@@ -37,18 +37,19 @@ function LoginPage() {
     defaultValues: { email: '', password: '' },
   })
 
+  const fromPathname = (location.state as { from?: Location } | null)?.from?.pathname
+
   if (profile.data) {
-    return <Navigate to="/" replace />
+    return <Navigate to={fromPathname ?? '/'} replace />
   }
 
   function onSubmit(values: FormValues) {
     login.mutate(values, {
       onSuccess: (data) => {
-        const from = (location.state as { from?: Location } | null)?.from
         if (data.mustChangePassword) {
           navigate('/force-password-change', { replace: true })
         } else {
-          navigate(from?.pathname ?? '/', { replace: true })
+          navigate(fromPathname ?? '/', { replace: true })
         }
       },
       onError: (error) => {

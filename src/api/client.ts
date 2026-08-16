@@ -43,6 +43,12 @@ export const api = createClient<paths>({
   // The session lives in an httpOnly cookie (D2.16) — this is what makes the browser send
   // it. There is no token to attach; JavaScript never has one to read.
   credentials: 'include',
+  // openapi-fetch's default for an object-typed query param (e.g. `pageable`) is
+  // `deepObject` style — `pageable[page]=0&pageable[size]=20`. Spring's `Pageable` resolver
+  // binds flat `page`/`size`/`sort` params, not a bracketed object, so every list endpoint
+  // would 400 without this override. Discovered on contact with a real OMS in W1.0 — every
+  // list/search screen depends on it.
+  querySerializer: { object: { style: 'form', explode: true } },
 })
 
 api.use({

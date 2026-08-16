@@ -29,6 +29,14 @@ import {
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu'
 
+export interface ServerPagination {
+  pageIndex: number
+  pageSize: number
+  pageCount: number
+  totalElements: number
+  onPageIndexChange: (pageIndex: number) => void
+}
+
 export interface DataTableProps<TData> {
   columns: ColumnDef<TData, unknown>[]
   data: TData[]
@@ -37,6 +45,13 @@ export interface DataTableProps<TData> {
   isLoading?: boolean
   emptyMessage?: string
   pageSize?: number
+  /**
+   * When set, `data` is treated as one already-fetched page rather than the whole dataset —
+   * pagination is driven by these props instead of TanStack Table's own row-slicing. Required
+   * for any screen backed by a paginated API (D: "the API already does it, do not fetch
+   * everything and filter client-side").
+   */
+  serverPagination?: ServerPagination
 }
 
 function DataTable<TData>({
@@ -46,6 +61,7 @@ function DataTable<TData>({
   isLoading = false,
   emptyMessage = 'No results.',
   pageSize = 10,
+  serverPagination,
 }: DataTableProps<TData>) {
   const [sorting, setSorting] = React.useState<SortingState>([])
   const [columnVisibility, setColumnVisibility] = React.useState<VisibilityState>({})
@@ -54,7 +70,14 @@ function DataTable<TData>({
   const table = useReactTable({
     data,
     columns,
-    state: { sorting, columnVisibility, expanded },
+    state: {
+      sorting,
+      columnVisibility,
+      expanded,
+      ...(serverPagination && {
+        pagination: { pageIndex: serverPagination.pageIndex, pageSize: serverPagination.pageSize },
+      }),
+    },
     onSortingChange: setSorting,
     onColumnVisibilityChange: setColumnVisibility,
     onExpandedChange: setExpanded,
@@ -63,8 +86,23 @@ function DataTable<TData>({
     getSortedRowModel: getSortedRowModel(),
     getExpandedRowModel: getExpandedRowModel(),
     getPaginationRowModel: getPaginationRowModel(),
+    manualPagination: !!serverPagination,
+    pageCount: serverPagination?.pageCount,
     initialState: { pagination: { pageSize } },
   })
+
+  const pageIndex = serverPagination?.pageIndex ?? table.getState().pagination.pageIndex
+  const canPreviousPage = serverPagination
+    ? serverPagination.pageIndex > 0
+    : table.getCanPreviousPage()
+  const canNextPage = serverPagination
+    ? serverPagination.pageIndex + 1 < serverPagination.pageCount
+    : table.getCanNextPage()
+  const goPreviousPage = () =>
+    serverPagination ? serverPagination.onPageIndexChange(pageIndex - 1) : table.previousPage()
+  const goNextPage = () =>
+    serverPagination ? serverPagination.onPageIndexChange(pageIndex + 1) : table.nextPage()
+  const pageCount = serverPagination?.pageCount ?? table.getPageCount()
 
   return (
     <div className="flex flex-col gap-3">
@@ -186,24 +224,14 @@ function DataTable<TData>({
 
       <div className="flex items-center justify-between">
         <span className="text-sm text-muted-foreground">
-          Page {table.getState().pagination.pageIndex + 1} of{' '}
-          {Math.max(1, table.getPageCount())}
+          Page {pageIndex + 1} of {Math.max(1, pageCount)}
+          {serverPagination && ` · ${serverPagination.totalElements} total`}
         </span>
         <div className="flex items-center gap-2">
-          <Button
-            variant="outline"
-            size="sm"
-            onClick={() => table.previousPage()}
-            disabled={!table.getCanPreviousPage()}
-          >
+          <Button variant="outline" size="sm" onClick={goPreviousPage} disabled={!canPreviousPage}>
             Previous
           </Button>
-          <Button
-            variant="outline"
-            size="sm"
-            onClick={() => table.nextPage()}
-            disabled={!table.getCanNextPage()}
-          >
+          <Button variant="outline" size="sm" onClick={goNextPage} disabled={!canNextPage}>
             Next
           </Button>
         </div>

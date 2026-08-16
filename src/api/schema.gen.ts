@@ -12,10 +12,10 @@ export interface paths {
             cookie?: never;
         };
         /** @description **Requires permission:** `catalog.attribute.read`. */
-        get: operations["list_6"];
+        get: operations["list_8"];
         put?: never;
         /** @description **Requires permission:** `catalog.attribute.write`. */
-        post: operations["create_6"];
+        post: operations["create_8"];
         delete?: never;
         options?: never;
         head?: never;
@@ -31,7 +31,7 @@ export interface paths {
         };
         get?: never;
         /** @description **Requires permission:** `catalog.attribute.write`. */
-        put: operations["update_7"];
+        put: operations["update_8"];
         post?: never;
         delete?: never;
         options?: never;
@@ -49,7 +49,7 @@ export interface paths {
         get?: never;
         put?: never;
         /** @description **Requires permission:** `catalog.attribute.write`. */
-        post: operations["deactivate_2"];
+        post: operations["deactivate_3"];
         delete?: never;
         options?: never;
         head?: never;
@@ -66,7 +66,7 @@ export interface paths {
         get?: never;
         put?: never;
         /** @description **Requires permission:** `catalog.attribute.write`. */
-        post: operations["reactivate_1"];
+        post: operations["reactivate_2"];
         delete?: never;
         options?: never;
         head?: never;
@@ -98,10 +98,10 @@ export interface paths {
             cookie?: never;
         };
         /** @description **Requires permission:** `catalog.attribute.read`. */
-        get: operations["list_5"];
+        get: operations["list_7"];
         put?: never;
         /** @description **Requires permission:** `catalog.attribute.write`. */
-        post: operations["create_5"];
+        post: operations["create_7"];
         delete?: never;
         options?: never;
         head?: never;
@@ -202,9 +202,9 @@ export interface paths {
             cookie?: never;
         };
         /** @description **Requires permission:** `catalog.attribute.read`. */
-        get: operations["get_6"];
+        get: operations["get_7"];
         /** @description **Requires permission:** `catalog.attribute.write`. */
-        put: operations["update_6"];
+        put: operations["update_7"];
         post?: never;
         delete?: never;
         options?: never;
@@ -222,7 +222,7 @@ export interface paths {
         get?: never;
         put?: never;
         /** @description **Requires permission:** `catalog.attribute.write`. */
-        post: operations["deactivate_1"];
+        post: operations["deactivate_2"];
         delete?: never;
         options?: never;
         head?: never;
@@ -239,7 +239,7 @@ export interface paths {
         get?: never;
         put?: never;
         /** @description **Requires permission:** `catalog.attribute.write`. */
-        post: operations["reactivate"];
+        post: operations["reactivate_1"];
         delete?: never;
         options?: never;
         head?: never;
@@ -271,7 +271,7 @@ export interface paths {
             cookie?: never;
         };
         /** @description **Requires permission:** `audit.read`. */
-        get: operations["list_9"];
+        get: operations["list_11"];
         put?: never;
         post?: never;
         delete?: never;
@@ -365,6 +365,41 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/admin/batches": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** @description **Requires permission:** `inventory.read`. */
+        get: operations["list_6"];
+        put?: never;
+        /** @description **Requires permission:** `inventory.adjust`. */
+        post: operations["create_6"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/admin/batches/{id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** @description **Requires permission:** `inventory.read`. */
+        get: operations["get_8"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/admin/brands": {
         parameters: {
             query?: never;
@@ -373,10 +408,10 @@ export interface paths {
             cookie?: never;
         };
         /** @description **Requires permission:** `catalog.brand.read`. */
-        get: operations["list_4"];
+        get: operations["list_5"];
         put?: never;
         /** @description **Requires permission:** `catalog.brand.write`. */
-        post: operations["create_4"];
+        post: operations["create_5"];
         delete?: never;
         options?: never;
         head?: never;
@@ -391,9 +426,9 @@ export interface paths {
             cookie?: never;
         };
         /** @description **Requires permission:** `catalog.brand.read`. */
-        get: operations["get_5"];
+        get: operations["get_6"];
         /** @description **Requires permission:** `catalog.brand.write`. */
-        put: operations["update_5"];
+        put: operations["update_6"];
         post?: never;
         delete?: never;
         options?: never;
@@ -494,10 +529,10 @@ export interface paths {
             cookie?: never;
         };
         /** @description **Requires permission:** `catalog.category.read`. */
-        get: operations["list_3"];
+        get: operations["list_4"];
         put?: never;
         /** @description **Requires permission:** `catalog.category.write`. */
-        post: operations["create_3"];
+        post: operations["create_4"];
         delete?: never;
         options?: never;
         head?: never;
@@ -512,9 +547,9 @@ export interface paths {
             cookie?: never;
         };
         /** @description **Requires permission:** `catalog.category.read`. */
-        get: operations["get_4"];
+        get: operations["get_5"];
         /** @description **Requires permission:** `catalog.category.write`. */
-        put: operations["update_4"];
+        put: operations["update_5"];
         post?: never;
         delete?: never;
         options?: never;
@@ -649,7 +684,7 @@ export interface paths {
             cookie?: never;
         };
         /** @description **Requires permission:** `team.read`. */
-        get: operations["list_8"];
+        get: operations["list_10"];
         put?: never;
         post?: never;
         delete?: never;
@@ -666,7 +701,7 @@ export interface paths {
             cookie?: never;
         };
         /** @description **Requires permission:** `team.read`. */
-        get: operations["list_7"];
+        get: operations["list_9"];
         put?: never;
         post?: never;
         delete?: never;
@@ -683,10 +718,10 @@ export interface paths {
             cookie?: never;
         };
         /** @description **Requires permission:** `catalog.product.read`. */
-        get: operations["list_2"];
+        get: operations["list_3"];
         put?: never;
         /** @description **Requires permission:** `catalog.product.write`. */
-        post: operations["create_2"];
+        post: operations["create_3"];
         delete?: never;
         options?: never;
         head?: never;
@@ -701,9 +736,9 @@ export interface paths {
             cookie?: never;
         };
         /** @description **Requires permission:** `catalog.product.read`. */
-        get: operations["get_3"];
+        get: operations["get_4"];
         /** @description **Requires permission:** `catalog.product.write`. */
-        put: operations["update_3"];
+        put: operations["update_4"];
         post?: never;
         delete?: never;
         options?: never;
@@ -1169,9 +1204,9 @@ export interface paths {
             cookie?: never;
         };
         /** @description **Requires authentication.** No specific permission beyond a live session. */
-        get: operations["get_2"];
+        get: operations["get_3"];
         /** @description **Requires authentication.** No specific permission beyond a live session. */
-        put: operations["update_2"];
+        put: operations["update_3"];
         post?: never;
         delete?: never;
         options?: never;
@@ -1204,10 +1239,10 @@ export interface paths {
             cookie?: never;
         };
         /** @description **Requires permission:** `team.read`. */
-        get: operations["list_1"];
+        get: operations["list_2"];
         put?: never;
         /** @description **Requires permission:** `team.manage`. */
-        post: operations["create_1"];
+        post: operations["create_2"];
         delete?: never;
         options?: never;
         head?: never;
@@ -1222,12 +1257,182 @@ export interface paths {
             cookie?: never;
         };
         /** @description **Requires permission:** `team.read`. */
-        get: operations["get_1"];
+        get: operations["get_2"];
         /** @description **Requires permission:** `team.manage`. */
-        put: operations["update_1"];
+        put: operations["update_2"];
         post?: never;
         /** @description **Requires permission:** `team.manage`. */
         delete: operations["delete"];
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/admin/stock/adjust": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** @description **Requires permission:** `inventory.adjust`. */
+        post: operations["adjust"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/admin/stock/expiring-soon": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** @description **Requires permission:** `inventory.read`. */
+        get: operations["expiringSoon"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/admin/stock/levels": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** @description **Requires permission:** `inventory.read`. */
+        get: operations["levels"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/admin/stock/low-stock": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** @description **Requires permission:** `inventory.read`. */
+        get: operations["lowStock"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/admin/stock/movements": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** @description **Requires permission:** `inventory.read`. */
+        get: operations["movements"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/admin/stock/rebuild": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** @description **Requires permission:** `inventory.adjust`. */
+        post: operations["rebuild"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/admin/stock/reconcile": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** @description **Requires permission:** `inventory.read`. */
+        get: operations["reconcile"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/admin/stock/totals": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** @description **Requires permission:** `inventory.read`. */
+        get: operations["totals"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/admin/stock/transfer": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** @description **Requires permission:** `inventory.transfer`. */
+        post: operations["transfer"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/admin/stock/transfers/{referenceId}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** @description **Requires permission:** `inventory.read`. */
+        get: operations["transfer_1"];
+        put?: never;
+        post?: never;
+        delete?: never;
         options?: never;
         head?: never;
         patch?: never;
@@ -1241,10 +1446,10 @@ export interface paths {
             cookie?: never;
         };
         /** @description **Requires permission:** `team.read`. */
-        get: operations["list"];
+        get: operations["list_1"];
         put?: never;
         /** @description **Requires permission:** `team.manage`. */
-        post: operations["create"];
+        post: operations["create_1"];
         delete?: never;
         options?: never;
         head?: never;
@@ -1259,9 +1464,9 @@ export interface paths {
             cookie?: never;
         };
         /** @description **Requires permission:** `team.read`. */
-        get: operations["get"];
+        get: operations["get_1"];
         /** @description **Requires permission:** `team.manage`. */
-        put: operations["update"];
+        put: operations["update_1"];
         post?: never;
         delete?: never;
         options?: never;
@@ -1296,7 +1501,7 @@ export interface paths {
         get?: never;
         put?: never;
         /** @description **Requires permission:** `team.manage`. */
-        post: operations["deactivate"];
+        post: operations["deactivate_1"];
         delete?: never;
         options?: never;
         head?: never;
@@ -1388,6 +1593,76 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/admin/warehouses": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** @description **Requires permission:** `warehouse.read`. */
+        get: operations["list"];
+        put?: never;
+        /** @description **Requires permission:** `warehouse.write`. */
+        post: operations["create"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/admin/warehouses/{id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** @description **Requires permission:** `warehouse.read`. */
+        get: operations["get"];
+        /** @description **Requires permission:** `warehouse.write`. */
+        put: operations["update"];
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/admin/warehouses/{id}/deactivate": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** @description **Requires permission:** `warehouse.write`. */
+        post: operations["deactivate"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/admin/warehouses/{id}/reactivate": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** @description **Requires permission:** `warehouse.write`. */
+        post: operations["reactivate"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
 }
 export type webhooks = Record<string, never>;
 export interface components {
@@ -1401,6 +1676,21 @@ export interface components {
             attributeId: string;
             /** Format: uuid */
             valueForExistingVariant: string;
+        };
+        AdjustStockRequest: {
+            /** Format: uuid */
+            batchId?: string;
+            /** @enum {string} */
+            movementType: "RECEIPT" | "ADJUSTMENT" | "TRANSFER_OUT" | "TRANSFER_IN" | "DAMAGE" | "EXPIRY_WRITE_OFF" | "RETURN";
+            note?: string;
+            /** Format: int32 */
+            quantity?: number;
+            /** @enum {string} */
+            reasonCode?: "CYCLE_COUNT" | "DATA_CORRECTION" | "FOUND_STOCK" | "LOST_STOCK" | "THEFT" | "CONSUMED_INTERNALLY" | "DAMAGED_IN_TRANSIT" | "DAMAGED_IN_WAREHOUSE" | "DAMAGED_ON_RETURN" | "CUSTOMER_RETURN" | "COURIER_RTO" | "CANCELLED_ORDER";
+            /** Format: uuid */
+            variantId: string;
+            /** Format: uuid */
+            warehouseId: string;
         };
         AssignRolesRequest: {
             roleIds: string[];
@@ -1482,6 +1772,22 @@ export interface components {
             occurredAt?: string;
             traceId?: string;
         };
+        BatchResponse: {
+            batchNumber?: string;
+            /** Format: date-time */
+            createdAt?: string;
+            expired?: boolean;
+            /** Format: date-time */
+            expiresAt?: string;
+            /** Format: date */
+            expiresOn?: string;
+            /** Format: uuid */
+            id?: string;
+            /** Format: date */
+            manufacturedOn?: string;
+            /** Format: uuid */
+            variantId?: string;
+        };
         BrandResponse: {
             bannerUrl?: string;
             /** Format: date-time */
@@ -1560,6 +1866,15 @@ export interface components {
             name: string;
             unit?: string;
         };
+        CreateBatchRequest: {
+            batchNumber: string;
+            /** Format: date */
+            expiresOn?: string;
+            /** Format: date */
+            manufacturedOn?: string;
+            /** Format: uuid */
+            variantId: string;
+        };
         CreateBrandRequest: {
             bannerUrl?: string;
             description?: string;
@@ -1609,11 +1924,53 @@ export interface components {
             optionValues: components["schemas"]["OptionValuePayload"][];
             skuCode: string;
         };
+        CreateWarehouseRequest: {
+            addressLine1: string;
+            addressLine2?: string;
+            city: string;
+            code: string;
+            gstin?: string;
+            name: string;
+            pincode: string;
+            state: string;
+            /** @enum {string} */
+            type: "OWN" | "THIRD_PARTY";
+        };
+        DriftRow: {
+            /** Format: uuid */
+            batchId?: string;
+            /** Format: int64 */
+            difference?: number;
+            /** Format: int64 */
+            ledger?: number;
+            /** Format: int64 */
+            projected?: number;
+            /** Format: uuid */
+            variantId?: string;
+            /** Format: uuid */
+            warehouseId?: string;
+        };
         ErrorResponse: {
             code?: string;
             fieldErrors?: components["schemas"]["FieldError"][];
             message?: string;
             traceId?: string;
+        };
+        ExpiringStockResponse: {
+            /** Format: uuid */
+            batchId?: string;
+            batchNumber?: string;
+            /** Format: date-time */
+            expiresAt?: string;
+            /** Format: int32 */
+            quantityOnHand?: number;
+            skuCode?: string;
+            /** Format: uuid */
+            variantId?: string;
+            variantName?: string;
+            warehouseCode?: string;
+            /** Format: uuid */
+            warehouseId?: string;
         };
         FieldError: {
             field?: string;
@@ -1714,6 +2071,17 @@ export interface components {
             /** Format: int32 */
             totalPages?: number;
         };
+        PageResponseBatchResponse: {
+            content?: components["schemas"]["BatchResponse"][];
+            /** Format: int32 */
+            page?: number;
+            /** Format: int32 */
+            size?: number;
+            /** Format: int64 */
+            totalElements?: number;
+            /** Format: int32 */
+            totalPages?: number;
+        };
         PageResponseBrandResponse: {
             content?: components["schemas"]["BrandResponse"][];
             /** Format: int32 */
@@ -1727,6 +2095,17 @@ export interface components {
         };
         PageResponseCategoryResponse: {
             content?: components["schemas"]["CategoryResponse"][];
+            /** Format: int32 */
+            page?: number;
+            /** Format: int32 */
+            size?: number;
+            /** Format: int64 */
+            totalElements?: number;
+            /** Format: int32 */
+            totalPages?: number;
+        };
+        PageResponseExpiringStockResponse: {
+            content?: components["schemas"]["ExpiringStockResponse"][];
             /** Format: int32 */
             page?: number;
             /** Format: int32 */
@@ -1758,8 +2137,52 @@ export interface components {
             /** Format: int32 */
             totalPages?: number;
         };
+        PageResponseStockLevelResponse: {
+            content?: components["schemas"]["StockLevelResponse"][];
+            /** Format: int32 */
+            page?: number;
+            /** Format: int32 */
+            size?: number;
+            /** Format: int64 */
+            totalElements?: number;
+            /** Format: int32 */
+            totalPages?: number;
+        };
+        PageResponseStockMovementResponse: {
+            content?: components["schemas"]["StockMovementResponse"][];
+            /** Format: int32 */
+            page?: number;
+            /** Format: int32 */
+            size?: number;
+            /** Format: int64 */
+            totalElements?: number;
+            /** Format: int32 */
+            totalPages?: number;
+        };
+        PageResponseStockTotalResponse: {
+            content?: components["schemas"]["StockTotalResponse"][];
+            /** Format: int32 */
+            page?: number;
+            /** Format: int32 */
+            size?: number;
+            /** Format: int64 */
+            totalElements?: number;
+            /** Format: int32 */
+            totalPages?: number;
+        };
         PageResponseTeamMemberResponse: {
             content?: components["schemas"]["TeamMemberResponse"][];
+            /** Format: int32 */
+            page?: number;
+            /** Format: int32 */
+            size?: number;
+            /** Format: int64 */
+            totalElements?: number;
+            /** Format: int32 */
+            totalPages?: number;
+        };
+        PageResponseWarehouseResponse: {
+            content?: components["schemas"]["WarehouseResponse"][];
             /** Format: int32 */
             page?: number;
             /** Format: int32 */
@@ -1840,6 +2263,17 @@ export interface components {
             /** @enum {string} */
             status?: "INVITED" | "ACTIVE" | "SUSPENDED" | "DEACTIVATED";
         };
+        RebuildResponse: {
+            corrected?: components["schemas"]["DriftRow"][];
+            /** Format: int32 */
+            rowsWritten?: number;
+        };
+        ReconcileResponse: {
+            drifting?: components["schemas"]["DriftRow"][];
+            /** Format: int32 */
+            driftingLocations?: number;
+            matches?: boolean;
+        };
         ReorderCategoriesRequest: {
             orderedIds: string[];
             /** Format: uuid */
@@ -1911,6 +2345,62 @@ export interface components {
             valueNumber?: number;
             valueText?: string;
         };
+        StockLevelResponse: {
+            /** Format: date-time */
+            batchExpiresAt?: string;
+            /** Format: uuid */
+            batchId?: string;
+            batchNumber?: string;
+            /** Format: int32 */
+            quantityOnHand?: number;
+            skuCode?: string;
+            /** Format: date-time */
+            updatedAt?: string;
+            /** Format: uuid */
+            variantId?: string;
+            variantName?: string;
+            warehouseCode?: string;
+            /** Format: uuid */
+            warehouseId?: string;
+            warehouseName?: string;
+        };
+        StockMovementResponse: {
+            /** Format: uuid */
+            actorId?: string;
+            /** Format: uuid */
+            batchId?: string;
+            batchNumber?: string;
+            /** Format: uuid */
+            id?: string;
+            idempotencyKey?: string;
+            /** @enum {string} */
+            movementType?: "RECEIPT" | "ADJUSTMENT" | "TRANSFER_OUT" | "TRANSFER_IN" | "DAMAGE" | "EXPIRY_WRITE_OFF" | "RETURN";
+            note?: string;
+            /** Format: date-time */
+            occurredAt?: string;
+            /** Format: int32 */
+            quantity?: number;
+            /** @enum {string} */
+            reasonCode?: "CYCLE_COUNT" | "DATA_CORRECTION" | "FOUND_STOCK" | "LOST_STOCK" | "THEFT" | "CONSUMED_INTERNALLY" | "DAMAGED_IN_TRANSIT" | "DAMAGED_IN_WAREHOUSE" | "DAMAGED_ON_RETURN" | "CUSTOMER_RETURN" | "COURIER_RTO" | "CANCELLED_ORDER";
+            /** Format: uuid */
+            referenceId?: string;
+            referenceType?: string;
+            skuCode?: string;
+            /** Format: uuid */
+            variantId?: string;
+            variantName?: string;
+            warehouseCode?: string;
+            /** Format: uuid */
+            warehouseId?: string;
+        };
+        StockTotalResponse: {
+            /** Format: int64 */
+            quantityOnHand?: number;
+            skuCode?: string;
+            /** Format: uuid */
+            variantId?: string;
+            variantName?: string;
+        };
         TeamMemberResponse: {
             email?: string;
             /** Format: uuid */
@@ -1924,6 +2414,25 @@ export interface components {
             roles?: components["schemas"]["RoleSummary"][];
             /** @enum {string} */
             status?: "INVITED" | "ACTIVE" | "SUSPENDED" | "DEACTIVATED";
+        };
+        TransferResponse: {
+            in?: components["schemas"]["StockMovementResponse"];
+            out?: components["schemas"]["StockMovementResponse"];
+            /** Format: uuid */
+            referenceId?: string;
+        };
+        TransferStockRequest: {
+            /** Format: uuid */
+            batchId?: string;
+            /** Format: uuid */
+            fromWarehouseId: string;
+            note?: string;
+            /** Format: int32 */
+            quantity?: number;
+            /** Format: uuid */
+            toWarehouseId: string;
+            /** Format: uuid */
+            variantId: string;
         };
         UpdateAttributeRequest: {
             /** @enum {string} */
@@ -2007,6 +2516,18 @@ export interface components {
             /** Format: int32 */
             widthMm?: number;
         };
+        UpdateWarehouseRequest: {
+            addressLine1: string;
+            addressLine2?: string;
+            city: string;
+            code: string;
+            gstin?: string;
+            name: string;
+            pincode: string;
+            state: string;
+            /** @enum {string} */
+            type: "OWN" | "THIRD_PARTY";
+        };
         VariantOptionValueResponse: {
             /** Format: uuid */
             attributeId?: string;
@@ -2048,6 +2569,25 @@ export interface components {
             /** Format: int32 */
             widthMm?: number;
         };
+        WarehouseResponse: {
+            active?: boolean;
+            addressLine1?: string;
+            addressLine2?: string;
+            city?: string;
+            code?: string;
+            /** Format: date-time */
+            createdAt?: string;
+            gstin?: string;
+            /** Format: uuid */
+            id?: string;
+            name?: string;
+            pincode?: string;
+            state?: string;
+            /** @enum {string} */
+            type?: "OWN" | "THIRD_PARTY";
+            /** Format: date-time */
+            updatedAt?: string;
+        };
     };
     responses: never;
     parameters: never;
@@ -2057,7 +2597,7 @@ export interface components {
 }
 export type $defs = Record<string, never>;
 export interface operations {
-    list_6: {
+    list_8: {
         parameters: {
             query?: {
                 active?: boolean;
@@ -2115,7 +2655,7 @@ export interface operations {
             };
         };
     };
-    create_6: {
+    create_8: {
         parameters: {
             query?: never;
             header?: never;
@@ -2175,7 +2715,7 @@ export interface operations {
             };
         };
     };
-    update_7: {
+    update_8: {
         parameters: {
             query?: never;
             header?: never;
@@ -2237,7 +2777,7 @@ export interface operations {
             };
         };
     };
-    deactivate_2: {
+    deactivate_3: {
         parameters: {
             query?: never;
             header?: never;
@@ -2295,7 +2835,7 @@ export interface operations {
             };
         };
     };
-    reactivate_1: {
+    reactivate_2: {
         parameters: {
             query?: never;
             header?: never;
@@ -2413,7 +2953,7 @@ export interface operations {
             };
         };
     };
-    list_5: {
+    list_7: {
         parameters: {
             query: {
                 active?: boolean;
@@ -2475,7 +3015,7 @@ export interface operations {
             };
         };
     };
-    create_5: {
+    create_7: {
         parameters: {
             query?: never;
             header?: never;
@@ -2898,7 +3438,7 @@ export interface operations {
             };
         };
     };
-    get_6: {
+    get_7: {
         parameters: {
             query?: never;
             header?: never;
@@ -2956,7 +3496,7 @@ export interface operations {
             };
         };
     };
-    update_6: {
+    update_7: {
         parameters: {
             query?: never;
             header?: never;
@@ -3018,7 +3558,7 @@ export interface operations {
             };
         };
     };
-    deactivate_1: {
+    deactivate_2: {
         parameters: {
             query?: never;
             header?: never;
@@ -3076,7 +3616,7 @@ export interface operations {
             };
         };
     };
-    reactivate: {
+    reactivate_1: {
         parameters: {
             query?: never;
             header?: never;
@@ -3194,7 +3734,7 @@ export interface operations {
             };
         };
     };
-    list_9: {
+    list_11: {
         parameters: {
             query: {
                 action?: string;
@@ -3476,7 +4016,186 @@ export interface operations {
             };
         };
     };
-    list_4: {
+    list_6: {
+        parameters: {
+            query: {
+                expiringWithinDays?: number;
+                pageable: components["schemas"]["Pageable"];
+                search?: string;
+                variantId?: string;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "*/*": components["schemas"]["PageResponseBatchResponse"];
+                };
+            };
+            /** @description Malformed request, or a field failed validation */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description No valid session — absent, expired or revoked credential */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Authenticated, but lacking the required permission */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Unhandled failure; the traceId identifies the log line */
+            500: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+        };
+    };
+    create_6: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["CreateBatchRequest"];
+            };
+        };
+        responses: {
+            /** @description Created */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "*/*": components["schemas"]["BatchResponse"];
+                };
+            };
+            /** @description Malformed request, or a field failed validation */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description No valid session — absent, expired or revoked credential */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Authenticated, but lacking the required permission */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Unhandled failure; the traceId identifies the log line */
+            500: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+        };
+    };
+    get_8: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "*/*": components["schemas"]["BatchResponse"];
+                };
+            };
+            /** @description Malformed request, or a field failed validation */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description No valid session — absent, expired or revoked credential */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Authenticated, but lacking the required permission */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Unhandled failure; the traceId identifies the log line */
+            500: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+        };
+    };
+    list_5: {
         parameters: {
             query: {
                 live?: boolean;
@@ -3537,7 +4256,7 @@ export interface operations {
             };
         };
     };
-    create_4: {
+    create_5: {
         parameters: {
             query?: never;
             header?: never;
@@ -3597,7 +4316,7 @@ export interface operations {
             };
         };
     };
-    get_5: {
+    get_6: {
         parameters: {
             query?: never;
             header?: never;
@@ -3655,7 +4374,7 @@ export interface operations {
             };
         };
     };
-    update_5: {
+    update_6: {
         parameters: {
             query?: never;
             header?: never;
@@ -4009,7 +4728,7 @@ export interface operations {
             };
         };
     };
-    list_3: {
+    list_4: {
         parameters: {
             query: {
                 live?: boolean;
@@ -4071,7 +4790,7 @@ export interface operations {
             };
         };
     };
-    create_3: {
+    create_4: {
         parameters: {
             query?: never;
             header?: never;
@@ -4131,7 +4850,7 @@ export interface operations {
             };
         };
     };
-    get_4: {
+    get_5: {
         parameters: {
             query?: never;
             header?: never;
@@ -4189,7 +4908,7 @@ export interface operations {
             };
         };
     };
-    update_4: {
+    update_5: {
         parameters: {
             query?: never;
             header?: never;
@@ -4661,7 +5380,7 @@ export interface operations {
             };
         };
     };
-    list_8: {
+    list_10: {
         parameters: {
             query: {
                 email?: string;
@@ -4724,7 +5443,7 @@ export interface operations {
             };
         };
     };
-    list_7: {
+    list_9: {
         parameters: {
             query?: never;
             header?: never;
@@ -4780,7 +5499,7 @@ export interface operations {
             };
         };
     };
-    list_2: {
+    list_3: {
         parameters: {
             query: {
                 audience?: "PUBLIC" | "TIER_RESTRICTED" | "CUSTOMER_RESTRICTED";
@@ -4844,7 +5563,7 @@ export interface operations {
             };
         };
     };
-    create_2: {
+    create_3: {
         parameters: {
             query?: never;
             header?: never;
@@ -4904,7 +5623,7 @@ export interface operations {
             };
         };
     };
-    get_3: {
+    get_4: {
         parameters: {
             query?: never;
             header?: never;
@@ -4962,7 +5681,7 @@ export interface operations {
             };
         };
     };
-    update_3: {
+    update_4: {
         parameters: {
             query?: never;
             header?: never;
@@ -7063,7 +7782,7 @@ export interface operations {
             };
         };
     };
-    get_2: {
+    get_3: {
         parameters: {
             query?: never;
             header?: never;
@@ -7119,7 +7838,7 @@ export interface operations {
             };
         };
     };
-    update_2: {
+    update_3: {
         parameters: {
             query?: never;
             header?: never;
@@ -7239,7 +7958,7 @@ export interface operations {
             };
         };
     };
-    list_1: {
+    list_2: {
         parameters: {
             query?: never;
             header?: never;
@@ -7295,7 +8014,7 @@ export interface operations {
             };
         };
     };
-    create_1: {
+    create_2: {
         parameters: {
             query?: never;
             header?: never;
@@ -7355,7 +8074,7 @@ export interface operations {
             };
         };
     };
-    get_1: {
+    get_2: {
         parameters: {
             query?: never;
             header?: never;
@@ -7413,7 +8132,7 @@ export interface operations {
             };
         };
     };
-    update_1: {
+    update_2: {
         parameters: {
             query?: never;
             header?: never;
@@ -7531,7 +8250,606 @@ export interface operations {
             };
         };
     };
-    list: {
+    adjust: {
+        parameters: {
+            query?: never;
+            header: {
+                "Idempotency-Key": string;
+            };
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["AdjustStockRequest"];
+            };
+        };
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "*/*": components["schemas"]["StockMovementResponse"];
+                };
+            };
+            /** @description Malformed request, or a field failed validation */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description No valid session — absent, expired or revoked credential */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Authenticated, but lacking the required permission */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Unhandled failure; the traceId identifies the log line */
+            500: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+        };
+    };
+    expiringSoon: {
+        parameters: {
+            query: {
+                pageable: components["schemas"]["Pageable"];
+                warehouseId?: string;
+                withinDays?: number;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "*/*": components["schemas"]["PageResponseExpiringStockResponse"];
+                };
+            };
+            /** @description Malformed request, or a field failed validation */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description No valid session — absent, expired or revoked credential */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Authenticated, but lacking the required permission */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Unhandled failure; the traceId identifies the log line */
+            500: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+        };
+    };
+    levels: {
+        parameters: {
+            query: {
+                batchId?: string;
+                includeEmpty?: boolean;
+                pageable: components["schemas"]["Pageable"];
+                variantId?: string;
+                warehouseId?: string;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "*/*": components["schemas"]["PageResponseStockLevelResponse"];
+                };
+            };
+            /** @description Malformed request, or a field failed validation */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description No valid session — absent, expired or revoked credential */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Authenticated, but lacking the required permission */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Unhandled failure; the traceId identifies the log line */
+            500: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+        };
+    };
+    lowStock: {
+        parameters: {
+            query: {
+                pageable: components["schemas"]["Pageable"];
+                threshold?: number;
+                warehouseId?: string;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "*/*": components["schemas"]["PageResponseStockLevelResponse"];
+                };
+            };
+            /** @description Malformed request, or a field failed validation */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description No valid session — absent, expired or revoked credential */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Authenticated, but lacking the required permission */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Unhandled failure; the traceId identifies the log line */
+            500: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+        };
+    };
+    movements: {
+        parameters: {
+            query: {
+                batchId?: string;
+                from?: string;
+                movementType?: "RECEIPT" | "ADJUSTMENT" | "TRANSFER_OUT" | "TRANSFER_IN" | "DAMAGE" | "EXPIRY_WRITE_OFF" | "RETURN";
+                pageable: components["schemas"]["Pageable"];
+                to?: string;
+                variantId?: string;
+                warehouseId?: string;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "*/*": components["schemas"]["PageResponseStockMovementResponse"];
+                };
+            };
+            /** @description Malformed request, or a field failed validation */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description No valid session — absent, expired or revoked credential */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Authenticated, but lacking the required permission */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Unhandled failure; the traceId identifies the log line */
+            500: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+        };
+    };
+    rebuild: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "*/*": components["schemas"]["RebuildResponse"];
+                };
+            };
+            /** @description Malformed request, or a field failed validation */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description No valid session — absent, expired or revoked credential */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Authenticated, but lacking the required permission */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Unhandled failure; the traceId identifies the log line */
+            500: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+        };
+    };
+    reconcile: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "*/*": components["schemas"]["ReconcileResponse"];
+                };
+            };
+            /** @description Malformed request, or a field failed validation */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description No valid session — absent, expired or revoked credential */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Authenticated, but lacking the required permission */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Unhandled failure; the traceId identifies the log line */
+            500: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+        };
+    };
+    totals: {
+        parameters: {
+            query: {
+                pageable: components["schemas"]["Pageable"];
+                variantId?: string;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "*/*": components["schemas"]["PageResponseStockTotalResponse"];
+                };
+            };
+            /** @description Malformed request, or a field failed validation */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description No valid session — absent, expired or revoked credential */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Authenticated, but lacking the required permission */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Unhandled failure; the traceId identifies the log line */
+            500: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+        };
+    };
+    transfer: {
+        parameters: {
+            query?: never;
+            header: {
+                "Idempotency-Key": string;
+            };
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["TransferStockRequest"];
+            };
+        };
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "*/*": components["schemas"]["TransferResponse"];
+                };
+            };
+            /** @description Malformed request, or a field failed validation */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description No valid session — absent, expired or revoked credential */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Authenticated, but lacking the required permission */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Unhandled failure; the traceId identifies the log line */
+            500: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+        };
+    };
+    transfer_1: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                referenceId: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "*/*": components["schemas"]["TransferResponse"];
+                };
+            };
+            /** @description Malformed request, or a field failed validation */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description No valid session — absent, expired or revoked credential */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Authenticated, but lacking the required permission */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Unhandled failure; the traceId identifies the log line */
+            500: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+        };
+    };
+    list_1: {
         parameters: {
             query: {
                 pageable: components["schemas"]["Pageable"];
@@ -7590,7 +8908,7 @@ export interface operations {
             };
         };
     };
-    create: {
+    create_1: {
         parameters: {
             query?: never;
             header?: never;
@@ -7650,7 +8968,7 @@ export interface operations {
             };
         };
     };
-    get: {
+    get_1: {
         parameters: {
             query?: never;
             header?: never;
@@ -7708,7 +9026,7 @@ export interface operations {
             };
         };
     };
-    update: {
+    update_1: {
         parameters: {
             query?: never;
             header?: never;
@@ -7828,7 +9146,7 @@ export interface operations {
             };
         };
     };
-    deactivate: {
+    deactivate_1: {
         parameters: {
             query?: never;
             header?: never;
@@ -8140,6 +9458,363 @@ export interface operations {
                 };
                 content: {
                     "*/*": components["schemas"]["TeamMemberResponse"];
+                };
+            };
+            /** @description Malformed request, or a field failed validation */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description No valid session — absent, expired or revoked credential */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Authenticated, but lacking the required permission */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Unhandled failure; the traceId identifies the log line */
+            500: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+        };
+    };
+    list: {
+        parameters: {
+            query: {
+                active?: boolean;
+                pageable: components["schemas"]["Pageable"];
+                search?: string;
+                type?: "OWN" | "THIRD_PARTY";
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "*/*": components["schemas"]["PageResponseWarehouseResponse"];
+                };
+            };
+            /** @description Malformed request, or a field failed validation */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description No valid session — absent, expired or revoked credential */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Authenticated, but lacking the required permission */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Unhandled failure; the traceId identifies the log line */
+            500: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+        };
+    };
+    create: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["CreateWarehouseRequest"];
+            };
+        };
+        responses: {
+            /** @description Created */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "*/*": components["schemas"]["WarehouseResponse"];
+                };
+            };
+            /** @description Malformed request, or a field failed validation */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description No valid session — absent, expired or revoked credential */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Authenticated, but lacking the required permission */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Unhandled failure; the traceId identifies the log line */
+            500: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+        };
+    };
+    get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "*/*": components["schemas"]["WarehouseResponse"];
+                };
+            };
+            /** @description Malformed request, or a field failed validation */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description No valid session — absent, expired or revoked credential */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Authenticated, but lacking the required permission */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Unhandled failure; the traceId identifies the log line */
+            500: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+        };
+    };
+    update: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["UpdateWarehouseRequest"];
+            };
+        };
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "*/*": components["schemas"]["WarehouseResponse"];
+                };
+            };
+            /** @description Malformed request, or a field failed validation */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description No valid session — absent, expired or revoked credential */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Authenticated, but lacking the required permission */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Unhandled failure; the traceId identifies the log line */
+            500: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+        };
+    };
+    deactivate: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "*/*": components["schemas"]["WarehouseResponse"];
+                };
+            };
+            /** @description Malformed request, or a field failed validation */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description No valid session — absent, expired or revoked credential */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Authenticated, but lacking the required permission */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Unhandled failure; the traceId identifies the log line */
+            500: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+        };
+    };
+    reactivate: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "*/*": components["schemas"]["WarehouseResponse"];
                 };
             };
             /** @description Malformed request, or a field failed validation */

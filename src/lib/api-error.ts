@@ -93,3 +93,17 @@ export function applyApiErrorToForm<TFieldValues extends FieldValues>(
     })
   }
 }
+
+/**
+ * For mutations with no form to attach field errors to — transitions, reorder, move. The
+ * server's message is already a full sentence built for an operator to act on (see
+ * `BusinessRuleException` on the OMS side), so it goes straight to the toast alongside the
+ * traceId that makes a support report actionable.
+ */
+export function toastApiError(error: unknown): void {
+  if (isApiError(error)) {
+    toast.error(error.message, { description: `Trace ID: ${error.traceId}` })
+    return
+  }
+  toast.error(error instanceof Error ? error.message : 'Something went wrong')
+}

@@ -9,6 +9,15 @@ import { reparentTree } from '@/components/tree/reparent'
 export interface CategoryTreeProps {
   data: CategoryNode[]
   onChange?: (data: CategoryNode[]) => void
+  /**
+   * Fired alongside `onChange`, with the pre-move tree, so a caller backed by a real API can
+   * persist the move and — if the server rejects it (cycle, max depth) — roll back by calling
+   * `onChange` again with `previousData`. The optimistic splice already happened by the time
+   * this fires; rollback is the caller's responsibility, not silent, per the task's requirement
+   * that a rejected reparent be visible rather than swallowed.
+   */
+  onMove?: (dragIds: string[], parentId: string | null, previousData: CategoryNode[]) => void
+  onSelect?: (nodes: NodeApi<CategoryNode>[]) => void
   height?: number
 }
 
@@ -34,7 +43,12 @@ function CategoryTreeNode({ node, style, dragHandle }: NodeRendererProps<Categor
         'flex items-center gap-1.5 rounded-md px-1 text-sm',
         node.isSelected && 'bg-accent text-accent-foreground'
       )}
-      onClick={() => node.isInternal && node.toggle()}
+      onClick={() => {
+        node.select()
+        if (node.isInternal) {
+          node.toggle()
+        }
+      }}
     >
       {node.isInternal ? (
         node.isOpen ? (
@@ -63,9 +77,10 @@ function CategoryTreeNode({ node, style, dragHandle }: NodeRendererProps<Categor
  * Three-level category tree with drag-to-reparent, backed by react-arborist. Renders from a
  * fixture shaped like GET /api/admin/categories/tree — id, name, slug, status, live, children.
  */
-function CategoryTree({ data, onChange, height = 400 }: CategoryTreeProps) {
+function CategoryTree({ data, onChange, onMove, onSelect, height = 400 }: CategoryTreeProps) {
   const handleMove: MoveHandler<CategoryNode> = ({ dragIds, parentId, index }) => {
     onChange?.(reparentTree(data, dragIds, parentId, index))
+    onMove?.(dragIds, parentId, data)
   }
 
   return (
@@ -74,6 +89,7 @@ function CategoryTree({ data, onChange, height = 400 }: CategoryTreeProps) {
       idAccessor="id"
       childrenAccessor="children"
       onMove={handleMove}
+      onSelect={onSelect}
       openByDefault
       width="100%"
       height={height}
