@@ -14,6 +14,14 @@ export interface ApiError {
   fieldErrors: ApiFieldError[]
 }
 
+/** D2.24 — branch on the error **code**, never on `message`, to tell "reload and retry" apart
+ * from "duplicate slug/code/email, change it" — both are 409s. */
+export function isVersionConflict(error: unknown): boolean {
+  return isApiError(error) && error.code === 'VERSION_CONFLICT'
+}
+
+const VERSION_CONFLICT_MESSAGE = 'This was changed by someone else — reload and try again.'
+
 export function isApiError(value: unknown): value is ApiError {
   if (typeof value !== 'object' || value === null) {
     return false
@@ -72,6 +80,14 @@ export function applyApiErrorToForm<TFieldValues extends FieldValues>(
   error: ApiError,
   form: UseFormReturn<TFieldValues>
 ): void {
+  // D2.24 — a stale `version` isn't a field the operator can correct by re-typing; no amount of
+  // editing the form fixes it. Branch on the code, not the message, and never on `error.fieldErrors`
+  // containing a `version` entry (a form rarely has a `version` field to attach it to anyway).
+  if (error.code === 'VERSION_CONFLICT') {
+    toast.error(VERSION_CONFLICT_MESSAGE, { description: `Trace ID: ${error.traceId}` })
+    return
+  }
+
   const knownFields = new Set(Object.keys(form.getValues() as object))
   let unmatchedCount = 0
 
@@ -102,6 +118,11 @@ export function applyApiErrorToForm<TFieldValues extends FieldValues>(
  */
 export function toastApiError(error: unknown): void {
   if (isApiError(error)) {
+    // D2.24 — same branch-on-code rule as applyApiErrorToForm above, for mutations with no form.
+    if (error.code === 'VERSION_CONFLICT') {
+      toast.error(VERSION_CONFLICT_MESSAGE, { description: `Trace ID: ${error.traceId}` })
+      return
+    }
     toast.error(error.message, { description: `Trace ID: ${error.traceId}` })
     return
   }

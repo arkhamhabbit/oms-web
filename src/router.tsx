@@ -11,6 +11,7 @@ import BrandsPage from '@/pages/BrandsPage'
 import CategoriesPage from '@/pages/CategoriesPage'
 import AttributesPage from '@/pages/AttributesPage'
 import ProductsPage from '@/pages/ProductsPage'
+import ProductDetailPage from '@/pages/ProductDetailPage'
 import TeamPage from '@/pages/TeamPage'
 import RolesPage from '@/pages/RolesPage'
 import AuditPage from '@/pages/AuditPage'
@@ -68,6 +69,14 @@ export const router = createBrowserRouter([
             element: (
               <RequirePermission permission="catalog.product.read">
                 <ProductsPage />
+              </RequirePermission>
+            ),
+          },
+          {
+            path: '/products/:id',
+            element: (
+              <RequirePermission permission="catalog.product.read">
+                <ProductDetailPage />
               </RequirePermission>
             ),
           },

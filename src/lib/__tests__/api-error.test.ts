@@ -3,7 +3,14 @@ import { useForm } from 'react-hook-form'
 import { toast } from 'sonner'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 
-import { ApiClientError, applyApiErrorToForm, networkError, type ApiError } from '@/lib/api-error'
+import {
+  ApiClientError,
+  applyApiErrorToForm,
+  isVersionConflict,
+  networkError,
+  toastApiError,
+  type ApiError,
+} from '@/lib/api-error'
 
 vi.mock('sonner', () => ({
   toast: { error: vi.fn() },
@@ -85,6 +92,47 @@ describe('applyApiErrorToForm', () => {
     applyApiErrorToForm(error, form)
 
     expect(toast.error).not.toHaveBeenCalled()
+  })
+})
+
+describe('VERSION_CONFLICT (D2.24 — branch on code, never message)', () => {
+  const conflict: ApiError = {
+    code: 'VERSION_CONFLICT',
+    message: 'version does not match',
+    traceId: 'trace-vc',
+    fieldErrors: [{ field: 'version', message: 'stale' }],
+  }
+
+  it('isVersionConflict is true for VERSION_CONFLICT and false for a plain CONFLICT', () => {
+    expect(isVersionConflict(conflict)).toBe(true)
+    expect(isVersionConflict({ ...conflict, code: 'CONFLICT' })).toBe(false)
+    expect(isVersionConflict(new Error('boom'))).toBe(false)
+  })
+
+  it('applyApiErrorToForm renders the reload sentence, not the server message, and skips field errors', () => {
+    const form = setupForm()
+    applyApiErrorToForm(conflict, form)
+
+    expect(toast.error).toHaveBeenCalledWith(
+      'This was changed by someone else — reload and try again.',
+      { description: 'Trace ID: trace-vc' }
+    )
+    expect(form.getFieldState('name').error).toBeUndefined()
+  })
+
+  it('toastApiError renders the same reload sentence for a mutation with no form', () => {
+    toastApiError(conflict)
+    expect(toast.error).toHaveBeenCalledWith(
+      'This was changed by someone else — reload and try again.',
+      { description: 'Trace ID: trace-vc' }
+    )
+  })
+
+  it('a plain CONFLICT (duplicate slug/code) still surfaces its own message untouched', () => {
+    toastApiError({ ...conflict, code: 'CONFLICT', message: 'Slug already in use' })
+    expect(toast.error).toHaveBeenCalledWith('Slug already in use', {
+      description: 'Trace ID: trace-vc',
+    })
   })
 })
 
