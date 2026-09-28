@@ -45,6 +45,10 @@ export interface DataTableProps<TData> {
   isLoading?: boolean
   emptyMessage?: string
   pageSize?: number
+  /** Makes each row clickable (e.g. navigating to a detail page). The expand toggle and any
+   * interactive cell content should call `stopPropagation()` so a click there doesn't also fire
+   * this. */
+  onRowClick?: (row: TData) => void
   /**
    * When set, `data` is treated as one already-fetched page rather than the whole dataset —
    * pagination is driven by these props instead of TanStack Table's own row-slicing. Required
@@ -62,6 +66,7 @@ function DataTable<TData>({
   emptyMessage = 'No results.',
   pageSize = 10,
   serverPagination,
+  onRowClick,
 }: DataTableProps<TData>) {
   const [sorting, setSorting] = React.useState<SortingState>([])
   const [columnVisibility, setColumnVisibility] = React.useState<VisibilityState>({})
@@ -183,14 +188,21 @@ function DataTable<TData>({
             ) : (
               table.getRowModel().rows.map((row) => (
                 <React.Fragment key={row.id}>
-                  <TableRow data-state={row.getIsSelected() && 'selected'}>
+                  <TableRow
+                    data-state={row.getIsSelected() && 'selected'}
+                    onClick={onRowClick ? () => onRowClick(row.original) : undefined}
+                    className={onRowClick ? 'cursor-pointer hover:bg-muted/50' : undefined}
+                  >
                     {renderSubRow && (
                       <TableCell>
                         {row.getCanExpand() && (
                           <button
                             type="button"
                             aria-label={row.getIsExpanded() ? 'Collapse row' : 'Expand row'}
-                            onClick={row.getToggleExpandedHandler()}
+                            onClick={(event) => {
+                              event.stopPropagation()
+                              row.getToggleExpandedHandler()()
+                            }}
                             className="flex size-6 items-center justify-center rounded hover:bg-accent"
                           >
                             {row.getIsExpanded() ? (

@@ -11,11 +11,24 @@ export interface paths {
             path?: never;
             cookie?: never;
         };
-        /** @description **Requires permission:** `catalog.attribute.read`. */
-        get: operations["list_8"];
+        /**
+         * Every group in form order.
+         * @description Every group in form order. <code>active</code> omitted lists all of them.
+         *
+         *     **Requires permission:** `catalog.attribute.read`.
+         */
+        get: operations["list_12"];
         put?: never;
-        /** @description **Requires permission:** `catalog.attribute.write`. */
-        post: operations["create_8"];
+        /**
+         * Creates a form section
+         * @description Creates a form section.
+         *
+         *      <p>Appended to the end of the section order. Names are not required to be unique — a group is a
+         *      heading on the admin form and nothing references it by name.
+         *
+         *     **Requires permission:** `catalog.attribute.write`.
+         */
+        post: operations["create_11"];
         delete?: never;
         options?: never;
         head?: never;
@@ -30,8 +43,18 @@ export interface paths {
             cookie?: never;
         };
         get?: never;
-        /** @description **Requires permission:** `catalog.attribute.write`. */
-        put: operations["update_8"];
+        /**
+         * Renames a section
+         * @description Renames a section.
+         *
+         *      <p>Nothing else about a group is editable, and nothing hangs off the name — attributes point at
+         *      the group's id.
+         *
+         *     **Requires permission:** `catalog.attribute.write`.
+         *
+         *     **Concurrency** — send back the `version` you read. If the record has been changed by someone else since, this returns **409 `VERSION_CONFLICT`** with a `version` field error and writes nothing. Re-read it, show the operator what moved, and submit again with the new `version`.
+         */
+        put: operations["update_11"];
         post?: never;
         delete?: never;
         options?: never;
@@ -48,8 +71,13 @@ export interface paths {
         };
         get?: never;
         put?: never;
-        /** @description **Requires permission:** `catalog.attribute.write`. */
-        post: operations["deactivate_3"];
+        /**
+         * Hides the section.
+         * @description Hides the section. Attributes in it keep their own <code>active</code> state.
+         *
+         *     **Requires permission:** `catalog.attribute.write`.
+         */
+        post: operations["deactivate_4"];
         delete?: never;
         options?: never;
         head?: never;
@@ -65,8 +93,16 @@ export interface paths {
         };
         get?: never;
         put?: never;
-        /** @description **Requires permission:** `catalog.attribute.write`. */
-        post: operations["reactivate_2"];
+        /**
+         * Puts the section back on the form
+         * @description Puts the section back on the form.
+         *
+         *      <p>Nothing is cascaded on the way back either — an attribute deactivated separately stays
+         *      deactivated.
+         *
+         *     **Requires permission:** `catalog.attribute.write`.
+         */
+        post: operations["reactivate_3"];
         delete?: never;
         options?: never;
         head?: never;
@@ -82,7 +118,19 @@ export interface paths {
         };
         get?: never;
         put?: never;
-        /** @description **Requires permission:** `catalog.attribute.write`. */
+        /**
+         * Sets the order the sections appear in, first to last
+         * @description Sets the order the sections appear in, first to last.
+         *
+         *      <p>Takes the whole ordering rather than one group and a position, so two operators dragging at
+         *      once cannot interleave into an order neither chose. Recorded as one audit entry: the operator
+         *      performed one act.
+         *
+         *      <p><b>Refuses</b> when an id is repeated, or when one names no group. Ids left out keep their
+         *      current position.
+         *
+         *     **Requires permission:** `catalog.attribute.write`.
+         */
         post: operations["reorder_3"];
         delete?: never;
         options?: never;
@@ -97,11 +145,32 @@ export interface paths {
             path?: never;
             cookie?: never;
         };
-        /** @description **Requires permission:** `catalog.attribute.read`. */
-        get: operations["list_7"];
+        /**
+         * Every filter is optional.
+         * @description Every filter is optional. With none, this is the whole library in display order.
+         *
+         *     **Requires permission:** `catalog.attribute.read`.
+         */
+        get: operations["list_11"];
         put?: never;
-        /** @description **Requires permission:** `catalog.attribute.write`. */
-        post: operations["create_7"];
+        /**
+         * Creates an attribute
+         * @description Creates an attribute.
+         *
+         *      <p><b>Refuses</b> when the code is already used by any attribute, deactivated ones included — a
+         *      retired code is never freed, because products, imports and reports reference it. The code is
+         *      derived from the name when absent.
+         *
+         *      <p>Also refuses an <code>OPTION</code> that could not identify a variant: an option must be <code>
+         *      SINGLE_SELECT</code> and apply to <code>VARIANT</code>. <code>appliesTo</code> is optional for an option, which
+         *      is always variant-level, and required for a spec, which has a real choice to make. A wrong
+         *      value on an option is rejected rather than corrected.
+         *
+         *      <p><code>unit</code> is accepted only when <code>dataType</code> is <code>NUMBER</code>.
+         *
+         *     **Requires permission:** `catalog.attribute.write`.
+         */
+        post: operations["create_10"];
         delete?: never;
         options?: never;
         head?: never;
@@ -115,10 +184,30 @@ export interface paths {
             path?: never;
             cookie?: never;
         };
-        /** @description **Requires permission:** `catalog.attribute.read`. */
+        /**
+         * The attribute's values, in the order they were arranged
+         * @description The attribute's values, in the order they were arranged.
+         *
+         *      <p>Includes deactivated values, so an editor can see what is there and reactivate it. Each
+         *      carries its own <code>version</code> for the update.
+         *
+         *     **Requires permission:** `catalog.attribute.read`.
+         */
         get: operations["listValues"];
         put?: never;
-        /** @description **Requires permission:** `catalog.attribute.write`. */
+        /**
+         * Adds a value to the set
+         * @description Adds a value to the set.
+         *
+         *      <p><b>Refuses unless the attribute is <code>SINGLE_SELECT</code> or <code>MULTI_SELECT</code></b> — no
+         *      other data type has a set of values — and when the code is already used by another value of the
+         *      same attribute, deactivated ones included.
+         *
+         *      <p>Appended to the end, not the front: values are typed in the order they belong in (S, M, L,
+         *      XL), and anything else would have the operator reordering after every add.
+         *
+         *     **Requires permission:** `catalog.attribute.write`.
+         */
         post: operations["addValue"];
         delete?: never;
         options?: never;
@@ -134,7 +223,19 @@ export interface paths {
             cookie?: never;
         };
         get?: never;
-        /** @description **Requires permission:** `catalog.attribute.write`. */
+        /**
+         * Relabels a value
+         * @description Relabels a value.
+         *
+         *      <p><b><code>code</code> is immutable and must match what is stored</b> — products reference it. The
+         *      label is the display text and is what relabelling is for.
+         *
+         *      <p>404 when the value exists but belongs to a different attribute than the one in the path.
+         *
+         *     **Requires permission:** `catalog.attribute.write`.
+         *
+         *     **Concurrency** — send back the `version` you read. If the record has been changed by someone else since, this returns **409 `VERSION_CONFLICT`** with a `version` field error and writes nothing. Re-read it, show the operator what moved, and submit again with the new `version`.
+         */
         put: operations["updateValue"];
         post?: never;
         delete?: never;
@@ -152,7 +253,16 @@ export interface paths {
         };
         get?: never;
         put?: never;
-        /** @description **Requires permission:** `catalog.attribute.write`. */
+        /**
+         * Retires a value from new selection
+         * @description Retires a value from new selection. There is no delete.
+         *
+         *      <p><b>Refuses while a non-archived variant still carries it</b> — as part of its combination or
+         *      as a selected spec value. The combination case is the serious one: the value identifies a SKU
+         *      that has stock against it and order lines pointing at it.
+         *
+         *     **Requires permission:** `catalog.attribute.write`.
+         */
         post: operations["deactivateValue"];
         delete?: never;
         options?: never;
@@ -169,7 +279,12 @@ export interface paths {
         };
         get?: never;
         put?: never;
-        /** @description **Requires permission:** `catalog.attribute.write`. */
+        /**
+         * Offers the value for selection again.
+         * @description Offers the value for selection again. Its position in the set is unchanged.
+         *
+         *     **Requires permission:** `catalog.attribute.write`.
+         */
         post: operations["reactivateValue"];
         delete?: never;
         options?: never;
@@ -186,7 +301,12 @@ export interface paths {
         };
         get?: never;
         put?: never;
-        /** @description **Requires permission:** `catalog.attribute.write`. */
+        /**
+         * Orders the values of one attribute.
+         * @description Orders the values of one attribute. Every id has to belong to it.
+         *
+         *     **Requires permission:** `catalog.attribute.write`.
+         */
         post: operations["reorderValues"];
         delete?: never;
         options?: never;
@@ -201,10 +321,37 @@ export interface paths {
             path?: never;
             cookie?: never;
         };
-        /** @description **Requires permission:** `catalog.attribute.read`. */
-        get: operations["get_7"];
-        /** @description **Requires permission:** `catalog.attribute.write`. */
-        put: operations["update_7"];
+        /**
+         * The attribute with its values, in one query.
+         * @description The attribute with its values, in one query.
+         *
+         *     **Requires permission:** `catalog.attribute.read`.
+         */
+        get: operations["get_10"];
+        /**
+         * Edits an attribute
+         * @description Edits an attribute.
+         *
+         *      <p><b><code>code</code> and <code>kind</code> are immutable and must match what is stored.</b> They are
+         *      carried in the payload and compared rather than omitted, so an attempted change is a rejection
+         *      instead of a 200 for something that did not happen (D2.11). A code is what imports and product
+         *      data name the attribute by; a kind decides whether the attribute defines variants or describes
+         *      them, and switching it would retroactively change what every product carrying it means.
+         *
+         *      <p><b><code>dataType</code> is fixed once the attribute has any value</b>, active or not — changing
+         *      it would leave those values in a shape nothing can read. It is freely editable before then.
+         *
+         *      <p><b><code>groupId</code> must name an existing group, and an active one</b> if this is a change of
+         *      group. An attribute whose section was deactivated afterwards stays editable, so tidying the
+         *      form does not freeze what was in it.
+         *
+         *      <p><code>name</code> is what renaming is for and is always free.
+         *
+         *     **Requires permission:** `catalog.attribute.write`.
+         *
+         *     **Concurrency** — send back the `version` you read. If the record has been changed by someone else since, this returns **409 `VERSION_CONFLICT`** with a `version` field error and writes nothing. Re-read it, show the operator what moved, and submit again with the new `version`.
+         */
+        put: operations["update_10"];
         post?: never;
         delete?: never;
         options?: never;
@@ -221,8 +368,21 @@ export interface paths {
         };
         get?: never;
         put?: never;
-        /** @description **Requires permission:** `catalog.attribute.write`. */
-        post: operations["deactivate_2"];
+        /**
+         * Retires the attribute from new selection
+         * @description Retires the attribute from new selection. There is no delete.
+         *
+         *      <p><b>Refuses while a non-archived product uses it as an option axis.</b> Those products'
+         *      variants are defined by it, so retiring the axis would leave a variant matrix built on
+         *      something the catalog says is gone — and nothing would fail at the moment it happened.
+         *
+         *      <p><b>A spec in use does not block.</b> Deactivating it stops the attribute being offered for
+         *      new products and leaves every existing description readable, which is what deactivation has
+         *      always meant.
+         *
+         *     **Requires permission:** `catalog.attribute.write`.
+         */
+        post: operations["deactivate_3"];
         delete?: never;
         options?: never;
         head?: never;
@@ -238,8 +398,13 @@ export interface paths {
         };
         get?: never;
         put?: never;
-        /** @description **Requires permission:** `catalog.attribute.write`. */
-        post: operations["reactivate_1"];
+        /**
+         * Offers the attribute for selection again.
+         * @description Offers the attribute for selection again. Its values keep whatever state they were left in.
+         *
+         *     **Requires permission:** `catalog.attribute.write`.
+         */
+        post: operations["reactivate_2"];
         delete?: never;
         options?: never;
         head?: never;
@@ -255,7 +420,16 @@ export interface paths {
         };
         get?: never;
         put?: never;
-        /** @description **Requires permission:** `catalog.attribute.write`. */
+        /**
+         * Sets the display order of the library in one call
+         * @description Sets the display order of the library in one call.
+         *
+         *      <p>A literal path segment rather than <code>PUT /{id</code>} with a position, so it cannot collide
+         *      with the id route and so two operators dragging rows at once cannot interleave into an order
+         *      neither of them chose.
+         *
+         *     **Requires permission:** `catalog.attribute.write`.
+         */
         post: operations["reorder_2"];
         delete?: never;
         options?: never;
@@ -270,8 +444,15 @@ export interface paths {
             path?: never;
             cookie?: never;
         };
-        /** @description **Requires permission:** `audit.read`. */
-        get: operations["list_11"];
+        /**
+         * Filtered, paginated, newest first
+         * @description Filtered, paginated, newest first.
+         *
+         *      <p><code>from</code> is inclusive, <code>to</code> exclusive. Both are instants in UTC.
+         *
+         *     **Requires permission:** `audit.read`.
+         */
+        get: operations["list_15"];
         put?: never;
         post?: never;
         delete?: never;
@@ -289,7 +470,21 @@ export interface paths {
         };
         get?: never;
         put?: never;
-        /** @description **No authentication required.** The invited member has no credential yet — the token is the credential. */
+        /**
+         * Accepts an invite: consumes the token, sets the first password, and activates the account
+         * @description Accepts an invite: consumes the token, sets the first password, and activates the account.
+         *
+         *      <p>Unauthenticated — the invited member has no credential yet, and the token is the credential.
+         *
+         *      <p><b>Refuses</b> when the token is unknown, already used, or expired, and when the password
+         *      fails the password policy. The token is single-use: a second call with the same one fails even
+         *      if the first succeeded, so a retry cannot silently reset a password someone has since chosen.
+         *
+         *      <p>No session is issued. The member logs in normally afterwards, which is what records the
+         *      login event.
+         *
+         *     **No authentication required.** The invited member has no credential yet — the token is the credential.
+         */
         post: operations["acceptInvite"];
         delete?: never;
         options?: never;
@@ -306,7 +501,19 @@ export interface paths {
         };
         get?: never;
         put?: never;
-        /** @description **No authentication required.** Completes a reset for someone who by definition cannot log in. */
+        /**
+         * Completes a self-service reset: consumes the token and sets the new password
+         * @description Completes a self-service reset: consumes the token and sets the new password.
+         *
+         *      <p>Unauthenticated — this is for someone who by definition cannot log in.
+         *
+         *      <p><b>Refuses</b> on an unknown, used or expired token, and on a password that fails the
+         *      policy. The token is single-use. Every existing session belonging to that member is revoked on
+         *      success: a reset is usually a response to a suspected compromise, and leaving the old sessions
+         *      alive would defeat it.
+         *
+         *     **No authentication required.** Completes a reset for someone who by definition cannot log in.
+         */
         post: operations["completePasswordReset"];
         delete?: never;
         options?: never;
@@ -323,7 +530,17 @@ export interface paths {
         };
         get?: never;
         put?: never;
-        /** @description **No authentication required.** Establishes the credential everything else requires. */
+        /**
+         * Logs in, and issues the session on both transports at once
+         * @description Logs in, and issues the session on both transports at once.
+         *
+         *      <p>The token is in the body <i>and</i> in an <code>httpOnly</code> cookie. A browser client ignores
+         *      the body value entirely and lets the cookie do the work (D2.16); an API client reads the body
+         *      and sends a bearer header. Same token, same session row — so this is one credential offered two
+         *      ways, not two credentials.
+         *
+         *     **No authentication required.** Establishes the credential everything else requires.
+         */
         post: operations["login"];
         delete?: never;
         options?: never;
@@ -340,7 +557,17 @@ export interface paths {
         };
         get?: never;
         put?: never;
-        /** @description **Requires authentication.** No specific permission beyond a live session. */
+        /**
+         * Revokes the session and clears the cookie
+         * @description Revokes the session and clears the cookie.
+         *
+         *      <p>Both, and in that order of importance. Clearing the cookie alone would leave a live session
+         *      that anyone holding the token — a copy in a proxy log, a Postman tab — could keep using;
+         *      revoking alone would leave the browser presenting a dead credential and getting 401s it cannot
+         *      clear. The revocation is what actually ends the session; the cookie removal is housekeeping.
+         *
+         *     **Requires authentication.** No specific permission beyond a live session.
+         */
         post: operations["logout"];
         delete?: never;
         options?: never;
@@ -357,7 +584,15 @@ export interface paths {
         };
         get?: never;
         put?: never;
-        /** @description **No authentication required.** Someone who has forgotten their password cannot authenticate. */
+        /**
+         * Self-service password reset
+         * @description Self-service password reset.
+         *
+         *      <p>Returns the same body whether or not the email matches a member — see {@link com.oms.service.team.controller.admin.AdminAuthController  GenericAcknowledgement}. The link is logged by the email sender; it is deliberately not in the
+         *      response, because this endpoint is unauthenticated and anyone could call it for anyone.
+         *
+         *     **No authentication required.** Someone who has forgotten their password cannot authenticate.
+         */
         post: operations["requestPasswordReset"];
         delete?: never;
         options?: never;
@@ -372,11 +607,33 @@ export interface paths {
             path?: never;
             cookie?: never;
         };
-        /** @description **Requires permission:** `inventory.read`. */
-        get: operations["list_6"];
+        /**
+         * Lists batches, newest first
+         * @description Lists batches, newest first. Every filter is optional.
+         *
+         *      <p><code>expiresBefore</code> is the one to reach for when chasing expiry; <code>GET
+         *      /api/admin/stock/expiring-soon</code> answers the same question against quantities actually on hand,
+         *      which is usually what an operator means.
+         *
+         *     **Requires permission:** `inventory.read`.
+         */
+        get: operations["list_10"];
         put?: never;
-        /** @description **Requires permission:** `inventory.adjust`. */
-        post: operations["create_6"];
+        /**
+         * Registers a batch against a variant, before stock can be received into it
+         * @description Registers a batch against a variant, before stock can be received into it.
+         *
+         *      <p><b>Refuses unless the variant is <code>batchTracked</code></b> — an untracked variant holds stock
+         *      against no batch at all, and creating one for it would make its quantities ambiguous. Batch
+         *      tracking is a catalog decision, set on the variant (D4.12).
+         *
+         *      <p><b>Also refuses</b> when the batch number is already used for that variant, and when the
+         *      variant has a shelf life but no <code>expiresOn</code> is given — a shelf life exists precisely so
+         *      that an expiry can be computed, and a batch without one cannot be swept.
+         *
+         *     **Requires permission:** `inventory.adjust`.
+         */
+        post: operations["create_9"];
         delete?: never;
         options?: never;
         head?: never;
@@ -390,8 +647,13 @@ export interface paths {
             path?: never;
             cookie?: never;
         };
-        /** @description **Requires permission:** `inventory.read`. */
-        get: operations["get_8"];
+        /**
+         * One batch, by id.
+         * @description One batch, by id.
+         *
+         *     **Requires permission:** `inventory.read`.
+         */
+        get: operations["get_12"];
         put?: never;
         post?: never;
         delete?: never;
@@ -407,11 +669,36 @@ export interface paths {
             path?: never;
             cookie?: never;
         };
-        /** @description **Requires permission:** `catalog.brand.read`. */
-        get: operations["list_5"];
+        /**
+         * Lists brands, newest merchandising order first
+         * @description Lists brands, newest merchandising order first.
+         *
+         *      <p>Every brand, whatever its lifecycle — including archived ones. This is the operator's view;
+         *      filter with <code>status</code> and <code>live</code> to narrow it.
+         *
+         *      <p><code>search</code> matches the name or the slug, case-insensitively, as a substring. <code>%</code>
+         *      and <code>_</code> in the term are matched literally rather than as wildcards, so a brand called
+         *      "50% Whey" searches the way it reads.
+         *
+         *     **Requires permission:** `catalog.brand.read`.
+         */
+        get: operations["list_9"];
         put?: never;
-        /** @description **Requires permission:** `catalog.brand.write`. */
-        post: operations["create_5"];
+        /**
+         * Creates a brand, in <code>DRAFT</code> and not live
+         * @description Creates a brand, in <code>DRAFT</code> and not live.
+         *
+         *      <p><b>Refuses when the slug is already taken</b> — by any brand, archived included. A retired
+         *      brand keeps its slug forever, because handing it to a new one would silently point every old
+         *      deep link at different content.
+         *
+         *      <p>The slug is derived from the name when absent. It is not made unique automatically: a
+         *      collision is reported rather than worked around, because the operator is the one who knows
+         *      which of the two names is wrong.
+         *
+         *     **Requires permission:** `catalog.brand.write`.
+         */
+        post: operations["create_8"];
         delete?: never;
         options?: never;
         head?: never;
@@ -425,10 +712,33 @@ export interface paths {
             path?: never;
             cookie?: never;
         };
-        /** @description **Requires permission:** `catalog.brand.read`. */
-        get: operations["get_6"];
-        /** @description **Requires permission:** `catalog.brand.write`. */
-        put: operations["update_6"];
+        /**
+         * One brand, whatever its lifecycle
+         * @description One brand, whatever its lifecycle.
+         *
+         *      <p>The response carries <code>version</code>. Send it back on the update — that is what makes a
+         *      concurrent edit detectable rather than silently last-write-wins.
+         *
+         *     **Requires permission:** `catalog.brand.read`.
+         */
+        get: operations["get_9"];
+        /**
+         * Edits the brand's content
+         * @description Edits the brand's content.
+         *
+         *      <p><b>Refuses</b> when the slug is taken by another brand, archived included; when the brand is
+         *      archived; and when <code>status</code> or <code>live</code> differ from what is stored.
+         *
+         *      <p>Those last two are present in the payload and required, and neither is editable here.
+         *      Carrying them is what makes an attempted lifecycle change a rejection rather than a 200 for
+         *      something that did not happen (D2.11) — approving and publishing are their own endpoints, under
+         *      their own permission.
+         *
+         *     **Requires permission:** `catalog.brand.write`.
+         *
+         *     **Concurrency** — send back the `version` you read. If the record has been changed by someone else since, this returns **409 `VERSION_CONFLICT`** with a `version` field error and writes nothing. Re-read it, show the operator what moved, and submit again with the new `version`.
+         */
+        put: operations["update_9"];
         post?: never;
         delete?: never;
         options?: never;
@@ -445,7 +755,16 @@ export interface paths {
         };
         get?: never;
         put?: never;
-        /** @description **Requires permission:** `catalog.brand.publish`. */
+        /**
+         * Approves the brand page — it becomes eligible to go live, and does not go live
+         * @description Approves the brand page — it becomes eligible to go live, and does not go live.
+         *
+         *      <p>Two steps rather than one because status and visibility are two axes (D4.8). Under 1.0's
+         *      single enum there was no way to say "this page is finished but not on sale yet", and no way to
+         *      take a page off sale without either reverting it to a draft or archiving it.
+         *
+         *     **Requires permission:** `catalog.brand.publish`.
+         */
         post: operations["activate_2"];
         delete?: never;
         options?: never;
@@ -462,7 +781,19 @@ export interface paths {
         };
         get?: never;
         put?: never;
-        /** @description **Requires permission:** `catalog.brand.publish`. */
+        /**
+         * Retires the brand
+         * @description Retires the brand. This is the only retirement — there is no delete.
+         *
+         *      <p><b>Refuses while any non-archived product still points at this brand.</b> Archiving anyway
+         *      would leave those products referencing a brand screen nobody can reach: visible in the catalog,
+         *      unreachable in the app, and nothing failing at the moment it happened. Archive or reassign the
+         *      products first.
+         *
+         *      <p>The slug stays reserved afterwards, so a future brand cannot inherit this one's deep links.
+         *
+         *     **Requires permission:** `catalog.brand.publish`.
+         */
         post: operations["archive_2"];
         delete?: never;
         options?: never;
@@ -479,7 +810,17 @@ export interface paths {
         };
         get?: never;
         put?: never;
-        /** @description **Requires permission:** `catalog.brand.publish`. */
+        /**
+         * Puts the brand on sale
+         * @description Puts the brand on sale.
+         *
+         *      <p><b>Refuses unless the brand is <code>ACTIVE</code>.</b> A draft or an archived brand cannot be
+         *      published; approve it first. Publishing is a distinct audited event rather than a status field
+         *      on the update payload, because going live is what later has to invalidate a cache and reindex a
+         *      search.
+         *
+         *     **Requires permission:** `catalog.brand.publish`.
+         */
         post: operations["publish_2"];
         delete?: never;
         options?: never;
@@ -496,7 +837,12 @@ export interface paths {
         };
         get?: never;
         put?: never;
-        /** @description **Requires permission:** `catalog.brand.publish`. */
+        /**
+         * Takes the brand off sale.
+         * @description Takes the brand off sale. It stays approved, so putting it back is one call.
+         *
+         *     **Requires permission:** `catalog.brand.publish`.
+         */
         post: operations["unpublish_2"];
         delete?: never;
         options?: never;
@@ -513,7 +859,16 @@ export interface paths {
         };
         get?: never;
         put?: never;
-        /** @description **Requires permission:** `catalog.brand.write`. */
+        /**
+         * Sets the merchandising order in one call
+         * @description Sets the merchandising order in one call.
+         *
+         *      <p>A literal path segment rather than <code>PUT /{id</code>} with a position, so it cannot collide
+         *      with the id route and so two operators dragging rows at once cannot interleave into an order
+         *      neither of them chose.
+         *
+         *     **Requires permission:** `catalog.brand.write`.
+         */
         post: operations["reorder_1"];
         delete?: never;
         options?: never;
@@ -528,11 +883,33 @@ export interface paths {
             path?: never;
             cookie?: never;
         };
-        /** @description **Requires permission:** `catalog.category.read`. */
-        get: operations["list_4"];
+        /**
+         * Lists categories flat, in merchandising order within each parent
+         * @description Lists categories flat, in merchandising order within each parent.
+         *
+         *      <p>Flat rather than nested — <code>GET /tree</code> is the nested shape for a picker. Both are
+         *      served; this one is what a filterable table wants.
+         *
+         *      <p><code>search</code> matches name or slug as a literal substring, so <code>%</code> and <code>_</code> in
+         *      the term are not wildcards.
+         *
+         *     **Requires permission:** `catalog.category.read`.
+         */
+        get: operations["list_8"];
         put?: never;
-        /** @description **Requires permission:** `catalog.category.write`. */
-        post: operations["create_4"];
+        /**
+         * Creates a category, in <code>DRAFT</code> and not live
+         * @description Creates a category, in <code>DRAFT</code> and not live.
+         *
+         *      <p><b>Refuses</b> when the slug is already taken by any category, archived included; with 404
+         *      when <code>parentId</code> names no category; and when the parent's depth plus one would exceed the
+         *      tree's maximum depth.
+         *
+         *      <p>A null <code>parentId</code> creates a root.
+         *
+         *     **Requires permission:** `catalog.category.write`.
+         */
+        post: operations["create_7"];
         delete?: never;
         options?: never;
         head?: never;
@@ -546,10 +923,31 @@ export interface paths {
             path?: never;
             cookie?: never;
         };
-        /** @description **Requires permission:** `catalog.category.read`. */
-        get: operations["get_5"];
-        /** @description **Requires permission:** `catalog.category.write`. */
-        put: operations["update_5"];
+        /**
+         * One category, whatever its lifecycle
+         * @description One category, whatever its lifecycle.
+         *
+         *      <p>Carries <code>version</code>; send it back on the update so a concurrent edit is detected.
+         *
+         *     **Requires permission:** `catalog.category.read`.
+         */
+        get: operations["get_8"];
+        /**
+         * Edits the category's content
+         * @description Edits the category's content.
+         *
+         *      <p><b>Refuses</b> on a taken slug, on an archived category, and when <code>status</code> or <code>
+         *      live</code> differ from what is stored (D2.11).
+         *
+         *      <p><b><code>parentId</code> is deliberately absent from this payload.</b> Reparenting is <code>POST
+         *      /{id</code>/move}, which enforces the cycle and depth rules; allowing it here would make those rules
+         *      bypassable by renaming the category at the same time.
+         *
+         *     **Requires permission:** `catalog.category.write`.
+         *
+         *     **Concurrency** — send back the `version` you read. If the record has been changed by someone else since, this returns **409 `VERSION_CONFLICT`** with a `version` field error and writes nothing. Re-read it, show the operator what moved, and submit again with the new `version`.
+         */
+        put: operations["update_8"];
         post?: never;
         delete?: never;
         options?: never;
@@ -566,7 +964,12 @@ export interface paths {
         };
         get?: never;
         put?: never;
-        /** @description **Requires permission:** `catalog.category.publish`. */
+        /**
+         * Approves the category — eligible to go live, not live.
+         * @description Approves the category — eligible to go live, not live. See <code>AdminBrandController</code>.
+         *
+         *     **Requires permission:** `catalog.category.publish`.
+         */
         post: operations["activate_1"];
         delete?: never;
         options?: never;
@@ -583,7 +986,18 @@ export interface paths {
         };
         get?: never;
         put?: never;
-        /** @description **Requires permission:** `catalog.category.publish`. */
+        /**
+         * Retires the category
+         * @description Retires the category. There is no delete.
+         *
+         *      <p><b>Refuses while any subcategory is still live, and while any non-archived product is still
+         *      filed under it.</b> Either would strand real catalog behind a node nobody can navigate to.
+         *      Unpublish the subtree from the leaves up, and re-file the products first.
+         *
+         *      <p>The slug stays reserved afterwards.
+         *
+         *     **Requires permission:** `catalog.category.publish`.
+         */
         post: operations["archive_1"];
         delete?: never;
         options?: never;
@@ -600,7 +1014,12 @@ export interface paths {
         };
         get?: never;
         put?: never;
-        /** @description **Requires permission:** `catalog.category.write`. */
+        /**
+         * Reparents a category and everything under it.
+         * @description Reparents a category and everything under it. Null parent makes it a root.
+         *
+         *     **Requires permission:** `catalog.category.write`.
+         */
         post: operations["move"];
         delete?: never;
         options?: never;
@@ -617,7 +1036,12 @@ export interface paths {
         };
         get?: never;
         put?: never;
-        /** @description **Requires permission:** `catalog.category.publish`. */
+        /**
+         * Takes the category live.
+         * @description Takes the category live. Refused unless every ancestor is already live (D4.7).
+         *
+         *     **Requires permission:** `catalog.category.publish`.
+         */
         post: operations["publish_1"];
         delete?: never;
         options?: never;
@@ -634,7 +1058,12 @@ export interface paths {
         };
         get?: never;
         put?: never;
-        /** @description **Requires permission:** `catalog.category.publish`. */
+        /**
+         * Takes the category off sale.
+         * @description Takes the category off sale. Refused while it still has live subcategories.
+         *
+         *     **Requires permission:** `catalog.category.publish`.
+         */
         post: operations["unpublish_1"];
         delete?: never;
         options?: never;
@@ -651,7 +1080,12 @@ export interface paths {
         };
         get?: never;
         put?: never;
-        /** @description **Requires permission:** `catalog.category.write`. */
+        /**
+         * Orders siblings within one parent.
+         * @description Orders siblings within one parent. <code>parentId</code> null orders the roots.
+         *
+         *     **Requires permission:** `catalog.category.write`.
+         */
         post: operations["reorder"];
         delete?: never;
         options?: never;
@@ -666,8 +1100,93 @@ export interface paths {
             path?: never;
             cookie?: never;
         };
-        /** @description **Requires permission:** `catalog.category.read`. */
+        /**
+         * The full hierarchy in one call, for the tree picker
+         * @description The full hierarchy in one call, for the tree picker.
+         *
+         *      <p>Mapped before <code>/{id</code>} in this class purely for readability — the literal segment wins
+         *      the match regardless.
+         *
+         *     **Requires permission:** `catalog.category.read`.
+         */
         get: operations["tree"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/admin/goods-receipts": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Lists posted goods receipts with their lines, most recently received first
+         * @description Lists posted goods receipts with their lines, most recently received first.
+         *
+         *      <p>Every filter optional. <code>search</code> matches the GRN number or the supplier's invoice
+         *      number — the two things somebody holding a piece of paper can actually type.
+         *
+         *     **Requires permission:** `procurement.grn.read`.
+         */
+        get: operations["list_7"];
+        put?: never;
+        /**
+         * Posts a goods receipt against a purchase order, receiving stock into its warehouse
+         * @description Posts a goods receipt against a purchase order, receiving stock into its warehouse.
+         *
+         *      <p>Every accepted unit becomes a <code>RECEIPT</code> stock movement written through the inventory
+         *      service, referencing the purchase order. Rejected quantities are recorded and create <b>no</b>
+         *      movement — they never entered inventory.
+         *
+         *      <p>Refused when:
+         *
+         *      <ul>
+         *        <li>the order is a <code>DRAFT</code> or <code>CANCELLED</code> — a draft was never sent to anybody,
+         *            and a cancelled order was abandoned
+         *        <li>a line would take the total received beyond the ordered quantity plus the configured
+         *            over-receipt tolerance (0% by default). The refusal names the ordered, received and
+         *            attempted quantities
+         *        <li>a batch-tracked variant arrives with no batch, or an untracked one arrives with one
+         *        <li>a line is not on that purchase order, or the same line appears twice
+         *      </ul>
+         *
+         *      <p>For a batch-tracked variant, either name an existing <code>batchId</code> or supply <code>
+         *      batchNumber</code> with its dates and the batch is created inline — the carton is where batch data
+         *      actually arrives. A batch number already recorded for that variant is reused rather than
+         *      refused, so a lot arriving across several deliveries stays one batch.
+         *
+         *      <p>Replaying the same <code>Idempotency-Key</code> returns the receipt the first call posted; it
+         *      does not post a second one.
+         *
+         *     **Requires permission:** `procurement.grn.create`.
+         */
+        post: operations["post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/admin/goods-receipts/{id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * One goods receipt with its lines.
+         * @description One goods receipt with its lines. There is no <code>version</code> — it cannot be edited.
+         *
+         *     **Requires permission:** `procurement.grn.read`.
+         */
+        get: operations["get_11"];
         put?: never;
         post?: never;
         delete?: never;
@@ -683,8 +1202,19 @@ export interface paths {
             path?: never;
             cookie?: never;
         };
-        /** @description **Requires permission:** `team.read`. */
-        get: operations["list_10"];
+        /**
+         * The login audit trail, newest first
+         * @description The login audit trail, newest first. Every filter is optional, including all of them at once.
+         *
+         *      <p>Records successes and failures alike, and failures for addresses that belong to nobody —
+         *      which is the point: an attempt against an unknown address is exactly what someone probing looks
+         *      like, and it has no member id to be filed under. Filter by <code>email</code> to see those.
+         *
+         *      <p>Append-only. There is no endpoint that edits or deletes an event, and there will not be one.
+         *
+         *     **Requires permission:** `team.read`.
+         */
+        get: operations["list_14"];
         put?: never;
         post?: never;
         delete?: never;
@@ -700,8 +1230,17 @@ export interface paths {
             path?: never;
             cookie?: never;
         };
-        /** @description **Requires permission:** `team.read`. */
-        get: operations["list_9"];
+        /**
+         * The whole permission catalog, grouped by domain, for the role editor
+         * @description The whole permission catalog, grouped by domain, for the role editor.
+         *
+         *      <p>Static: these are the permissions this build of the service enforces, not rows in a table. A
+         *      key that is not in this list is refused by the role endpoints, so this is the authoritative
+         *      answer to "what may a role grant".
+         *
+         *     **Requires permission:** `team.read`.
+         */
+        get: operations["list_13"];
         put?: never;
         post?: never;
         delete?: never;
@@ -717,11 +1256,32 @@ export interface paths {
             path?: never;
             cookie?: never;
         };
-        /** @description **Requires permission:** `catalog.product.read`. */
-        get: operations["list_3"];
+        /**
+         * Every filter is optional.
+         * @description Every filter is optional. With none, this is the whole catalog by name.
+         *
+         *     **Requires permission:** `catalog.product.read`.
+         */
+        get: operations["list_6"];
         put?: never;
-        /** @description **Requires permission:** `catalog.product.write`. */
-        post: operations["create_3"];
+        /**
+         * Creates a product, in <code>DRAFT</code> and not live, together with its default variant
+         * @description Creates a product, in <code>DRAFT</code> and not live, together with its default variant.
+         *
+         *      <p>A product always has at least one variant (D4.9), so one is created here — a product is not
+         *      the thing a warehouse holds. <code>skuCode</code> on this payload is that variant's, derived from
+         *      the slug when absent.
+         *
+         *      <p><b>Refuses</b> when the slug is taken by any product, archived included; when the SKU code
+         *      is taken by any variant; when <code>brandId</code> names no brand (404) or an archived one; when
+         *      <code>categoryIds</code> repeats an id or contains one that does not exist; and when more than one
+         *      category is given with no <code>primaryCategoryId</code> to choose between them.
+         *
+         *      <p>Categories are optional at creation. A primary category is only required to go live.
+         *
+         *     **Requires permission:** `catalog.product.write`.
+         */
+        post: operations["create_6"];
         delete?: never;
         options?: never;
         head?: never;
@@ -735,10 +1295,34 @@ export interface paths {
             path?: never;
             cookie?: never;
         };
-        /** @description **Requires permission:** `catalog.product.read`. */
-        get: operations["get_4"];
-        /** @description **Requires permission:** `catalog.product.write`. */
-        put: operations["update_4"];
+        /**
+         * The product with its categories, option axes, variants and each variant's combination
+         * @description The product with its categories, option axes, variants and each variant's combination.
+         *
+         *      <p>Assembled from a fixed number of queries whatever the product contains — see <code>
+         *      ProductService#detail</code>.
+         *
+         *     **Requires permission:** `catalog.product.read`.
+         */
+        get: operations["get_7"];
+        /**
+         * Edits the product's content
+         * @description Edits the product's content.
+         *
+         *      <p><b>Refuses</b> when the slug is taken by another product; when the product is archived; when
+         *      a changed <code>brandId</code> names no brand or an archived one; and when <code>status</code> or <code>
+         *      live</code> differ from what is stored (D2.11) — submit, approve, reject, publish and archive are
+         *      each their own audited endpoint.
+         *
+         *      <p>Renaming the product renames its sole default variant, which is named after it. A product
+         *      with several variants names them after their option combination instead, and those are
+         *      untouched here.
+         *
+         *     **Requires permission:** `catalog.product.write`.
+         *
+         *     **Concurrency** — send back the `version` you read. If the record has been changed by someone else since, this returns **409 `VERSION_CONFLICT`** with a `version` field error and writes nothing. Re-read it, show the operator what moved, and submit again with the new `version`.
+         */
+        put: operations["update_7"];
         post?: never;
         delete?: never;
         options?: never;
@@ -755,8 +1339,13 @@ export interface paths {
         };
         get?: never;
         put?: never;
-        /** @description **Requires permission:** `catalog.product.approve`. */
-        post: operations["approve"];
+        /**
+         * Approves the product for sale.
+         * @description Approves the product for sale. Refused while any variant cannot be invoiced or shipped (§7).
+         *
+         *     **Requires permission:** `catalog.product.approve`.
+         */
+        post: operations["approve_1"];
         delete?: never;
         options?: never;
         head?: never;
@@ -772,7 +1361,18 @@ export interface paths {
         };
         get?: never;
         put?: never;
-        /** @description **Requires permission:** `catalog.product.publish`. */
+        /**
+         * Retires the product
+         * @description Retires the product. There is no delete, for a product or for a variant.
+         *
+         *      <p><b>Refuses unless the current status can transition to <code>ARCHIVED</code></b>, and takes the
+         *      product off sale on the way. An archived product cannot be edited or republished afterwards: it
+         *      is a historical record that old orders and audit entries refer to.
+         *
+         *      <p>Its slug and its variants' SKU codes stay reserved.
+         *
+         *     **Requires permission:** `catalog.product.publish`.
+         */
         post: operations["archive"];
         delete?: never;
         options?: never;
@@ -788,7 +1388,14 @@ export interface paths {
             cookie?: never;
         };
         get?: never;
-        /** @description **Requires permission:** `catalog.product.write`. */
+        /**
+         * Replaces the whole membership set — exactly one primary is a property of the set.
+         * @description Replaces the whole membership set — exactly one primary is a property of the set.
+         *
+         *     **Requires permission:** `catalog.product.write`.
+         *
+         *     **Concurrency** — send back the `version` you read. If the record has been changed by someone else since, this returns **409 `VERSION_CONFLICT`** with a `version` field error and writes nothing. Re-read it, show the operator what moved, and submit again with the new `version`.
+         */
         put: operations["setCategories"];
         post?: never;
         delete?: never;
@@ -806,7 +1413,12 @@ export interface paths {
         };
         get?: never;
         put?: never;
-        /** @description **Requires permission:** `catalog.product.publish`. */
+        /**
+         * Puts it on sale.
+         * @description Puts it on sale. Refused unless the brand and primary category are themselves live (§7).
+         *
+         *     **Requires permission:** `catalog.product.publish`.
+         */
         post: operations["publish"];
         delete?: never;
         options?: never;
@@ -823,7 +1435,15 @@ export interface paths {
         };
         get?: never;
         put?: never;
-        /** @description **Requires permission:** `catalog.product.approve`. */
+        /**
+         * Sends a submission back to its author
+         * @description Sends a submission back to its author.
+         *
+         *      <p><b>Refuses unless the product is <code>IN_REVIEW</code>.</b> The submission is undone and nothing
+         *      else is: content, variants, categories and images are exactly as they were.
+         *
+         *     **Requires permission:** `catalog.product.approve`.
+         */
         post: operations["reject"];
         delete?: never;
         options?: never;
@@ -840,7 +1460,14 @@ export interface paths {
         };
         get?: never;
         put?: never;
-        /** @description **Requires permission:** `catalog.product.write`. */
+        /**
+         * Sends a draft for review
+         * @description Sends a draft for review.
+         *
+         *      <p>Under <code>write</code>, not <code>approve</code>: asking for a review is something the author does.
+         *
+         *     **Requires permission:** `catalog.product.write`.
+         */
         post: operations["submitForReview"];
         delete?: never;
         options?: never;
@@ -857,7 +1484,15 @@ export interface paths {
         };
         get?: never;
         put?: never;
-        /** @description **Requires permission:** `catalog.product.publish`. */
+        /**
+         * Takes the product off sale
+         * @description Takes the product off sale.
+         *
+         *      <p>The status is untouched — it stays approved, so putting it back on sale is one call. This is
+         *      the operation to reach for rather than archiving something that is only temporarily out.
+         *
+         *     **Requires permission:** `catalog.product.publish`.
+         */
         post: operations["unpublish"];
         delete?: never;
         options?: never;
@@ -872,10 +1507,27 @@ export interface paths {
             path?: never;
             cookie?: never;
         };
-        /** @description **Requires permission:** `catalog.product.read`. */
+        /**
+         * The product's images, in display order
+         * @description The product's images, in display order.
+         *
+         *      <p>The product's own — not what a variant would show. A variant with no images of its own falls
+         *      back to these (D4.14), and <code>GET /variants/&amp;#123;variantId&amp;#125;/images</code> is the endpoint
+         *      that resolves that.
+         *
+         *     **Requires permission:** `catalog.product.read`.
+         */
         get: operations["productImages"];
         put?: never;
-        /** @description **Requires permission:** `catalog.product.write`. */
+        /**
+         * Adds an image to the product, appended to the end of the order
+         * @description Adds an image to the product, appended to the end of the order.
+         *
+         *      <p>Takes a URL: this service stores the reference, it does not accept an upload. <code>url</code>
+         *      must not be blank.
+         *
+         *     **Requires permission:** `catalog.product.write`.
+         */
         post: operations["addProductImage"];
         delete?: never;
         options?: never;
@@ -891,10 +1543,32 @@ export interface paths {
             cookie?: never;
         };
         get?: never;
-        /** @description **Requires permission:** `catalog.product.write`. */
+        /**
+         * Edits an image's URL or alt text
+         * @description Edits an image's URL or alt text.
+         *
+         *      <p>Position is not editable here — <code>POST /images/reorder</code> takes the whole ordering. 404
+         *      when the image belongs to a different product than the one in the path, which is what stops one
+         *      product's images being edited through another's URL.
+         *
+         *     **Requires permission:** `catalog.product.write`.
+         *
+         *     **Concurrency** — send back the `version` you read. If the record has been changed by someone else since, this returns **409 `VERSION_CONFLICT`** with a `version` field error and writes nothing. Re-read it, show the operator what moved, and submit again with the new `version`.
+         */
         put: operations["updateProductImage"];
         post?: never;
-        /** @description **Requires permission:** `catalog.product.write`. */
+        /**
+         * Removes an image from the product
+         * @description Removes an image from the product.
+         *
+         *      <p>A real delete: an image is a reference, not a record anything accounts for. Removing the
+         *      last one leaves the product with no images, which is allowed — it is a completeness question
+         *      for approval, not a reason to refuse the removal.
+         *
+         *      <p>404 when the image belongs to a different product than the one in the path.
+         *
+         *     **Requires permission:** `catalog.product.write`.
+         */
         delete: operations["removeProductImage"];
         options?: never;
         head?: never;
@@ -910,7 +1584,16 @@ export interface paths {
         };
         get?: never;
         put?: never;
-        /** @description **Requires permission:** `catalog.product.write`. */
+        /**
+         * Sets the order of the product's images, first to last
+         * @description Sets the order of the product's images, first to last. The first is the one used as the
+         *      primary.
+         *
+         *      <p><b>Refuses</b> when an id is repeated, when one names no image, or when one belongs to a
+         *      different product.
+         *
+         *     **Requires permission:** `catalog.product.write`.
+         */
         post: operations["reorderProductImages"];
         delete?: never;
         options?: never;
@@ -925,10 +1608,26 @@ export interface paths {
             path?: never;
             cookie?: never;
         };
-        /** @description **Requires permission:** `catalog.product.read`. */
+        /**
+         * The option axes this product's variants are defined by, in the order they read
+         * @description The option axes this product's variants are defined by, in the order they read.
+         *
+         *      <p>Empty for a simple product. The order is the order a variant's name reads in, so it is
+         *      merchandising rather than presentation detail.
+         *
+         *     **Requires permission:** `catalog.product.read`.
+         */
         get: operations["listOptions"];
         put?: never;
-        /** @description **Requires permission:** `catalog.product.write`. */
+        /**
+         * Declares an option axis
+         * @description Declares an option axis.
+         *
+         *      <p>Only while the product has exactly one variant, and the request has to say what that variant
+         *      becomes on the new axis — the row is kept, with its id, SKU code and stock history (D4.9).
+         *
+         *     **Requires permission:** `catalog.product.write`.
+         */
         post: operations["addOption"];
         delete?: never;
         options?: never;
@@ -946,7 +1645,12 @@ export interface paths {
         get?: never;
         put?: never;
         post?: never;
-        /** @description **Requires permission:** `catalog.product.write`. */
+        /**
+         * Removes an axis.
+         * @description Removes an axis. Refused while the product has more than one variant.
+         *
+         *     **Requires permission:** `catalog.product.write`.
+         */
         delete: operations["removeOption"];
         options?: never;
         head?: never;
@@ -962,7 +1666,12 @@ export interface paths {
         };
         get?: never;
         put?: never;
-        /** @description **Requires permission:** `catalog.product.write`. */
+        /**
+         * The order the axes read in — which is the order a variant's name reads.
+         * @description The order the axes read in — which is the order a variant's name reads.
+         *
+         *     **Requires permission:** `catalog.product.write`.
+         */
         post: operations["reorderOptions"];
         delete?: never;
         options?: never;
@@ -977,9 +1686,40 @@ export interface paths {
             path?: never;
             cookie?: never;
         };
-        /** @description **Requires permission:** `catalog.product.read`. */
+        /**
+         * The product's own spec values — one answer for every variant
+         * @description The product's own spec values — one answer for every variant.
+         *
+         *      <p>Variant-level specs are read from <code>GET /variants/&amp;#123;variantId&amp;#125;/specs</code>. An
+         *      attribute's <code>appliesTo</code> decides which of the two it belongs to, so the sets never
+         *      overlap.
+         *
+         *     **Requires permission:** `catalog.product.read`.
+         */
         get: operations["productSpecs"];
-        /** @description **Requires permission:** `catalog.product.write`. */
+        /**
+         * Sets a product-level spec value
+         * @description Sets a product-level spec value.
+         *
+         *      <p>Replaces the value for single-valued types; adds for <code>MULTI_SELECT</code>, where several is
+         *      the point. *
+         *
+         *      <p><b>Refuses</b> when the attribute is an <code>OPTION</code> rather than a <code>SPEC</code> — an
+         *      option identifies a variant, it does not describe one; when the attribute's <code>appliesTo</code>
+         *      does not match this level; when the attribute is deactivated; when the supplied value does not
+         *      match the attribute's data type, naming the field that was expected; when <code>
+         *      attributeValueId</code> is not a value of that attribute, or is a deactivated one.
+         *
+         *      <p>Exactly one of <code>valueText</code>, <code>valueNumber</code>, <code>valueBoolean</code> and <code>
+         *      attributeValueId</code> is required, and which one is decided by the attribute's data type — bean
+         *      validation cannot express "whichever matches a row in another table", so the refusal says which
+         *      was expected.
+         *
+         *      <p>Carries no <code>version</code>: this is an upsert keyed by attribute, not an edit of a row the
+         *      client read, so there is no version for it to have sent back.
+         *
+         *     **Requires permission:** `catalog.product.write`.
+         */
         put: operations["setProductSpec"];
         post?: never;
         delete?: never;
@@ -998,7 +1738,15 @@ export interface paths {
         get?: never;
         put?: never;
         post?: never;
-        /** @description **Requires permission:** `catalog.product.write`. */
+        /**
+         * Clears the product-level value for one attribute
+         * @description Clears the product-level value for one attribute.
+         *
+         *      <p>Clearing something that was never set is not an error — the endpoint states the intended
+         *      result rather than performing a delete, so a client retrying is safe.
+         *
+         *     **Requires permission:** `catalog.product.write`.
+         */
         delete: operations["clearProductSpec"];
         options?: never;
         head?: never;
@@ -1012,10 +1760,27 @@ export interface paths {
             path?: never;
             cookie?: never;
         };
-        /** @description **Requires permission:** `catalog.product.read`. */
+        /**
+         * The product's variants, in display order
+         * @description The product's variants, in display order.
+         *
+         *      <p>Each carries its own <code>version</code> — a variant is a row of its own and is locked
+         *      separately from the product — plus <code>missingForSale</code>, which lists what approval is still
+         *      waiting on for that variant. An empty <code>missingForSale</code> means it is ready.
+         *
+         *     **Requires permission:** `catalog.product.read`.
+         */
         get: operations["listVariants"];
         put?: never;
-        /** @description **Requires permission:** `catalog.product.write`. */
+        /**
+         * Creates an additional variant from a combination
+         * @description Creates an additional variant from a combination.
+         *
+         *      <p>Only meaningful once the product declares an axis: a product with none has exactly one
+         *      variant (D4.9), and that one was created with the product.
+         *
+         *     **Requires permission:** `catalog.product.write`.
+         */
         post: operations["createVariant"];
         delete?: never;
         options?: never;
@@ -1031,7 +1796,30 @@ export interface paths {
             cookie?: never;
         };
         get?: never;
-        /** @description **Requires permission:** `catalog.product.write`. */
+        /**
+         * Edits a variant
+         * @description Edits a variant.
+         *
+         *      <p><b><code>skuCode</code> is frozen once the product has ever been approved</b> (§3). Before then a
+         *      change applies; after then it is refused with the reason. It is carried in the payload and
+         *      compared rather than dropped, because silently ignoring it would tell an operator their
+         *      relabelling worked while the warehouse kept printing the old code. <code>skuCodesEditable</code> on
+         *      the product response says which side of that line the product is on.
+         *
+         *      <p><b>Also refuses</b> when the SKU code or the barcode is already used by another variant;
+         *      when the selling price is above the MRP; and when <code>shelfLifeDays</code> is set on a variant
+         *      that is not <code>batchTracked</code> — a shelf life with no batches has no date to be computed
+         *      against (D4.12).
+         *
+         *      <p>404 when the variant exists but belongs to a different product than the one in the path.
+         *
+         *      <p>Money is minor units plus a currency, never a decimal: a decimal invites a JavaScript client
+         *      to parse it as a float and hand a rounded value back.
+         *
+         *     **Requires permission:** `catalog.product.write`.
+         *
+         *     **Concurrency** — send back the `version` you read. If the record has been changed by someone else since, this returns **409 `VERSION_CONFLICT`** with a `version` field error and writes nothing. Re-read it, show the operator what moved, and submit again with the new `version`.
+         */
         put: operations["updateVariant"];
         post?: never;
         delete?: never;
@@ -1049,7 +1837,12 @@ export interface paths {
         };
         get?: never;
         put?: never;
-        /** @description **Requires permission:** `catalog.product.write`. */
+        /**
+         * The variant a product page opens on, and what a bare "add to cart" resolves to.
+         * @description The variant a product page opens on, and what a bare "add to cart" resolves to.
+         *
+         *     **Requires permission:** `catalog.product.write`.
+         */
         post: operations["makeVariantDefault"];
         delete?: never;
         options?: never;
@@ -1066,7 +1859,12 @@ export interface paths {
         };
         get?: never;
         put?: never;
-        /** @description **Requires permission:** `catalog.product.write`. */
+        /**
+         * No longer sold.
+         * @description No longer sold. Not hidden — see <code>VariantStatus</code>.
+         *
+         *     **Requires permission:** `catalog.product.write`.
+         */
         post: operations["discontinueVariant"];
         delete?: never;
         options?: never;
@@ -1081,10 +1879,26 @@ export interface paths {
             path?: never;
             cookie?: never;
         };
-        /** @description **Requires permission:** `catalog.product.read`. */
+        /**
+         * A variant's images after fallback (D4
+         * @description A variant's images after fallback (D4.14).
+         *
+         *      <p>Its own if it has any, the product's otherwise, with <code>inherited</code> saying which. No
+         *      client implements this.
+         *
+         *     **Requires permission:** `catalog.product.read`.
+         */
         get: operations["resolvedVariantImages"];
         put?: never;
-        /** @description **Requires permission:** `catalog.product.write`. */
+        /**
+         * Adds an image to a variant, appended to the end of its order
+         * @description Adds an image to a variant, appended to the end of its order.
+         *
+         *      <p>Giving a variant its first own image stops it inheriting the product's (D4.14) — from that
+         *      point it shows only its own. 404 when the variant belongs to a different product.
+         *
+         *     **Requires permission:** `catalog.product.write`.
+         */
         post: operations["addVariantImage"];
         delete?: never;
         options?: never;
@@ -1100,10 +1914,25 @@ export interface paths {
             cookie?: never;
         };
         get?: never;
-        /** @description **Requires permission:** `catalog.product.write`. */
+        /**
+         * Edits a variant image's URL or alt text
+         * @description Edits a variant image's URL or alt text.
+         *
+         *      <p>404 when the image does not belong to the variant, or the variant to the product, in the
+         *      path.
+         *
+         *     **Requires permission:** `catalog.product.write`.
+         *
+         *     **Concurrency** — send back the `version` you read. If the record has been changed by someone else since, this returns **409 `VERSION_CONFLICT`** with a `version` field error and writes nothing. Re-read it, show the operator what moved, and submit again with the new `version`.
+         */
         put: operations["updateVariantImage"];
         post?: never;
-        /** @description **Requires permission:** `catalog.product.write`. */
+        /**
+         * Removing the last one is not a loss — the variant falls back to the product's images.
+         * @description Removing the last one is not a loss — the variant falls back to the product's images.
+         *
+         *     **Requires permission:** `catalog.product.write`.
+         */
         delete: operations["removeVariantImage"];
         options?: never;
         head?: never;
@@ -1119,7 +1948,15 @@ export interface paths {
         };
         get?: never;
         put?: never;
-        /** @description **Requires permission:** `catalog.product.write`. */
+        /**
+         * Sets the order of a variant's own images, first to last
+         * @description Sets the order of a variant's own images, first to last.
+         *
+         *      <p><b>Refuses</b> when an id is repeated, names no image, or belongs to a different variant.
+         *      Inherited images are not orderable here — they belong to the product and are ordered there.
+         *
+         *     **Requires permission:** `catalog.product.write`.
+         */
         post: operations["reorderVariantImages"];
         delete?: never;
         options?: never;
@@ -1136,7 +1973,15 @@ export interface paths {
         };
         get?: never;
         put?: never;
-        /** @description **Requires permission:** `catalog.product.write`. */
+        /**
+         * Puts a discontinued variant back on sale
+         * @description Puts a discontinued variant back on sale.
+         *
+         *      <p>The reverse of discontinue, and the reason discontinuing is not a delete. Its SKU code,
+         *      option combination, stock history and order lines are all still there and still refer to it.
+         *
+         *     **Requires permission:** `catalog.product.write`.
+         */
         post: operations["reinstateVariant"];
         delete?: never;
         options?: never;
@@ -1151,9 +1996,42 @@ export interface paths {
             path?: never;
             cookie?: never;
         };
-        /** @description **Requires permission:** `catalog.product.read`. */
+        /**
+         * The variant's own spec values
+         * @description The variant's own spec values.
+         *
+         *      <p>Variant-level only. Product-level specs are one answer for every variant and are read from
+         *      <code>GET /specs</code>; the two sets never overlap, because an attribute's <code>appliesTo</code> puts
+         *      it in exactly one of them.
+         *
+         *      <p>404 when the variant belongs to a different product than the one in the path.
+         *
+         *     **Requires permission:** `catalog.product.read`.
+         */
         get: operations["variantSpecs"];
-        /** @description **Requires permission:** `catalog.product.write`. */
+        /**
+         * Sets a variant-level spec value
+         * @description Sets a variant-level spec value.
+         *
+         *      <p>Replaces the value for single-valued types; adds for <code>MULTI_SELECT</code>, where several is
+         *      the point. *
+         *
+         *      <p><b>Refuses</b> when the attribute is an <code>OPTION</code> rather than a <code>SPEC</code> — an
+         *      option identifies a variant, it does not describe one; when the attribute's <code>appliesTo</code>
+         *      does not match this level; when the attribute is deactivated; when the supplied value does not
+         *      match the attribute's data type, naming the field that was expected; when <code>
+         *      attributeValueId</code> is not a value of that attribute, or is a deactivated one.
+         *
+         *      <p>Exactly one of <code>valueText</code>, <code>valueNumber</code>, <code>valueBoolean</code> and <code>
+         *      attributeValueId</code> is required, and which one is decided by the attribute's data type — bean
+         *      validation cannot express "whichever matches a row in another table", so the refusal says which
+         *      was expected.
+         *
+         *      <p>Carries no <code>version</code>: this is an upsert keyed by attribute, not an edit of a row the
+         *      client read, so there is no version for it to have sent back.
+         *
+         *     **Requires permission:** `catalog.product.write`.
+         */
         put: operations["setVariantSpec"];
         post?: never;
         delete?: never;
@@ -1172,7 +2050,14 @@ export interface paths {
         get?: never;
         put?: never;
         post?: never;
-        /** @description **Requires permission:** `catalog.product.write`. */
+        /**
+         * Clears a variant's value for one attribute
+         * @description Clears a variant's value for one attribute.
+         *
+         *      <p>Clearing something that was never set is not an error.
+         *
+         *     **Requires permission:** `catalog.product.write`.
+         */
         delete: operations["clearVariantSpec"];
         options?: never;
         head?: never;
@@ -1188,7 +2073,15 @@ export interface paths {
         };
         get?: never;
         put?: never;
-        /** @description **Requires permission:** `catalog.product.write`. */
+        /**
+         * Sets the display order of the product's variants, first to last
+         * @description Sets the display order of the product's variants, first to last.
+         *
+         *      <p><b>Refuses</b> when an id is repeated, when one names no variant, or when one belongs to a
+         *      different product. Recorded as a single audit entry — the operator performed one act.
+         *
+         *     **Requires permission:** `catalog.product.write`.
+         */
         post: operations["reorderVariants"];
         delete?: never;
         options?: never;
@@ -1203,10 +2096,32 @@ export interface paths {
             path?: never;
             cookie?: never;
         };
-        /** @description **Requires authentication.** No specific permission beyond a live session. */
-        get: operations["get_3"];
-        /** @description **Requires authentication.** No specific permission beyond a live session. */
-        put: operations["update_3"];
+        /**
+         * The caller's own account, with their roles and resolved permissions
+         * @description The caller's own account, with their roles and resolved permissions.
+         *
+         *      <p>Permissions are resolved per request, so this is what the caller may do <i>now</i> — not
+         *      what they could do when they signed in. A client can render its navigation from it directly.
+         *
+         *      <p>Roles and permissions are read-only here and there is no endpoint on this controller that
+         *      accepts them: nobody edits their own access, Super Admin included.
+         *
+         *     **Requires authentication.** No specific permission beyond a live session.
+         */
+        get: operations["get_6"];
+        /**
+         * Edits the caller's own name and phone
+         * @description Edits the caller's own name and phone.
+         *
+         *      <p>Email, status, roles and permissions are all absent from the payload and none can be changed
+         *      here. Changing someone's email is a <code>team.manage</code> act on the team-member endpoints;
+         *      changing their own access is not an act anyone may perform.
+         *
+         *     **Requires authentication.** No specific permission beyond a live session.
+         *
+         *     **Concurrency** — send back the `version` you read. If the record has been changed by someone else since, this returns **409 `VERSION_CONFLICT`** with a `version` field error and writes nothing. Re-read it, show the operator what moved, and submit again with the new `version`.
+         */
+        put: operations["update_6"];
         post?: never;
         delete?: never;
         options?: never;
@@ -1223,8 +2138,213 @@ export interface paths {
         };
         get?: never;
         put?: never;
-        /** @description **Requires authentication.** No specific permission beyond a live session. */
+        /**
+         * Changes the caller's own password, having proved they know the current one
+         * @description Changes the caller's own password, having proved they know the current one.
+         *
+         *      <p><b>A wrong <code>currentPassword</code> is a 400 with a field error on <code>currentPassword</code> —
+         *      not a 401.</b> The caller holds a live session and is exactly who they say they are; what is
+         *      wrong is a value in the payload. A client must not treat this as a dead session (D2.21, D2.23):
+         *      the session it was sent on is still valid afterwards.
+         *
+         *      <p><b>Also refuses</b> when the new password equals the current one, and when it fails the
+         *      password policy — both as field errors on <code>newPassword</code>.
+         *
+         *      <p>On success every <i>other</i> session is signed out and this one survives, and the count is
+         *      returned. A password change is usually a response to "I think someone has my password"; leaving
+         *      the other sessions alive would defeat it, and killing this one too would just make people avoid
+         *      doing it.
+         *
+         *     **Requires authentication.** No specific permission beyond a live session.
+         */
         post: operations["changePassword"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/admin/purchase-orders": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Lists purchase orders with their lines
+         * @description Lists purchase orders with their lines. Every filter optional.
+         *
+         *      <p><code>expectedFrom</code> and <code>expectedTo</code> are inclusive business dates in <code>
+         *      Asia/Kolkata</code>. Supplying either narrows the list to orders that <i>have</i> an expected date;
+         *      the unfiltered list includes undated ones.
+         *
+         *      <p><code>search</code> matches the PO number as a literal substring.
+         *
+         *     **Requires permission:** `procurement.po.read`.
+         */
+        get: operations["list_5"];
+        put?: never;
+        /**
+         * Raises a purchase order in <code>DRAFT</code>
+         * @description Raises a purchase order in <code>DRAFT</code>. It commits nothing until it is approved.
+         *
+         *      <p>Lines are optional here — a buyer starts an order and fills it in — but approval refuses an
+         *      empty one. Every line must name a variant that is still orderable: not discontinued, and not on
+         *      an archived product.
+         *
+         *      <p>Refused when the supplier or the destination warehouse is deactivated.
+         *
+         *     **Requires permission:** `procurement.po.write`.
+         */
+        post: operations["create_5"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/admin/purchase-orders/{id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * One purchase order with its lines, and the <code>version</code> to send back on an update.
+         * @description One purchase order with its lines, and the <code>version</code> to send back on an update.
+         *
+         *     **Requires permission:** `procurement.po.read`.
+         */
+        get: operations["get_5"];
+        /**
+         * Edits a draft: destination, expected date, notes and the whole set of lines
+         * @description Edits a draft: destination, expected date, notes and the whole set of lines.
+         *
+         *      <p><b>Refused on anything that is not a <code>DRAFT</code></b>, with <code>
+         *      BUSINESS_RULE_VIOLATION</code>. After approval the order is a document the supplier is holding, and
+         *      changing a quantity under them produces a delivery nobody ordered and an invoice nobody can
+         *      match — the way to change an approved order is to cancel it and raise a new one.
+         *
+         *      <p><code>lines</code> <b>replaces</b> the draft's lines rather than patching them.
+         *
+         *      <p>A stale <code>version</code> is refused with 409 <code>VERSION_CONFLICT</code> and nothing is written.
+         *
+         *     **Requires permission:** `procurement.po.write`.
+         *
+         *     **Concurrency** — send back the `version` you read. If the record has been changed by someone else since, this returns **409 `VERSION_CONFLICT`** with a `version` field error and writes nothing. Re-read it, show the operator what moved, and submit again with the new `version`.
+         */
+        put: operations["update_5"];
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/admin/purchase-orders/{id}/approve": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Commits the order to the supplier
+         * @description Commits the order to the supplier.
+         *
+         *      <p><b>Its own permission, because approving is what commits money.</b> Refused when the order
+         *      has no lines, when any line orders zero or fewer, or when any line has a negative cost — all
+         *      things a draft is allowed to be halfway through, and none of which may be sent to a supplier.
+         *
+         *      <p>Refused on anything that is not a <code>DRAFT</code>: approval happens once.
+         *
+         *     **Requires permission:** `procurement.po.approve`.
+         */
+        post: operations["approve"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/admin/purchase-orders/{id}/cancel": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Abandons the order
+         * @description Abandons the order.
+         *
+         *      <p>Allowed from <code>DRAFT</code> and <code>APPROVED</code>. <b>Refused once anything has been
+         *      received</b> — reality has overtaken the document: the stock is in a warehouse and the
+         *      movements are in a ledger that cannot be edited, so cancelling the paperwork would leave those
+         *      movements pointing at an order saying nothing ever arrived. Return the goods to the supplier or
+         *      post a reversing receipt instead.
+         *
+         *     **Requires permission:** `procurement.po.write`.
+         */
+        post: operations["cancel"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/admin/purchase-orders/{id}/receipts": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * The receipt history for this order: every goods receipt posted against it, oldest first
+         * @description The receipt history for this order: every goods receipt posted against it, oldest first.
+         *
+         *      <p>Under the GRN read permission rather than the PO one — it is receipt data hanging off an
+         *      order, and someone who may see what was ordered does not automatically get to see what a
+         *      warehouse actually accepted and rejected.
+         *
+         *     **Requires permission:** `procurement.grn.read`.
+         */
+        get: operations["receipts"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/admin/purchase-orders/open": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * What suppliers still owe us: approved and partially received orders, soonest expected first
+         * @description What suppliers still owe us: approved and partially received orders, soonest expected first.
+         *
+         *      <p>Drafts are excluded — a draft is not outstanding with anybody, it is a form somebody is
+         *      still filling in. Orders with no expected date sort last rather than being dropped, because an
+         *      undated order is the one most likely to have been forgotten.
+         *
+         *     **Requires permission:** `procurement.po.read`.
+         */
+        get: operations["open"];
+        put?: never;
+        post?: never;
         delete?: never;
         options?: never;
         head?: never;
@@ -1238,11 +2358,29 @@ export interface paths {
             path?: never;
             cookie?: never;
         };
-        /** @description **Requires permission:** `team.read`. */
-        get: operations["list_2"];
+        /**
+         * Every role, with the permissions it grants
+         * @description Every role, with the permissions it grants.
+         *
+         *      <p>Super Admin stores no permission rows and grants the whole catalog, so it is reported with
+         *      <code>grantsEveryPermission</code> true and the full set expanded — reporting its stored set
+         *      verbatim would tell a role editor it grants nothing.
+         *
+         *     **Requires permission:** `team.read`.
+         */
+        get: operations["list_4"];
         put?: never;
-        /** @description **Requires permission:** `team.manage`. */
-        post: operations["create_2"];
+        /**
+         * Creates a role
+         * @description Creates a role.
+         *
+         *      <p><b>Refuses when a role of that name already exists</b>, and when <code>permissions</code>
+         *      contains a key that is not in the catalog — <code>GET /api/admin/permissions</code> is the list of
+         *      what may be granted.
+         *
+         *     **Requires permission:** `team.manage`.
+         */
+        post: operations["create_4"];
         delete?: never;
         options?: never;
         head?: never;
@@ -1256,12 +2394,44 @@ export interface paths {
             path?: never;
             cookie?: never;
         };
-        /** @description **Requires permission:** `team.read`. */
-        get: operations["get_2"];
-        /** @description **Requires permission:** `team.manage`. */
-        put: operations["update_2"];
+        /**
+         * One role, with its permissions and the <code>version</code> to send back on an update.
+         * @description One role, with its permissions and the <code>version</code> to send back on an update.
+         *
+         *     **Requires permission:** `team.read`.
+         */
+        get: operations["get_4"];
+        /**
+         * Replaces a role's name, description and whole permission set
+         * @description Replaces a role's name, description and whole permission set.
+         *
+         *      <p><b>Refuses on a system role</b> — Super Admin above all: if it could be edited, its last
+         *      holder could strip its permissions and lock every human out. <b>Also refuses</b> when the name
+         *      is taken by another role, and when a permission key is not in the catalog.
+         *
+         *      <p>The permission set is replaced wholesale, not merged: send the complete set. Everyone
+         *      holding the role has their cached permissions dropped immediately, so the change lands on their
+         *      next request.
+         *
+         *     **Requires permission:** `team.manage`.
+         *
+         *     **Concurrency** — send back the `version` you read. If the record has been changed by someone else since, this returns **409 `VERSION_CONFLICT`** with a `version` field error and writes nothing. Re-read it, show the operator what moved, and submit again with the new `version`.
+         */
+        put: operations["update_4"];
         post?: never;
-        /** @description **Requires permission:** `team.manage`. */
+        /**
+         * Deletes a role
+         * @description Deletes a role.
+         *
+         *      <p><b>Refuses on a system role, and while any member still holds it.</b> Deleting a held role
+         *      would silently remove access from people nobody was thinking about at the time. Take it off
+         *      them first — that way each removal is its own audited act.
+         *
+         *      <p>One of the few real deletes in this service: a role grants nothing historical, so there is
+         *      nothing for an old record to refer back to.
+         *
+         *     **Requires permission:** `team.manage`.
+         */
         delete: operations["delete"];
         options?: never;
         head?: never;
@@ -1277,7 +2447,14 @@ export interface paths {
         };
         get?: never;
         put?: never;
-        /** @description **Requires permission:** `inventory.adjust`. */
+        /**
+         * Posts one movement: a receipt, an adjustment, damage, an expiry write-off, or a return
+         * @description Posts one movement: a receipt, an adjustment, damage, an expiry write-off, or a return.
+         *
+         *      <p>The transfer halves are refused here — they exist only as a pair, written by {@link com.oms.service.inventory.controller.admin.AdminStockController  #transfer}.
+         *
+         *     **Requires permission:** `inventory.adjust`.
+         */
         post: operations["adjust"];
         delete?: never;
         options?: never;
@@ -1292,7 +2469,16 @@ export interface paths {
             path?: never;
             cookie?: never;
         };
-        /** @description **Requires permission:** `inventory.read`. */
+        /**
+         * Batches with stock still on hand that expire within the window, soonest first
+         * @description Batches with stock still on hand that expire within the window, soonest first.
+         *
+         *      <p>Only batch-tracked variants can appear — nothing else has an expiry — and only locations
+         *      with a positive quantity, since an expired batch that is already empty is not a problem anyone
+         *      needs to act on.
+         *
+         *     **Requires permission:** `inventory.read`.
+         */
         get: operations["expiringSoon"];
         put?: never;
         post?: never;
@@ -1309,7 +2495,12 @@ export interface paths {
             path?: never;
             cookie?: never;
         };
-        /** @description **Requires permission:** `inventory.read`. */
+        /**
+         * On-hand quantities per (variant, warehouse, batch).
+         * @description On-hand quantities per (variant, warehouse, batch). Every filter optional (D2.10).
+         *
+         *     **Requires permission:** `inventory.read`.
+         */
         get: operations["levels"];
         put?: never;
         post?: never;
@@ -1326,7 +2517,19 @@ export interface paths {
             path?: never;
             cookie?: never;
         };
-        /** @description **Requires permission:** `inventory.read`. */
+        /**
+         * Locations at or below a threshold, lowest first
+         * @description Locations at or below a threshold, lowest first.
+         *
+         *      <p>A flat threshold across every SKU, because per-SKU reorder points do not exist yet — they
+         *      arrive with procurement (1.6). Until then this is a triage list, not a reorder signal.
+         *
+         *      <p>Counts on-hand quantity, so a location that has never held anything does not appear at all:
+         *      there is no row for it. That is deliberate — "we have never stocked this here" is a catalog
+         *      question, not a low-stock one.
+         *
+         *     **Requires permission:** `inventory.read`.
+         */
         get: operations["lowStock"];
         put?: never;
         post?: never;
@@ -1343,7 +2546,16 @@ export interface paths {
             path?: never;
             cookie?: never;
         };
-        /** @description **Requires permission:** `inventory.read`. */
+        /**
+         * The movement history
+         * @description The movement history.
+         *
+         *      <p><code>from</code> is inclusive and <code>to</code> is exclusive, as ISO-8601 instants. Half-open
+         *      because a closed upper bound on a timestamp either drops or double-counts whatever happened in
+         *      the final microsecond, depending on which way it was rounded.
+         *
+         *     **Requires permission:** `inventory.read`.
+         */
         get: operations["movements"];
         put?: never;
         post?: never;
@@ -1362,7 +2574,16 @@ export interface paths {
         };
         get?: never;
         put?: never;
-        /** @description **Requires permission:** `inventory.adjust`. */
+        /**
+         * Throws the projection away and recomputes it from the ledger
+         * @description Throws the projection away and recomputes it from the ledger.
+         *
+         *      <p>Under <code>inventory.adjust</code>, because it can change every stock number in the system at
+         *      once. It takes an exclusive lock on the projection while it runs, so movements queue rather
+         *      than interleave — deliberate, and the reason this is triggered by a person and not a schedule.
+         *
+         *     **Requires permission:** `inventory.adjust`.
+         */
         post: operations["rebuild"];
         delete?: never;
         options?: never;
@@ -1377,7 +2598,16 @@ export interface paths {
             path?: never;
             cookie?: never;
         };
-        /** @description **Requires permission:** `inventory.read`. */
+        /**
+         * Compares the projection against the ledger and reports every disagreement
+         * @description Compares the projection against the ledger and reports every disagreement.
+         *
+         *      <p>A read, under the read permission: it changes nothing and answers the question "can I trust
+         *      the numbers on these screens". An empty result is the expected answer and any other is an
+         *      incident.
+         *
+         *     **Requires permission:** `inventory.read`.
+         */
         get: operations["reconcile"];
         put?: never;
         post?: never;
@@ -1394,7 +2624,12 @@ export interface paths {
             path?: never;
             cookie?: never;
         };
-        /** @description **Requires permission:** `inventory.read`. */
+        /**
+         * Totals across every warehouse and batch, per variant.
+         * @description Totals across every warehouse and batch, per variant.
+         *
+         *     **Requires permission:** `inventory.read`.
+         */
         get: operations["totals"];
         put?: never;
         post?: never;
@@ -1413,7 +2648,16 @@ export interface paths {
         };
         get?: never;
         put?: never;
-        /** @description **Requires permission:** `inventory.transfer`. */
+        /**
+         * Moves stock between warehouses — two movements in one transaction, sharing a reference id
+         * @description Moves stock between warehouses — two movements in one transaction, sharing a reference id.
+         *
+         *      <p>A failure leaves neither. That is the whole reason this is one endpoint rather than two
+         *      calls to {@link com.oms.service.inventory.controller.admin.AdminStockController#adjust #adjust}: a half-completed transfer has destroyed stock and produced paperwork
+         *      saying it arrived somewhere.
+         *
+         *     **Requires permission:** `inventory.transfer`.
+         */
         post: operations["transfer"];
         delete?: never;
         options?: never;
@@ -1428,10 +2672,138 @@ export interface paths {
             path?: never;
             cookie?: never;
         };
-        /** @description **Requires permission:** `inventory.read`. */
+        /**
+         * Both halves of one transfer, by the reference id they share.
+         * @description Both halves of one transfer, by the reference id they share.
+         *
+         *     **Requires permission:** `inventory.read`.
+         */
         get: operations["transfer_1"];
         put?: never;
         post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/admin/suppliers": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Lists suppliers, active and inactive
+         * @description Lists suppliers, active and inactive.
+         *
+         *      <p><code>search</code> matches the code, the name or the GSTIN as a literal substring — whichever of
+         *      the three is on the document in front of whoever is looking.
+         *
+         *     **Requires permission:** `procurement.supplier.read`.
+         */
+        get: operations["list_3"];
+        put?: never;
+        /**
+         * Creates a supplier, active
+         * @description Creates a supplier, active.
+         *
+         *      <p><b>Refuses when the code is already used</b> by any supplier, deactivated ones included. The
+         *      code appears on purchase orders that outlive the relationship, so it is immutable from here on.
+         *
+         *      <p><code>state</code> is required and cannot be added later: an inter-state purchase is a GST event
+         *      in India, and backfilling state after goods have been received means guessing which tax
+         *      applied.
+         *
+         *     **Requires permission:** `procurement.supplier.write`.
+         */
+        post: operations["create_3"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/admin/suppliers/{id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * One supplier, with the <code>version</code> to send back on an update.
+         * @description One supplier, with the <code>version</code> to send back on an update.
+         *
+         *     **Requires permission:** `procurement.supplier.read`.
+         */
+        get: operations["get_3"];
+        /**
+         * Edits a supplier's name, address, GSTIN, contact and payment terms
+         * @description Edits a supplier's name, address, GSTIN, contact and payment terms.
+         *
+         *      <p><b><code>code</code> is immutable and must match what is stored</b> — it appears on every
+         *      purchase order the supplier has received. It is carried and compared rather than omitted, so an
+         *      attempted rename is refused instead of returning 200 for something that did not happen.
+         *
+         *      <p>A stale <code>version</code> is refused with 409 <code>VERSION_CONFLICT</code> and nothing is written.
+         *
+         *     **Requires permission:** `procurement.supplier.write`.
+         *
+         *     **Concurrency** — send back the `version` you read. If the record has been changed by someone else since, this returns **409 `VERSION_CONFLICT`** with a `version` field error and writes nothing. Re-read it, show the operator what moved, and submit again with the new `version`.
+         */
+        put: operations["update_3"];
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/admin/suppliers/{id}/deactivate": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Takes the supplier out of use
+         * @description Takes the supplier out of use.
+         *
+         *      <p><b>Refused while any purchase order against them is still open</b> — draft, approved or
+         *      partially received — and the refusal names the count and the first few order numbers. A
+         *      supplier deactivated with live orders disappears from every picker while the goods still turn
+         *      up next Tuesday against an order nobody can now find.
+         *
+         *     **Requires permission:** `procurement.supplier.write`.
+         */
+        post: operations["deactivate_2"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/admin/suppliers/{id}/reactivate": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Puts the supplier back into use.
+         * @description Puts the supplier back into use. Unconditional — there is no state to reconcile.
+         *
+         *     **Requires permission:** `procurement.supplier.write`.
+         */
+        post: operations["reactivate_1"];
         delete?: never;
         options?: never;
         head?: never;
@@ -1445,11 +2817,31 @@ export interface paths {
             path?: never;
             cookie?: never;
         };
-        /** @description **Requires permission:** `team.read`. */
-        get: operations["list_1"];
+        /**
+         * Lists team members with their roles
+         * @description Lists team members with their roles.
+         *
+         *      <p>Team members are a separate identity from consumers and partners — a different table, a
+         *      different auth mechanism, a different lifecycle. Nothing here reaches either of the others.
+         *
+         *      <p>Never includes password hashes, token hashes or invite tokens. <code>locked</code> reflects the
+         *      lockout window as of now and clears itself when it expires.
+         *
+         *     **Requires permission:** `team.read`.
+         */
+        get: operations["list_2"];
         put?: never;
-        /** @description **Requires permission:** `team.manage`. */
-        post: operations["create_1"];
+        /**
+         * Creates a member and returns their invite link
+         * @description Creates a member and returns their invite link.
+         *
+         *      <p>The link is in the response because email is not wired yet — an operator copies it and hands
+         *      it over. When a provider is embedded the flow does not change; the response simply stops being
+         *      the only way to get the link.
+         *
+         *     **Requires permission:** `team.manage`.
+         */
+        post: operations["create_2"];
         delete?: never;
         options?: never;
         head?: never;
@@ -1463,10 +2855,27 @@ export interface paths {
             path?: never;
             cookie?: never;
         };
-        /** @description **Requires permission:** `team.read`. */
-        get: operations["get_1"];
-        /** @description **Requires permission:** `team.manage`. */
-        put: operations["update_1"];
+        /**
+         * One team member, with their roles and the <code>version</code> to send back on an update.
+         * @description One team member, with their roles and the <code>version</code> to send back on an update.
+         *
+         *     **Requires permission:** `team.read`.
+         */
+        get: operations["get_2"];
+        /**
+         * Edits a member's name and phone
+         * @description Edits a member's name and phone.
+         *
+         *      <p><b>Email is not editable</b> and is absent from the payload: it is the login identity and
+         *      the key every login event is recorded against. <b>Roles are not editable here</b> either —
+         *      <code>PUT /&amp;#123;id&amp;#125;/roles</code> is the endpoint for that, and it carries the escalation
+         *      guards.
+         *
+         *     **Requires permission:** `team.manage`.
+         *
+         *     **Concurrency** — send back the `version` you read. If the record has been changed by someone else since, this returns **409 `VERSION_CONFLICT`** with a `version` field error and writes nothing. Re-read it, show the operator what moved, and submit again with the new `version`.
+         */
+        put: operations["update_2"];
         post?: never;
         delete?: never;
         options?: never;
@@ -1483,7 +2892,16 @@ export interface paths {
         };
         get?: never;
         put?: never;
-        /** @description **Requires permission:** `team.manage`. */
+        /**
+         * Returns a suspended or deactivated member to <code>ACTIVE</code>
+         * @description Returns a suspended or deactivated member to <code>ACTIVE</code>.
+         *
+         *      <p>Their roles are whatever they were left with — reinstating does not restore access that was
+         *      separately removed. Their permission cache is dropped, so the change lands on their next
+         *      request rather than whenever the entry happened to expire.
+         *
+         *     **Requires permission:** `team.manage`.
+         */
         post: operations["activate"];
         delete?: never;
         options?: never;
@@ -1500,7 +2918,20 @@ export interface paths {
         };
         get?: never;
         put?: never;
-        /** @description **Requires permission:** `team.manage`. */
+        /**
+         * Offboards a member and kills every session they hold
+         * @description Offboards a member and kills every session they hold.
+         *
+         *      <p><b>Refuses when the caller is the target</b>, and <b>when the target is the last active
+         *      Super Admin</b> — losing that one means nobody can administer anything, with no way back that
+         *      does not involve a database console.
+         *
+         *      <p>Revocation is immediate: the very next request on any of their sessions is denied. There is
+         *      no delete for a team member; deactivation is the retirement, because login events and audit
+         *      entries refer to them.
+         *
+         *     **Requires permission:** `team.manage`.
+         */
         post: operations["deactivate_1"];
         delete?: never;
         options?: never;
@@ -1517,7 +2948,17 @@ export interface paths {
         };
         get?: never;
         put?: never;
-        /** @description **Requires permission:** `team.manage`. */
+        /**
+         * Kills every session the member holds, without changing their status
+         * @description Kills every session the member holds, without changing their status.
+         *
+         *      <p>For "they left their laptop on a train" — they can sign in again immediately. To stop them
+         *      signing in at all, suspend or deactivate them instead.
+         *
+         *      <p>Returns how many sessions were revoked; zero is a normal answer, not a failure.
+         *
+         *     **Requires permission:** `team.manage`.
+         */
         post: operations["forceLogout"];
         delete?: never;
         options?: never;
@@ -1534,7 +2975,18 @@ export interface paths {
         };
         get?: never;
         put?: never;
-        /** @description **Requires permission:** `team.manage`. */
+        /**
+         * Issues a fresh invite link, invalidating the previous one
+         * @description Issues a fresh invite link, invalidating the previous one.
+         *
+         *      <p><b>Refuses once the member has accepted their invite</b> — they have a password, and this is
+         *      not the way to reset it. Use <code>POST /&amp;#123;id&amp;#125;/reset-password</code> for that.
+         *
+         *      <p>The link is in the response because email is not wired yet; an operator copies it and hands
+         *      it over. It appears here and nowhere else.
+         *
+         *     **Requires permission:** `team.manage`.
+         */
         post: operations["resendInvite"];
         delete?: never;
         options?: never;
@@ -1551,7 +3003,15 @@ export interface paths {
         };
         get?: never;
         put?: never;
-        /** @description **Requires permission:** `team.manage`. */
+        /**
+         * Triggers a password reset for a member
+         * @description Triggers a password reset for a member.
+         *
+         *      <p>Returns a link, never a password. An administrator can start a reset and can never set,
+         *      choose or see the resulting credential.
+         *
+         *     **Requires permission:** `team.manage`.
+         */
         post: operations["resetPassword"];
         delete?: never;
         options?: never;
@@ -1567,7 +3027,17 @@ export interface paths {
             cookie?: never;
         };
         get?: never;
-        /** @description **Requires permission:** `team.manage`. */
+        /**
+         * Replaces a member's roles
+         * @description Replaces a member's roles.
+         *
+         *      <p>Refused when the caller is the target — nobody grants themselves access, including a Super
+         *      Admin. Enforced in the service so it holds for every future caller too.
+         *
+         *     **Requires permission:** `team.manage`.
+         *
+         *     **Concurrency** — send back the `version` you read. If the record has been changed by someone else since, this returns **409 `VERSION_CONFLICT`** with a `version` field error and writes nothing. Re-read it, show the operator what moved, and submit again with the new `version`.
+         */
         put: operations["assignRoles"];
         post?: never;
         delete?: never;
@@ -1585,7 +3055,197 @@ export interface paths {
         };
         get?: never;
         put?: never;
-        /** @description **Requires permission:** `team.manage`. */
+        /**
+         * Suspends a member and kills every session they hold
+         * @description Suspends a member and kills every session they hold.
+         *
+         *      <p><b>Refuses when the caller is the target, and when the target is the last active Super
+         *      Admin.</b> Suspension is the reversible one — activate puts them back with the roles they had;
+         *      deactivation is the offboarding.
+         *
+         *     **Requires permission:** `team.manage`.
+         */
+        post: operations["suspend_1"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/admin/users": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Lists consumer and partner accounts, newest first
+         * @description Lists consumer and partner accounts, newest first.
+         *
+         *      <p>Every filter is optional. <code>role</code> matches accounts currently holding the role — a
+         *      revoked partner is not listed under <code>PARTNER</code>. <code>search</code> matches the name or email
+         *      as a literal substring, and the mobile number by its digits, so <code>98765 43210</code> finds
+         *      <code>+919876543210</code>.
+         *
+         *      <p>Soft-deleted accounts are never listed.
+         *
+         *     **Requires permission:** `identity.user.read`.
+         */
+        get: operations["list_1"];
+        put?: never;
+        /**
+         * Starts an account for a person: <code>INVITED</code>, holding <code>CONSUMER</code>
+         * @description Starts an account for a person: <code>INVITED</code>, holding <code>CONSUMER</code>.
+         *
+         *      <p><b>This never creates an active user.</b> Every account originates from an invite or a
+         *      legacy import, and becomes <code>ACTIVE</code> only when its owner claims it. Issuing and claiming
+         *      the invite is not part of this endpoint yet — that arrives with invite management.
+         *
+         *      <p><b>Refused with 409 <code>CONFLICT</code></b> when the mobile number, or the email if given,
+         *      already belongs to another account. One person has one account: a consumer who is to become a
+         *      partner is granted the role on the account they have, not given a second one. Mobile numbers
+         *      are compared normalised, so <code>09876543210</code> collides with <code>+919876543210</code>.
+         *
+         *     **Requires permission:** `identity.user.write`.
+         */
+        post: operations["create_1"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/admin/users/{id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * One account, with its full role history and the <code>version</code> to send back on an update.
+         * @description One account, with its full role history and the <code>version</code> to send back on an update. 404
+         *      for an account that does not exist or has been deleted.
+         *
+         *     **Requires permission:** `identity.user.read`.
+         */
+        get: operations["get_1"];
+        /**
+         * Edits an account's mobile, email and name
+         * @description Edits an account's mobile, email and name.
+         *
+         *      <p>Mobile and email stay unique — a clash is 409 <code>CONFLICT</code> naming the value. Status and
+         *      roles are not editable here; each has its own endpoint.
+         *
+         *      <p>A stale <code>version</code> is refused with 409 <code>VERSION_CONFLICT</code> and nothing is written.
+         *
+         *     **Requires permission:** `identity.user.write`.
+         *
+         *     **Concurrency** — send back the `version` you read. If the record has been changed by someone else since, this returns **409 `VERSION_CONFLICT`** with a `version` field error and writes nothing. Re-read it, show the operator what moved, and submit again with the new `version`.
+         */
+        put: operations["update_1"];
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/admin/users/{id}/grant-partner": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Grants the <code>PARTNER</code> role to this account
+         * @description Grants the <code>PARTNER</code> role to this account.
+         *
+         *      <p>The same account gains the role — the person stays one user (D5.1). <b>Takes no body</b>:
+         *      the grant is a bare flag and captures no KYC, bank or commission detail, all of which belongs
+         *      to payouts. Refused with 422 when the account already holds <code>PARTNER</code>.
+         *
+         *     **Requires permission:** `identity.user.write`.
+         */
+        post: operations["grantPartner"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/admin/users/{id}/reinstate": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Lifts a suspension, returning the account to where it was: <code>ACTIVE</code> if its owner had
+         *      claimed it, <code>INVITED</code> if not
+         * @description Lifts a suspension, returning the account to where it was: <code>ACTIVE</code> if its owner had
+         *      claimed it, <code>INVITED</code> if not. Reinstating never activates an unclaimed account.
+         *
+         *      <p>Requires <code>identity.user.suspend</code>. Refused with 422 when the account is not suspended.
+         *
+         *     **Requires permission:** `identity.user.suspend`.
+         */
+        post: operations["reinstate"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/admin/users/{id}/revoke-partner": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Revokes the <code>PARTNER</code> role.
+         * @description Revokes the <code>PARTNER</code> role. The account keeps <code>CONSUMER</code>, and the closed grant
+         *      stays in <code>roleHistory</code>. Refused with 422 when the account does not hold <code>PARTNER</code>.
+         *
+         *     **Requires permission:** `identity.user.write`.
+         */
+        post: operations["revokePartner"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/admin/users/{id}/suspend": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Suspends the account: it can no longer transact
+         * @description Suspends the account: it can no longer transact.
+         *
+         *      <p>Requires <code>identity.user.suspend</code> — <b>not</b> <code>identity.user.write</code>. Blocking a
+         *      customer is a heavier action than editing their profile, and the two are granted separately.
+         *      Refused with 422 when the account is already suspended.
+         *
+         *     **Requires permission:** `identity.user.suspend`.
+         */
         post: operations["suspend"];
         delete?: never;
         options?: never;
@@ -1600,10 +3260,29 @@ export interface paths {
             path?: never;
             cookie?: never;
         };
-        /** @description **Requires permission:** `warehouse.read`. */
+        /**
+         * Lists warehouses, active and inactive
+         * @description Lists warehouses, active and inactive.
+         *
+         *      <p><code>search</code> matches the code, the name or the city as a literal substring.
+         *
+         *     **Requires permission:** `warehouse.read`.
+         */
         get: operations["list"];
         put?: never;
-        /** @description **Requires permission:** `warehouse.write`. */
+        /**
+         * Creates a warehouse, active
+         * @description Creates a warehouse, active.
+         *
+         *      <p><b>Refuses when the code is already used</b> by any warehouse, inactive ones included. The
+         *      code is printed on labels and paperwork, so it is immutable from here on.
+         *
+         *      <p><code>state</code> is required and cannot be added later: an inter-state stock transfer is a GST
+         *      event in India, and backfilling state after stock has moved means guessing which movements
+         *      crossed a line.
+         *
+         *     **Requires permission:** `warehouse.write`.
+         */
         post: operations["create"];
         delete?: never;
         options?: never;
@@ -1618,9 +3297,28 @@ export interface paths {
             path?: never;
             cookie?: never;
         };
-        /** @description **Requires permission:** `warehouse.read`. */
+        /**
+         * One warehouse, with the <code>version</code> to send back on an update.
+         * @description One warehouse, with the <code>version</code> to send back on an update.
+         *
+         *     **Requires permission:** `warehouse.read`.
+         */
         get: operations["get"];
-        /** @description **Requires permission:** `warehouse.write`. */
+        /**
+         * Edits a warehouse's name, type, address and GSTIN
+         * @description Edits a warehouse's name, type, address and GSTIN.
+         *
+         *      <p><b><code>code</code> is immutable and must match what is stored</b> — it is on labels and
+         *      paperwork that cannot be reprinted. It is carried and compared rather than omitted, so an
+         *      attempted rename is refused instead of returning 200 for something that did not happen.
+         *
+         *      <p><code>active</code> is absent for the opposite reason: deactivation has a rule of its own and is
+         *      its own endpoint, so there is nothing to compare against here.
+         *
+         *     **Requires permission:** `warehouse.write`.
+         *
+         *     **Concurrency** — send back the `version` you read. If the record has been changed by someone else since, this returns **409 `VERSION_CONFLICT`** with a `version` field error and writes nothing. Re-read it, show the operator what moved, and submit again with the new `version`.
+         */
         put: operations["update"];
         post?: never;
         delete?: never;
@@ -1638,7 +3336,12 @@ export interface paths {
         };
         get?: never;
         put?: never;
-        /** @description **Requires permission:** `warehouse.write`. */
+        /**
+         * Takes the warehouse out of service.
+         * @description Takes the warehouse out of service. Refused, with a count, while it still holds stock.
+         *
+         *     **Requires permission:** `warehouse.write`.
+         */
         post: operations["deactivate"];
         delete?: never;
         options?: never;
@@ -1655,7 +3358,15 @@ export interface paths {
         };
         get?: never;
         put?: never;
-        /** @description **Requires permission:** `warehouse.write`. */
+        /**
+         * Puts the warehouse back into service
+         * @description Puts the warehouse back into service.
+         *
+         *      <p>Unconditional — a warehouse can only have been deactivated while empty, so there is no state
+         *      to reconcile on the way back.
+         *
+         *     **Requires permission:** `warehouse.write`.
+         */
         post: operations["reactivate"];
         delete?: never;
         options?: never;
@@ -1671,21 +3382,46 @@ export interface components {
             password: string;
             token: string;
         };
+        AddImageRequest: {
+            altText?: string;
+            url: string;
+        };
+        /** @description Declaring an option axis. */
         AddOptionRequest: {
             /** Format: uuid */
             attributeId: string;
-            /** Format: uuid */
+            /**
+             * Format: uuid
+             * @description required — the product's sole variant has to become something
+             *          specific on the new axis, and only the operator knows which. Defaulting to the first value
+             *          would silently label existing stock.
+             */
             valueForExistingVariant: string;
         };
+        /**
+         * @description Posting one movement.
+         *
+         *      <p><code>quantity</code> is signed, and the sign has to match the type — positive for a receipt or a
+         *      return, negative for damage or a write-off, either way for an adjustment. Making the caller
+         *      state it, rather than inferring it from the type, is what lets an adjustment go both ways
+         *      without a second field saying which; and the database enforces the pairing, so an inconsistent
+         *      one cannot be stored even if this layer were bypassed.
+         */
         AdjustStockRequest: {
-            /** Format: uuid */
+            /**
+             * Format: uuid
+             * @description required iff the variant is batch-tracked, and rejected otherwise (D4.12)
+             */
             batchId?: string;
             /** @enum {string} */
             movementType: "RECEIPT" | "ADJUSTMENT" | "TRANSFER_OUT" | "TRANSFER_IN" | "DAMAGE" | "EXPIRY_WRITE_OFF" | "RETURN";
             note?: string;
             /** Format: int32 */
             quantity?: number;
-            /** @enum {string} */
+            /**
+             * @description required for ADJUSTMENT, DAMAGE and RETURN, rejected on the rest
+             * @enum {string}
+             */
             reasonCode?: "CYCLE_COUNT" | "DATA_CORRECTION" | "FOUND_STOCK" | "LOST_STOCK" | "THEFT" | "CONSUMED_INTERNALLY" | "DAMAGED_IN_TRANSIT" | "DAMAGED_IN_WAREHOUSE" | "DAMAGED_ON_RETURN" | "CUSTOMER_RETURN" | "COURIER_RTO" | "CANCELLED_ORDER";
             /** Format: uuid */
             variantId: string;
@@ -1694,7 +3430,20 @@ export interface components {
         };
         AssignRolesRequest: {
             roleIds: string[];
+            /**
+             * Format: int64
+             * @description the member's <code>version</code>. Roles hang off the member, so two administrators
+             *          changing one person's access at once is the same conflict as two editing their name.
+             */
+            version: number;
         };
+        /**
+         * @description The single-get shape: the attribute with its values.
+         *
+         *      <p><code>values</code> is always present and empty for a type that has no set, rather than absent —
+         *      a client rendering the form should not have to distinguish "no values yet" from "this type
+         *      cannot have any", which is what <code>dataType</code> already answers.
+         */
         AttributeDetailResponse: {
             attribute?: components["schemas"]["AttributeResponse"];
             values?: components["schemas"]["AttributeValueResponse"][];
@@ -1710,7 +3459,10 @@ export interface components {
             name?: string;
             /** Format: date-time */
             updatedAt?: string;
+            /** Format: int64 */
+            version?: number;
         };
+        /** @description The list shape: no values, because a list of fifty attributes does not need their sets. */
         AttributeResponse: {
             active?: boolean;
             /** @enum {string} */
@@ -1733,6 +3485,8 @@ export interface components {
             unit?: string;
             /** Format: date-time */
             updatedAt?: string;
+            /** Format: int64 */
+            version?: number;
         };
         AttributeValueResponse: {
             active?: boolean;
@@ -1748,7 +3502,16 @@ export interface components {
             label?: string;
             /** Format: date-time */
             updatedAt?: string;
+            /** Format: int64 */
+            version?: number;
         };
+        /**
+         * @description One entry, as recorded.
+         *
+         *      <p><code>actorEmail</code> is the snapshot taken at the time, not a lookup — which is why it can
+         *      differ from what that member's email is today, and why it is still there when the member is
+         *      not.
+         */
         AuditEntryResponse: {
             action?: string;
             actorEmail?: string;
@@ -1777,7 +3540,12 @@ export interface components {
             /** Format: date-time */
             createdAt?: string;
             expired?: boolean;
-            /** Format: date-time */
+            /**
+             * Format: date-time
+             * @description the exclusive instant the batch stops being good — the start of the day after
+             *          <code>expiresOn</code>. Exposed alongside the date because that is what every expiry comparison
+             *          downstream actually uses, and hiding it invites a client to reimplement the boundary
+             */
             expiresAt?: string;
             /** Format: date */
             expiresOn?: string;
@@ -1805,6 +3573,12 @@ export interface components {
             status?: "DRAFT" | "IN_REVIEW" | "ACTIVE" | "ARCHIVED";
             /** Format: date-time */
             updatedAt?: string;
+            /** Format: int64 */
+            version?: number;
+        };
+        /** @description Why the order is being abandoned. Recorded on the audit entry, not on the order. */
+        CancelPurchaseOrderRequest: {
+            reason?: string;
         };
         CategoryResponse: {
             bannerUrl?: string;
@@ -1825,7 +3599,15 @@ export interface components {
             status?: "DRAFT" | "IN_REVIEW" | "ACTIVE" | "ARCHIVED";
             /** Format: date-time */
             updatedAt?: string;
+            /** Format: int64 */
+            version?: number;
         };
+        /**
+         * @description A category and its subtree, for the tree picker.
+         *
+         *      <p>Nested rather than flat with parent ids: the picker renders a tree, and reassembling one on
+         *      the client is work every consumer would repeat. The whole thing comes from a single query.
+         */
         CategoryTreeResponse: {
             children?: components["schemas"]["CategoryTreeResponse"][];
             /** Format: int32 */
@@ -1839,6 +3621,8 @@ export interface components {
             slug?: string;
             /** @enum {string} */
             status?: "DRAFT" | "IN_REVIEW" | "ACTIVE" | "ARCHIVED";
+            /** Format: int64 */
+            version?: number;
         };
         ChangePasswordRequest: {
             currentPassword: string;
@@ -1852,9 +3636,19 @@ export interface components {
             password: string;
             token: string;
         };
+        CreateAttributeGroupRequest: {
+            name: string;
+        };
+        /** @description Creating an attribute. */
         CreateAttributeRequest: {
-            /** @enum {string} */
+            /**
+             * @description optional for an <code>OPTION</code>, which is always <code>VARIANT</code>. Required for
+             *          a <code>SPEC</code>, which has a real choice to make. A wrong value on an <code>OPTION</code> is
+             *          rejected rather than corrected.
+             * @enum {string}
+             */
             appliesTo?: "PRODUCT" | "VARIANT";
+            /** @description optional — derived from the name when absent. Immutable once created. */
             code?: string;
             /** @enum {string} */
             dataType: "TEXT" | "NUMBER" | "BOOLEAN" | "SINGLE_SELECT" | "MULTI_SELECT";
@@ -1864,11 +3658,16 @@ export interface components {
             /** @enum {string} */
             kind: "OPTION" | "SPEC";
             name: string;
+            /** @description accepted only when <code>dataType</code> is <code>NUMBER</code>. */
             unit?: string;
         };
         CreateBatchRequest: {
             batchNumber: string;
-            /** Format: date */
+            /**
+             * Format: date
+             * @description required when the variant declares a shelf life — the service enforces it,
+             *          because only it can see the variant
+             */
             expiresOn?: string;
             /** Format: date */
             manufacturedOn?: string;
@@ -1880,6 +3679,7 @@ export interface components {
             description?: string;
             logoUrl?: string;
             name: string;
+            /** @description optional — derived from the name when absent. Supplying one overrides that. */
             slug?: string;
         };
         CreateCategoryRequest: {
@@ -1887,15 +3687,27 @@ export interface components {
             description?: string;
             imageUrl?: string;
             name: string;
-            /** Format: uuid */
+            /**
+             * Format: uuid
+             * @description null creates a root category
+             */
             parentId?: string;
+            /** @description optional — derived from the name when absent */
             slug?: string;
         };
+        /**
+         * @description Creating a product.
+         *
+         *      <p><code>skuCode</code> is the default variant's, not the product's — a product has no SKU code
+         *      because a product is not the thing a warehouse holds (D4.9). Absent, it is derived from the
+         *      slug.
+         */
         CreateProductRequest: {
             /** @enum {string} */
             audience?: "PUBLIC" | "TIER_RESTRICTED" | "CUSTOMER_RESTRICTED";
             /** Format: uuid */
             brandId: string;
+            /** @description optional at creation; a primary category is required only to go live (§7) */
             categoryIds?: string[];
             description?: string;
             /** @enum {string} */
@@ -1909,6 +3721,57 @@ export interface components {
             skuCode?: string;
             slug?: string;
         };
+        /** @description Raising a purchase order. It is created in <code>DRAFT</code> and commits nothing until approved. */
+        CreatePurchaseOrderRequest: {
+            /**
+             * @description one currency for the whole order, fixed at creation. A total across two of them
+             *          means nothing, and changing it later would make this a different order
+             */
+            currency: string;
+            /**
+             * Format: date
+             * @description optional. Orders with no expected date sort last in the outstanding view
+             *          rather than disappearing from it — an undated order is the one most likely forgotten
+             */
+            expectedOn?: string;
+            lines?: components["schemas"]["PurchaseOrderLineRequest"][];
+            notes?: string;
+            /** Format: uuid */
+            supplierId: string;
+            /** Format: uuid */
+            warehouseId: string;
+        };
+        CreateRoleRequest: {
+            description?: string;
+            name: string;
+            permissions: string[];
+        };
+        CreateSupplierRequest: {
+            addressLine1: string;
+            addressLine2?: string;
+            city: string;
+            /** @description short, uppercase and unique. Immutable once created — see {@link com.oms.service.procurement.dto.admin.AdminSupplierDtos.CreateSupplierRequest      UpdateSupplierRequest} */
+            code: string;
+            /** Format: email */
+            contactEmail?: string;
+            contactName?: string;
+            contactPhone?: string;
+            gstin?: string;
+            name: string;
+            /**
+             * Format: int32
+             * @description net days. <b>Required</b>, and zero is a real answer meaning payment on
+             *          delivery — which is not the same as unknown, so there is no default
+             */
+            paymentTermsDays: number;
+            pincode: string;
+            /**
+             * @description <b>required.</b> An inter-state purchase is a GST event in India (IGST rather than
+             *          CGST plus SGST), and adding state to suppliers after goods have been received means
+             *          guessing which tax applied to every receipt already recorded
+             */
+            state: string;
+        };
         CreateTeamMemberRequest: {
             /** Format: email */
             email: string;
@@ -1916,10 +3779,35 @@ export interface components {
             phone?: string;
             roleIds?: string[];
         };
+        /**
+         * @description Starting an account. The result is always <code>INVITED</code>, holding <code>CONSUMER</code> — there is
+         *      no way to create an active user.
+         */
+        CreateUserRequest: {
+            /**
+             * Format: email
+             * @description optional; unique among accounts when present; stored lowercased
+             */
+            email?: string;
+            /**
+             * @description an Indian mobile number. Accepted with or without <code>+91</code> / <code>0</code>, with
+             *          spaces or hyphens; stored and returned as <code>+91</code> followed by ten digits
+             */
+            mobile: string;
+            name: string;
+        };
+        /** @description Adding a value. */
         CreateValueRequest: {
+            /** @description optional — derived from the label when absent. Immutable once created. */
             code?: string;
             label: string;
         };
+        /**
+         * @description Creating an additional variant.
+         *
+         *      <p><code>optionValues</code> must name exactly one value per axis the product declares — fewer and
+         *      no combination identifies the variant, more and it claims to be two things at once.
+         */
         CreateVariantRequest: {
             optionValues: components["schemas"]["OptionValuePayload"][];
             skuCode: string;
@@ -1928,10 +3816,16 @@ export interface components {
             addressLine1: string;
             addressLine2?: string;
             city: string;
+            /** @description short, uppercase and unique. Immutable once created — see {@link com.oms.service.inventory.dto.admin.AdminWarehouseDtos.CreateWarehouseRequest      UpdateWarehouseRequest} */
             code: string;
             gstin?: string;
             name: string;
             pincode: string;
+            /**
+             * @description <b>required.</b> An inter-state stock transfer is a GST event in India, and adding
+             *          state to warehouses after stock has already moved means guessing which movements crossed a
+             *          line
+             */
             state: string;
             /** @enum {string} */
             type: "OWN" | "THIRD_PARTY";
@@ -1950,8 +3844,13 @@ export interface components {
             /** Format: uuid */
             warehouseId?: string;
         };
+        /**
+         * @description The machine-readable error code. Branch on this, never on `message`. The catalog in the API description says what each one means and which fields it populates.
+         * @enum {unknown}
+         */
+        ErrorCode: "NOT_FOUND" | "VALIDATION_FAILED" | "VERSION_CONFLICT" | "CONFLICT" | "BUSINESS_RULE_VIOLATION" | "AUTHENTICATION_FAILED" | "ACCESS_DENIED" | "INTERNAL_ERROR";
         ErrorResponse: {
-            code?: string;
+            code?: components["schemas"]["ErrorCode"];
             fieldErrors?: components["schemas"]["FieldError"][];
             message?: string;
             traceId?: string;
@@ -1980,8 +3879,99 @@ export interface components {
             /** Format: int32 */
             sessionsRevoked?: number;
         };
+        /**
+         * @description The deliberately uninformative response of the self-service reset endpoint.
+         *
+         *      <p>Identical whether or not the email belongs to a member. The endpoint is unauthenticated, so
+         *      varying it would let anyone on the internet test addresses to learn who works here.
+         */
         GenericAcknowledgement: {
             message?: string;
+        };
+        /**
+         * @description One line of a receipt.
+         *
+         *      <p><b>Two quantities.</b> <code>quantityReceived</code> is what was accepted and becomes a <code>
+         *      RECEIPT</code> stock movement; <code>quantityRejected</code> is what was refused at the door and
+         *      deliberately becomes no movement at all — it never entered inventory. Recording only the
+         *      accepted figure loses the reason the purchase order is short.
+         *
+         *      <p><b>Batches.</b> For a batch-tracked variant, either name an existing <code>batchId</code> or give
+         *      <code>batchNumber</code> with its dates and the batch is created inline — the carton is where batch
+         *      data actually arrives. Both together is refused as ambiguous, and either on an untracked
+         *      variant is refused too.
+         */
+        GoodsReceiptLineRequest: {
+            /** Format: uuid */
+            batchId?: string;
+            batchNumber?: string;
+            /** Format: date */
+            expiresOn?: string;
+            /** Format: date */
+            manufacturedOn?: string;
+            /** Format: uuid */
+            purchaseOrderLineId: string;
+            /** Format: int32 */
+            quantityReceived: number;
+            /** Format: int32 */
+            quantityRejected?: number;
+            /**
+             * @description what was <b>actually</b> charged. Omit it and the purchase order's agreed cost
+             *          stands. Must be in the order's currency
+             */
+            unitCost?: components["schemas"]["Money"];
+        };
+        GoodsReceiptLineResponse: {
+            /** Format: date-time */
+            batchExpiresAt?: string;
+            /** Format: uuid */
+            batchId?: string;
+            batchNumber?: string;
+            /** Format: uuid */
+            id?: string;
+            lineCost?: components["schemas"]["Money"];
+            /** Format: uuid */
+            purchaseOrderLineId?: string;
+            /** Format: int32 */
+            quantityReceived?: number;
+            /** Format: int32 */
+            quantityRejected?: number;
+            skuCode?: string;
+            unitCost?: components["schemas"]["Money"];
+            /** Format: uuid */
+            variantId?: string;
+            variantName?: string;
+        };
+        /**
+         * @description A posted goods receipt with its lines.
+         *
+         *      <p>There is no <code>version</code>: this row has no edit path, so an optimistic lock would
+         *      advertise one that does not exist.
+         */
+        GoodsReceiptResponse: {
+            /** Format: date-time */
+            createdAt?: string;
+            grnNumber?: string;
+            /** Format: uuid */
+            id?: string;
+            lines?: components["schemas"]["GoodsReceiptLineResponse"][];
+            notes?: string;
+            poNumber?: string;
+            /** Format: uuid */
+            postedBy?: string;
+            /** Format: uuid */
+            purchaseOrderId?: string;
+            /** Format: int32 */
+            quantityReceived?: number;
+            /** Format: int32 */
+            quantityRejected?: number;
+            /** Format: date */
+            receivedOn?: string;
+            supplierInvoiceNumber?: string;
+            totalCost?: components["schemas"]["Money"];
+            warehouseCode?: string;
+            /** Format: uuid */
+            warehouseId?: string;
         };
         ImageResponse: {
             altText?: string;
@@ -1990,7 +3980,10 @@ export interface components {
             /** Format: uuid */
             id?: string;
             url?: string;
+            /** Format: int64 */
+            version?: number;
         };
+        /** @description A member plus their one-time invite link. The link exists in this response and nowhere else. */
         InvitedTeamMemberResponse: {
             inviteLink?: string;
             member?: components["schemas"]["TeamMemberResponse"];
@@ -2021,21 +4014,49 @@ export interface components {
             email?: string;
             /** Format: uuid */
             memberId?: string;
+            /**
+             * @description the client must route to the change-password screen before anything
+             *          else when this is true
+             */
             mustChangePassword?: boolean;
             name?: string;
             permissions?: string[];
             status?: string;
+            /** @description the session token — sent once, never retrievable again */
             token?: string;
         };
+        /**
+         * @description An immutable monetary amount: a signed count of minor units plus an ISO-4217 currency.
+         *
+         *      <p><code>double</code>, <code>float</code> and bare {@link BigDecimal BigDecimal} are banned from money handling. All
+         *      arithmetic lives on this type so that rounding happens in exactly one place and is impossible to
+         *      get subtly wrong at a call site.
+         *
+         *      <p>Rounding is always {@link RoundingMode#HALF_UP RoundingMode#HALF_UP} and always to a whole minor unit. Operations
+         *      that combine two amounts reject a currency mismatch rather than coercing.
+         */
+        Money: {
+            negative?: boolean;
+            positive?: boolean;
+            zero?: boolean;
+        };
+        /** @description Money on the wire. */
         MoneyPayload: {
-            /** Format: int64 */
+            /**
+             * Format: int64
+             * @description paise for INR — 149900 is ₹1,499.00
+             */
             amountMinor: number;
             currency: string;
         };
         MoveCategoryRequest: {
-            /** Format: uuid */
+            /**
+             * Format: uuid
+             * @description null makes the category a root
+             */
             newParentId?: string;
         };
+        /** @description One value on one axis. */
         OptionValuePayload: {
             /** Format: uuid */
             attributeId: string;
@@ -2049,6 +4070,24 @@ export interface components {
             size?: number;
             sort?: string[];
         };
+        /**
+         * @description The paging envelope every paginated response uses.
+         *
+         *      <p>Lives in <code>platform</code> rather than in one domain's DTO folder. It carries no domain meaning
+         *      and every module needs it, so putting it in <code>team/dto/admin</code> — where it started, when team
+         *      was the only module — would make <code>catalog</code> import <code>team</code> to return a page of brands.
+         *      Domain packages depend on <code>platform</code> and never on each other; a shared envelope has to sit
+         *      where both can reach it.
+         *
+         *      <p>It is not an exception to "never share DTOs across surfaces". That rule is about
+         *      <i>representations</i> — the fields of a brand, of a member, of an order — where a shared type
+         *      leaks an admin-only field into an app-facing response. This type has no fields of its own; the
+         *      content it wraps is a per-surface DTO and stays one.
+         *
+         *      <p>Deliberately not Spring Data's <code>Page</code>, whose JSON form is unstable across versions and
+         *      exposes internals — <code>pageable</code>, <code>sort</code>, <code>numberOfElements</code> — that no client
+         *      should be reading.
+         */
         PageResponseAttributeResponse: {
             content?: components["schemas"]["AttributeResponse"][];
             /** Format: int32 */
@@ -2060,6 +4099,24 @@ export interface components {
             /** Format: int32 */
             totalPages?: number;
         };
+        /**
+         * @description The paging envelope every paginated response uses.
+         *
+         *      <p>Lives in <code>platform</code> rather than in one domain's DTO folder. It carries no domain meaning
+         *      and every module needs it, so putting it in <code>team/dto/admin</code> — where it started, when team
+         *      was the only module — would make <code>catalog</code> import <code>team</code> to return a page of brands.
+         *      Domain packages depend on <code>platform</code> and never on each other; a shared envelope has to sit
+         *      where both can reach it.
+         *
+         *      <p>It is not an exception to "never share DTOs across surfaces". That rule is about
+         *      <i>representations</i> — the fields of a brand, of a member, of an order — where a shared type
+         *      leaks an admin-only field into an app-facing response. This type has no fields of its own; the
+         *      content it wraps is a per-surface DTO and stays one.
+         *
+         *      <p>Deliberately not Spring Data's <code>Page</code>, whose JSON form is unstable across versions and
+         *      exposes internals — <code>pageable</code>, <code>sort</code>, <code>numberOfElements</code> — that no client
+         *      should be reading.
+         */
         PageResponseAuditEntryResponse: {
             content?: components["schemas"]["AuditEntryResponse"][];
             /** Format: int32 */
@@ -2071,6 +4128,24 @@ export interface components {
             /** Format: int32 */
             totalPages?: number;
         };
+        /**
+         * @description The paging envelope every paginated response uses.
+         *
+         *      <p>Lives in <code>platform</code> rather than in one domain's DTO folder. It carries no domain meaning
+         *      and every module needs it, so putting it in <code>team/dto/admin</code> — where it started, when team
+         *      was the only module — would make <code>catalog</code> import <code>team</code> to return a page of brands.
+         *      Domain packages depend on <code>platform</code> and never on each other; a shared envelope has to sit
+         *      where both can reach it.
+         *
+         *      <p>It is not an exception to "never share DTOs across surfaces". That rule is about
+         *      <i>representations</i> — the fields of a brand, of a member, of an order — where a shared type
+         *      leaks an admin-only field into an app-facing response. This type has no fields of its own; the
+         *      content it wraps is a per-surface DTO and stays one.
+         *
+         *      <p>Deliberately not Spring Data's <code>Page</code>, whose JSON form is unstable across versions and
+         *      exposes internals — <code>pageable</code>, <code>sort</code>, <code>numberOfElements</code> — that no client
+         *      should be reading.
+         */
         PageResponseBatchResponse: {
             content?: components["schemas"]["BatchResponse"][];
             /** Format: int32 */
@@ -2082,6 +4157,24 @@ export interface components {
             /** Format: int32 */
             totalPages?: number;
         };
+        /**
+         * @description The paging envelope every paginated response uses.
+         *
+         *      <p>Lives in <code>platform</code> rather than in one domain's DTO folder. It carries no domain meaning
+         *      and every module needs it, so putting it in <code>team/dto/admin</code> — where it started, when team
+         *      was the only module — would make <code>catalog</code> import <code>team</code> to return a page of brands.
+         *      Domain packages depend on <code>platform</code> and never on each other; a shared envelope has to sit
+         *      where both can reach it.
+         *
+         *      <p>It is not an exception to "never share DTOs across surfaces". That rule is about
+         *      <i>representations</i> — the fields of a brand, of a member, of an order — where a shared type
+         *      leaks an admin-only field into an app-facing response. This type has no fields of its own; the
+         *      content it wraps is a per-surface DTO and stays one.
+         *
+         *      <p>Deliberately not Spring Data's <code>Page</code>, whose JSON form is unstable across versions and
+         *      exposes internals — <code>pageable</code>, <code>sort</code>, <code>numberOfElements</code> — that no client
+         *      should be reading.
+         */
         PageResponseBrandResponse: {
             content?: components["schemas"]["BrandResponse"][];
             /** Format: int32 */
@@ -2093,6 +4186,24 @@ export interface components {
             /** Format: int32 */
             totalPages?: number;
         };
+        /**
+         * @description The paging envelope every paginated response uses.
+         *
+         *      <p>Lives in <code>platform</code> rather than in one domain's DTO folder. It carries no domain meaning
+         *      and every module needs it, so putting it in <code>team/dto/admin</code> — where it started, when team
+         *      was the only module — would make <code>catalog</code> import <code>team</code> to return a page of brands.
+         *      Domain packages depend on <code>platform</code> and never on each other; a shared envelope has to sit
+         *      where both can reach it.
+         *
+         *      <p>It is not an exception to "never share DTOs across surfaces". That rule is about
+         *      <i>representations</i> — the fields of a brand, of a member, of an order — where a shared type
+         *      leaks an admin-only field into an app-facing response. This type has no fields of its own; the
+         *      content it wraps is a per-surface DTO and stays one.
+         *
+         *      <p>Deliberately not Spring Data's <code>Page</code>, whose JSON form is unstable across versions and
+         *      exposes internals — <code>pageable</code>, <code>sort</code>, <code>numberOfElements</code> — that no client
+         *      should be reading.
+         */
         PageResponseCategoryResponse: {
             content?: components["schemas"]["CategoryResponse"][];
             /** Format: int32 */
@@ -2104,6 +4215,24 @@ export interface components {
             /** Format: int32 */
             totalPages?: number;
         };
+        /**
+         * @description The paging envelope every paginated response uses.
+         *
+         *      <p>Lives in <code>platform</code> rather than in one domain's DTO folder. It carries no domain meaning
+         *      and every module needs it, so putting it in <code>team/dto/admin</code> — where it started, when team
+         *      was the only module — would make <code>catalog</code> import <code>team</code> to return a page of brands.
+         *      Domain packages depend on <code>platform</code> and never on each other; a shared envelope has to sit
+         *      where both can reach it.
+         *
+         *      <p>It is not an exception to "never share DTOs across surfaces". That rule is about
+         *      <i>representations</i> — the fields of a brand, of a member, of an order — where a shared type
+         *      leaks an admin-only field into an app-facing response. This type has no fields of its own; the
+         *      content it wraps is a per-surface DTO and stays one.
+         *
+         *      <p>Deliberately not Spring Data's <code>Page</code>, whose JSON form is unstable across versions and
+         *      exposes internals — <code>pageable</code>, <code>sort</code>, <code>numberOfElements</code> — that no client
+         *      should be reading.
+         */
         PageResponseExpiringStockResponse: {
             content?: components["schemas"]["ExpiringStockResponse"][];
             /** Format: int32 */
@@ -2115,6 +4244,53 @@ export interface components {
             /** Format: int32 */
             totalPages?: number;
         };
+        /**
+         * @description The paging envelope every paginated response uses.
+         *
+         *      <p>Lives in <code>platform</code> rather than in one domain's DTO folder. It carries no domain meaning
+         *      and every module needs it, so putting it in <code>team/dto/admin</code> — where it started, when team
+         *      was the only module — would make <code>catalog</code> import <code>team</code> to return a page of brands.
+         *      Domain packages depend on <code>platform</code> and never on each other; a shared envelope has to sit
+         *      where both can reach it.
+         *
+         *      <p>It is not an exception to "never share DTOs across surfaces". That rule is about
+         *      <i>representations</i> — the fields of a brand, of a member, of an order — where a shared type
+         *      leaks an admin-only field into an app-facing response. This type has no fields of its own; the
+         *      content it wraps is a per-surface DTO and stays one.
+         *
+         *      <p>Deliberately not Spring Data's <code>Page</code>, whose JSON form is unstable across versions and
+         *      exposes internals — <code>pageable</code>, <code>sort</code>, <code>numberOfElements</code> — that no client
+         *      should be reading.
+         */
+        PageResponseGoodsReceiptResponse: {
+            content?: components["schemas"]["GoodsReceiptResponse"][];
+            /** Format: int32 */
+            page?: number;
+            /** Format: int32 */
+            size?: number;
+            /** Format: int64 */
+            totalElements?: number;
+            /** Format: int32 */
+            totalPages?: number;
+        };
+        /**
+         * @description The paging envelope every paginated response uses.
+         *
+         *      <p>Lives in <code>platform</code> rather than in one domain's DTO folder. It carries no domain meaning
+         *      and every module needs it, so putting it in <code>team/dto/admin</code> — where it started, when team
+         *      was the only module — would make <code>catalog</code> import <code>team</code> to return a page of brands.
+         *      Domain packages depend on <code>platform</code> and never on each other; a shared envelope has to sit
+         *      where both can reach it.
+         *
+         *      <p>It is not an exception to "never share DTOs across surfaces". That rule is about
+         *      <i>representations</i> — the fields of a brand, of a member, of an order — where a shared type
+         *      leaks an admin-only field into an app-facing response. This type has no fields of its own; the
+         *      content it wraps is a per-surface DTO and stays one.
+         *
+         *      <p>Deliberately not Spring Data's <code>Page</code>, whose JSON form is unstable across versions and
+         *      exposes internals — <code>pageable</code>, <code>sort</code>, <code>numberOfElements</code> — that no client
+         *      should be reading.
+         */
         PageResponseLoginEventResponse: {
             content?: components["schemas"]["LoginEventResponse"][];
             /** Format: int32 */
@@ -2126,6 +4302,24 @@ export interface components {
             /** Format: int32 */
             totalPages?: number;
         };
+        /**
+         * @description The paging envelope every paginated response uses.
+         *
+         *      <p>Lives in <code>platform</code> rather than in one domain's DTO folder. It carries no domain meaning
+         *      and every module needs it, so putting it in <code>team/dto/admin</code> — where it started, when team
+         *      was the only module — would make <code>catalog</code> import <code>team</code> to return a page of brands.
+         *      Domain packages depend on <code>platform</code> and never on each other; a shared envelope has to sit
+         *      where both can reach it.
+         *
+         *      <p>It is not an exception to "never share DTOs across surfaces". That rule is about
+         *      <i>representations</i> — the fields of a brand, of a member, of an order — where a shared type
+         *      leaks an admin-only field into an app-facing response. This type has no fields of its own; the
+         *      content it wraps is a per-surface DTO and stays one.
+         *
+         *      <p>Deliberately not Spring Data's <code>Page</code>, whose JSON form is unstable across versions and
+         *      exposes internals — <code>pageable</code>, <code>sort</code>, <code>numberOfElements</code> — that no client
+         *      should be reading.
+         */
         PageResponseProductResponse: {
             content?: components["schemas"]["ProductResponse"][];
             /** Format: int32 */
@@ -2137,6 +4331,53 @@ export interface components {
             /** Format: int32 */
             totalPages?: number;
         };
+        /**
+         * @description The paging envelope every paginated response uses.
+         *
+         *      <p>Lives in <code>platform</code> rather than in one domain's DTO folder. It carries no domain meaning
+         *      and every module needs it, so putting it in <code>team/dto/admin</code> — where it started, when team
+         *      was the only module — would make <code>catalog</code> import <code>team</code> to return a page of brands.
+         *      Domain packages depend on <code>platform</code> and never on each other; a shared envelope has to sit
+         *      where both can reach it.
+         *
+         *      <p>It is not an exception to "never share DTOs across surfaces". That rule is about
+         *      <i>representations</i> — the fields of a brand, of a member, of an order — where a shared type
+         *      leaks an admin-only field into an app-facing response. This type has no fields of its own; the
+         *      content it wraps is a per-surface DTO and stays one.
+         *
+         *      <p>Deliberately not Spring Data's <code>Page</code>, whose JSON form is unstable across versions and
+         *      exposes internals — <code>pageable</code>, <code>sort</code>, <code>numberOfElements</code> — that no client
+         *      should be reading.
+         */
+        PageResponsePurchaseOrderResponse: {
+            content?: components["schemas"]["PurchaseOrderResponse"][];
+            /** Format: int32 */
+            page?: number;
+            /** Format: int32 */
+            size?: number;
+            /** Format: int64 */
+            totalElements?: number;
+            /** Format: int32 */
+            totalPages?: number;
+        };
+        /**
+         * @description The paging envelope every paginated response uses.
+         *
+         *      <p>Lives in <code>platform</code> rather than in one domain's DTO folder. It carries no domain meaning
+         *      and every module needs it, so putting it in <code>team/dto/admin</code> — where it started, when team
+         *      was the only module — would make <code>catalog</code> import <code>team</code> to return a page of brands.
+         *      Domain packages depend on <code>platform</code> and never on each other; a shared envelope has to sit
+         *      where both can reach it.
+         *
+         *      <p>It is not an exception to "never share DTOs across surfaces". That rule is about
+         *      <i>representations</i> — the fields of a brand, of a member, of an order — where a shared type
+         *      leaks an admin-only field into an app-facing response. This type has no fields of its own; the
+         *      content it wraps is a per-surface DTO and stays one.
+         *
+         *      <p>Deliberately not Spring Data's <code>Page</code>, whose JSON form is unstable across versions and
+         *      exposes internals — <code>pageable</code>, <code>sort</code>, <code>numberOfElements</code> — that no client
+         *      should be reading.
+         */
         PageResponseStockLevelResponse: {
             content?: components["schemas"]["StockLevelResponse"][];
             /** Format: int32 */
@@ -2148,6 +4389,24 @@ export interface components {
             /** Format: int32 */
             totalPages?: number;
         };
+        /**
+         * @description The paging envelope every paginated response uses.
+         *
+         *      <p>Lives in <code>platform</code> rather than in one domain's DTO folder. It carries no domain meaning
+         *      and every module needs it, so putting it in <code>team/dto/admin</code> — where it started, when team
+         *      was the only module — would make <code>catalog</code> import <code>team</code> to return a page of brands.
+         *      Domain packages depend on <code>platform</code> and never on each other; a shared envelope has to sit
+         *      where both can reach it.
+         *
+         *      <p>It is not an exception to "never share DTOs across surfaces". That rule is about
+         *      <i>representations</i> — the fields of a brand, of a member, of an order — where a shared type
+         *      leaks an admin-only field into an app-facing response. This type has no fields of its own; the
+         *      content it wraps is a per-surface DTO and stays one.
+         *
+         *      <p>Deliberately not Spring Data's <code>Page</code>, whose JSON form is unstable across versions and
+         *      exposes internals — <code>pageable</code>, <code>sort</code>, <code>numberOfElements</code> — that no client
+         *      should be reading.
+         */
         PageResponseStockMovementResponse: {
             content?: components["schemas"]["StockMovementResponse"][];
             /** Format: int32 */
@@ -2159,6 +4418,24 @@ export interface components {
             /** Format: int32 */
             totalPages?: number;
         };
+        /**
+         * @description The paging envelope every paginated response uses.
+         *
+         *      <p>Lives in <code>platform</code> rather than in one domain's DTO folder. It carries no domain meaning
+         *      and every module needs it, so putting it in <code>team/dto/admin</code> — where it started, when team
+         *      was the only module — would make <code>catalog</code> import <code>team</code> to return a page of brands.
+         *      Domain packages depend on <code>platform</code> and never on each other; a shared envelope has to sit
+         *      where both can reach it.
+         *
+         *      <p>It is not an exception to "never share DTOs across surfaces". That rule is about
+         *      <i>representations</i> — the fields of a brand, of a member, of an order — where a shared type
+         *      leaks an admin-only field into an app-facing response. This type has no fields of its own; the
+         *      content it wraps is a per-surface DTO and stays one.
+         *
+         *      <p>Deliberately not Spring Data's <code>Page</code>, whose JSON form is unstable across versions and
+         *      exposes internals — <code>pageable</code>, <code>sort</code>, <code>numberOfElements</code> — that no client
+         *      should be reading.
+         */
         PageResponseStockTotalResponse: {
             content?: components["schemas"]["StockTotalResponse"][];
             /** Format: int32 */
@@ -2170,6 +4447,53 @@ export interface components {
             /** Format: int32 */
             totalPages?: number;
         };
+        /**
+         * @description The paging envelope every paginated response uses.
+         *
+         *      <p>Lives in <code>platform</code> rather than in one domain's DTO folder. It carries no domain meaning
+         *      and every module needs it, so putting it in <code>team/dto/admin</code> — where it started, when team
+         *      was the only module — would make <code>catalog</code> import <code>team</code> to return a page of brands.
+         *      Domain packages depend on <code>platform</code> and never on each other; a shared envelope has to sit
+         *      where both can reach it.
+         *
+         *      <p>It is not an exception to "never share DTOs across surfaces". That rule is about
+         *      <i>representations</i> — the fields of a brand, of a member, of an order — where a shared type
+         *      leaks an admin-only field into an app-facing response. This type has no fields of its own; the
+         *      content it wraps is a per-surface DTO and stays one.
+         *
+         *      <p>Deliberately not Spring Data's <code>Page</code>, whose JSON form is unstable across versions and
+         *      exposes internals — <code>pageable</code>, <code>sort</code>, <code>numberOfElements</code> — that no client
+         *      should be reading.
+         */
+        PageResponseSupplierResponse: {
+            content?: components["schemas"]["SupplierResponse"][];
+            /** Format: int32 */
+            page?: number;
+            /** Format: int32 */
+            size?: number;
+            /** Format: int64 */
+            totalElements?: number;
+            /** Format: int32 */
+            totalPages?: number;
+        };
+        /**
+         * @description The paging envelope every paginated response uses.
+         *
+         *      <p>Lives in <code>platform</code> rather than in one domain's DTO folder. It carries no domain meaning
+         *      and every module needs it, so putting it in <code>team/dto/admin</code> — where it started, when team
+         *      was the only module — would make <code>catalog</code> import <code>team</code> to return a page of brands.
+         *      Domain packages depend on <code>platform</code> and never on each other; a shared envelope has to sit
+         *      where both can reach it.
+         *
+         *      <p>It is not an exception to "never share DTOs across surfaces". That rule is about
+         *      <i>representations</i> — the fields of a brand, of a member, of an order — where a shared type
+         *      leaks an admin-only field into an app-facing response. This type has no fields of its own; the
+         *      content it wraps is a per-surface DTO and stays one.
+         *
+         *      <p>Deliberately not Spring Data's <code>Page</code>, whose JSON form is unstable across versions and
+         *      exposes internals — <code>pageable</code>, <code>sort</code>, <code>numberOfElements</code> — that no client
+         *      should be reading.
+         */
         PageResponseTeamMemberResponse: {
             content?: components["schemas"]["TeamMemberResponse"][];
             /** Format: int32 */
@@ -2181,6 +4505,53 @@ export interface components {
             /** Format: int32 */
             totalPages?: number;
         };
+        /**
+         * @description The paging envelope every paginated response uses.
+         *
+         *      <p>Lives in <code>platform</code> rather than in one domain's DTO folder. It carries no domain meaning
+         *      and every module needs it, so putting it in <code>team/dto/admin</code> — where it started, when team
+         *      was the only module — would make <code>catalog</code> import <code>team</code> to return a page of brands.
+         *      Domain packages depend on <code>platform</code> and never on each other; a shared envelope has to sit
+         *      where both can reach it.
+         *
+         *      <p>It is not an exception to "never share DTOs across surfaces". That rule is about
+         *      <i>representations</i> — the fields of a brand, of a member, of an order — where a shared type
+         *      leaks an admin-only field into an app-facing response. This type has no fields of its own; the
+         *      content it wraps is a per-surface DTO and stays one.
+         *
+         *      <p>Deliberately not Spring Data's <code>Page</code>, whose JSON form is unstable across versions and
+         *      exposes internals — <code>pageable</code>, <code>sort</code>, <code>numberOfElements</code> — that no client
+         *      should be reading.
+         */
+        PageResponseUserSummaryResponse: {
+            content?: components["schemas"]["UserSummaryResponse"][];
+            /** Format: int32 */
+            page?: number;
+            /** Format: int32 */
+            size?: number;
+            /** Format: int64 */
+            totalElements?: number;
+            /** Format: int32 */
+            totalPages?: number;
+        };
+        /**
+         * @description The paging envelope every paginated response uses.
+         *
+         *      <p>Lives in <code>platform</code> rather than in one domain's DTO folder. It carries no domain meaning
+         *      and every module needs it, so putting it in <code>team/dto/admin</code> — where it started, when team
+         *      was the only module — would make <code>catalog</code> import <code>team</code> to return a page of brands.
+         *      Domain packages depend on <code>platform</code> and never on each other; a shared envelope has to sit
+         *      where both can reach it.
+         *
+         *      <p>It is not an exception to "never share DTOs across surfaces". That rule is about
+         *      <i>representations</i> — the fields of a brand, of a member, of an order — where a shared type
+         *      leaks an admin-only field into an app-facing response. This type has no fields of its own; the
+         *      content it wraps is a per-surface DTO and stays one.
+         *
+         *      <p>Deliberately not Spring Data's <code>Page</code>, whose JSON form is unstable across versions and
+         *      exposes internals — <code>pageable</code>, <code>sort</code>, <code>numberOfElements</code> — that no client
+         *      should be reading.
+         */
         PageResponseWarehouseResponse: {
             content?: components["schemas"]["WarehouseResponse"][];
             /** Format: int32 */
@@ -2195,6 +4566,7 @@ export interface components {
         PasswordResetLinkResponse: {
             resetLink?: string;
         };
+        /** @description The catalog grouped for the role editor, which renders straight from this. */
         PermissionDomainResponse: {
             domain?: string;
             permissions?: components["schemas"]["PermissionResponse"][];
@@ -2204,11 +4576,30 @@ export interface components {
             domain?: string;
             key?: string;
         };
+        /**
+         * @description Posting a goods receipt.
+         *
+         *      <p>The whole thing commits or none of it does: the purchase order's status, every line's
+         *      received quantity and every stock movement.
+         */
+        PostGoodsReceiptRequest: {
+            lines: components["schemas"]["GoodsReceiptLineRequest"][];
+            notes?: string;
+            /**
+             * Format: date
+             * @description when the goods actually arrived. Optional, defaulting to today; backdating is
+             *          allowed because paperwork catches up with a warehouse days later, but a future date is
+             *          refused — it would put stock into a period that has not happened yet
+             */
+            receivedOn?: string;
+            supplierInvoiceNumber?: string;
+        };
         ProductCategoryResponse: {
             /** Format: uuid */
             categoryId?: string;
             primary?: boolean;
         };
+        /** @description The single-get shape: the product with everything hanging off it. */
         ProductDetailResponse: {
             categories?: components["schemas"]["ProductCategoryResponse"][];
             options?: components["schemas"]["ProductOptionResponse"][];
@@ -2223,6 +4614,7 @@ export interface components {
             /** Format: uuid */
             id?: string;
         };
+        /** @description The list shape: the product without its variants, options, specs or images. */
         ProductResponse: {
             /** @enum {string} */
             audience?: "PUBLIC" | "TIER_RESTRICTED" | "CUSTOMER_RESTRICTED";
@@ -2248,7 +4640,15 @@ export interface components {
             status?: "DRAFT" | "IN_REVIEW" | "ACTIVE" | "ARCHIVED";
             /** Format: date-time */
             updatedAt?: string;
+            /** Format: int64 */
+            version?: number;
         };
+        /**
+         * @description The caller's own account.
+         *
+         *      <p>Roles and permissions are present and read-only. Nobody edits their own access, including a
+         *      Super Admin, so there is no request type that accepts them.
+         */
         ProfileResponse: {
             email?: string;
             /** Format: uuid */
@@ -2262,23 +4662,122 @@ export interface components {
             roles?: components["schemas"]["RoleSummary"][];
             /** @enum {string} */
             status?: "INVITED" | "ACTIVE" | "SUSPENDED" | "DEACTIVATED";
+            /** Format: int64 */
+            version?: number;
+        };
+        /** @description One line on the way in. */
+        PurchaseOrderLineRequest: {
+            /** Format: int32 */
+            quantityOrdered: number;
+            /** @description a percentage, e.g. <code>18.00</code> */
+            taxRate: number;
+            /**
+             * @description minor units plus currency, e.g. <code>{&quot;amountMinor&quot;: 45000, &quot;currency&quot;:
+             *          &quot;INR&quot;</code>}. Must be in the order's currency — a mismatch is refused rather than converted
+             */
+            unitCost: components["schemas"]["Money"];
+            /** Format: uuid */
+            variantId: string;
+        };
+        PurchaseOrderLineResponse: {
+            batchTracked?: boolean;
+            /** Format: uuid */
+            id?: string;
+            lineCost?: components["schemas"]["Money"];
+            /** Format: int32 */
+            lineNumber?: number;
+            lineTax?: components["schemas"]["Money"];
+            productName?: string;
+            /** Format: int32 */
+            quantityOrdered?: number;
+            /** Format: int32 */
+            quantityOutstanding?: number;
+            /** Format: int32 */
+            quantityReceived?: number;
+            skuCode?: string;
+            taxRate?: number;
+            unitCost?: components["schemas"]["Money"];
+            /** Format: uuid */
+            variantId?: string;
+            variantName?: string;
+        };
+        /** @description A purchase order with its lines. */
+        PurchaseOrderResponse: {
+            /** Format: date-time */
+            approvedAt?: string;
+            /** Format: uuid */
+            approvedBy?: string;
+            /** Format: date-time */
+            cancelledAt?: string;
+            /** Format: uuid */
+            cancelledBy?: string;
+            /** Format: date-time */
+            createdAt?: string;
+            currency?: string;
+            /** Format: date */
+            expectedOn?: string;
+            /** Format: uuid */
+            id?: string;
+            lines?: components["schemas"]["PurchaseOrderLineResponse"][];
+            notes?: string;
+            poNumber?: string;
+            /** Format: int32 */
+            quantityOrdered?: number;
+            /** Format: int32 */
+            quantityOutstanding?: number;
+            /**
+             * Format: int32
+             * @description a projection of the goods receipts against this order. It is never set
+             *          directly, and there is no endpoint that can
+             */
+            quantityReceived?: number;
+            /** @enum {string} */
+            status?: "DRAFT" | "APPROVED" | "PARTIALLY_RECEIVED" | "RECEIVED" | "CANCELLED";
+            supplierCode?: string;
+            /** Format: uuid */
+            supplierId?: string;
+            supplierName?: string;
+            totalCost?: components["schemas"]["Money"];
+            totalTax?: components["schemas"]["Money"];
+            /** Format: date-time */
+            updatedAt?: string;
+            /** Format: int64 */
+            version?: number;
+            warehouseCode?: string;
+            /** Format: uuid */
+            warehouseId?: string;
+            warehouseName?: string;
         };
         RebuildResponse: {
+            /**
+             * @description what was wrong before it ran. Empty means the projection was already right —
+             *          which is what it should be every single time
+             */
             corrected?: components["schemas"]["DriftRow"][];
-            /** Format: int32 */
+            /**
+             * Format: int32
+             * @description how many locations the projection holds after the rebuild
+             */
             rowsWritten?: number;
         };
+        /** @description The reconciliation report. */
         ReconcileResponse: {
+            /**
+             * @description locations where the projection and the ledger disagree. Empty is the expected
+             *          answer, and any other answer is an incident
+             */
             drifting?: components["schemas"]["DriftRow"][];
             /** Format: int32 */
             driftingLocations?: number;
             matches?: boolean;
         };
+        /** @description Ordering within one parent. <code>parentId</code> null orders the roots. */
         ReorderCategoriesRequest: {
             orderedIds: string[];
             /** Format: uuid */
             parentId?: string;
         };
+        /** @description The ordering, first to last. */
         ReorderRequest: {
             orderedIds: string[];
         };
@@ -2286,12 +4785,41 @@ export interface components {
             /** Format: email */
             email: string;
         };
+        /** @description A variant's images after fallback (D4.14). */
         ResolvedImageResponse: {
             altText?: string;
             /** Format: int32 */
             displayOrder?: number;
+            /**
+             * @description true when these are the product's images rather than the variant's own. On the
+             *          response so an operator can see a variant is borrowing rather than owning its pictures —
+             *          without it, "has images" and "is showing the product's" look identical and nobody notices
+             *          the variant photo was never uploaded.
+             */
             inherited?: boolean;
             url?: string;
+        };
+        /** @description One grant of a role. */
+        RoleGrantResponse: {
+            /** Format: date-time */
+            grantedAt?: string;
+            /**
+             * Format: uuid
+             * @description the team member who granted it
+             */
+            grantedBy?: string;
+            /**
+             * Format: date-time
+             * @description null while the grant is open
+             */
+            revokedAt?: string;
+            /**
+             * Format: uuid
+             * @description the team member who revoked it; null while open
+             */
+            revokedBy?: string;
+            /** @enum {string} */
+            role?: "CONSUMER" | "PARTNER";
         };
         RoleResponse: {
             description?: string;
@@ -2301,6 +4829,8 @@ export interface components {
             name?: string;
             permissions?: string[];
             systemRole?: boolean;
+            /** Format: int64 */
+            version?: number;
         };
         RoleSummary: {
             /** Format: uuid */
@@ -2308,23 +4838,26 @@ export interface components {
             name?: string;
             systemRole?: boolean;
         };
-        SaveAttributeGroupRequest: {
-            name: string;
-        };
-        SaveImageRequest: {
-            altText?: string;
-            url: string;
-        };
-        SaveRoleRequest: {
-            description?: string;
-            name: string;
-            permissions: string[];
-        };
+        /** @description The whole membership set at once — "exactly one primary" is a property of the set. */
         SetCategoriesRequest: {
             categoryIds?: string[];
             /** Format: uuid */
             primaryCategoryId?: string;
+            /**
+             * Format: int64
+             * @description the <b>product's</b> <code>version</code>, not a category's. Category membership is
+             *          part of the product, so two operators re-categorising the same product at once is the same
+             *          conflict as two operators renaming it.
+             */
+            version: number;
         };
+        /**
+         * @description Setting a spec value.
+         *
+         *      <p>All four value fields are optional here and exactly one is required by the attribute's data
+         *      type — bean validation cannot express "whichever one matches a row in another table", so the
+         *      service decides and says which was expected.
+         */
         SetSpecRequest: {
             /** Format: uuid */
             attributeId: string;
@@ -2364,6 +4897,13 @@ export interface components {
             warehouseId?: string;
             warehouseName?: string;
         };
+        /**
+         * @description One row of the ledger.
+         *
+         *      <p><code>idempotencyKey</code> is returned deliberately. It is how an operator or an integration
+         *      proves that the movement they are looking at is the one their request produced, rather than a
+         *      duplicate — which is the entire point of requiring one.
+         */
         StockMovementResponse: {
             /** Format: uuid */
             actorId?: string;
@@ -2401,6 +4941,30 @@ export interface components {
             variantId?: string;
             variantName?: string;
         };
+        SupplierResponse: {
+            active?: boolean;
+            addressLine1?: string;
+            addressLine2?: string;
+            city?: string;
+            code?: string;
+            contactEmail?: string;
+            contactName?: string;
+            contactPhone?: string;
+            /** Format: date-time */
+            createdAt?: string;
+            gstin?: string;
+            /** Format: uuid */
+            id?: string;
+            name?: string;
+            /** Format: int32 */
+            paymentTermsDays?: number;
+            pincode?: string;
+            state?: string;
+            /** Format: date-time */
+            updatedAt?: string;
+            /** Format: int64 */
+            version?: number;
+        };
         TeamMemberResponse: {
             email?: string;
             /** Format: uuid */
@@ -2414,13 +4978,26 @@ export interface components {
             roles?: components["schemas"]["RoleSummary"][];
             /** @enum {string} */
             status?: "INVITED" | "ACTIVE" | "SUSPENDED" | "DEACTIVATED";
+            /** Format: int64 */
+            version?: number;
         };
+        /** @description Both halves of a transfer. */
         TransferResponse: {
             in?: components["schemas"]["StockMovementResponse"];
             out?: components["schemas"]["StockMovementResponse"];
-            /** Format: uuid */
+            /**
+             * Format: uuid
+             * @description what ties the two movements together — and what an in-transit state would
+             *          hang off, if one is ever added
+             */
             referenceId?: string;
         };
+        /**
+         * @description Moving stock between warehouses.
+         *
+         *      <p><code>quantity</code> is positive: the direction is the pair of warehouses, not a sign. This one
+         *      request becomes two movements sharing a reference id, written in one transaction.
+         */
         TransferStockRequest: {
             /** Format: uuid */
             batchId?: string;
@@ -2434,6 +5011,30 @@ export interface components {
             /** Format: uuid */
             variantId: string;
         };
+        /**
+         * @description Renaming a group.
+         *
+         *      <p>Separate from {@link CreateAttributeGroupRequest CreateAttributeGroupRequest} rather than one shared "save" shape,
+         *      because only one of the two can carry a <code>version</code>: there is nothing to compare against on
+         *      a record that does not exist yet.
+         */
+        UpdateAttributeGroupRequest: {
+            name: string;
+            /**
+             * Format: int64
+             * @description the <code>version</code> from the group you read. A mismatch is refused with 409
+             *          <code>VERSION_CONFLICT</code> and nothing is written.
+             */
+            version: number;
+        };
+        /**
+         * @description Editing an attribute.
+         *
+         *      <p><b><code>code</code> and <code>kind</code> are present and required, and must match what is
+         *      stored.</b> They are immutable, and carrying them here is what makes an attempted change a
+         *      rejection rather than a silent no-op: a payload that omitted them would let a caller believe a
+         *      change it asked for had been applied.
+         */
         UpdateAttributeRequest: {
             /** @enum {string} */
             appliesTo?: "PRODUCT" | "VARIANT";
@@ -2447,7 +5048,21 @@ export interface components {
             kind: "OPTION" | "SPEC";
             name: string;
             unit?: string;
+            /**
+             * Format: int64
+             * @description the <code>version</code> from the attribute you read. A mismatch is refused with 409
+             *          <code>VERSION_CONFLICT</code> and nothing is written.
+             */
+            version: number;
         };
+        /**
+         * @description Editing a brand.
+         *
+         *      <p><b><code>status</code> and <code>live</code> are present, required, and must match what is stored</b>
+         *      (D2.11). Neither is editable — approving and going live are their own transitions — but
+         *      omitting them, as 1.0 did, means a client that sends <code>status: ACTIVE</code> on a draft gets a
+         *      200 for a change that never happened.
+         */
         UpdateBrandRequest: {
             bannerUrl?: string;
             description?: string;
@@ -2457,7 +5072,24 @@ export interface components {
             slug?: string;
             /** @enum {string} */
             status: "DRAFT" | "IN_REVIEW" | "ACTIVE" | "ARCHIVED";
+            /**
+             * Format: int64
+             * @description the <code>version</code> from the brand you read. A mismatch is refused with 409
+             *          <code>VERSION_CONFLICT</code> and nothing is written — see {@link com.oms.service.catalog.dto.admin.AdminBrandDtos.UpdateBrandRequest      com.oms.service.platform.persistence.EntityVersion}.
+             */
+            version: number;
         };
+        /**
+         * @description Content, plus the two lifecycle axes for the D2.11 check.
+         *
+         *      <p><code>parentId</code> is absent on purpose: reparenting is <code>move</code>, which enforces the cycle
+         *      and depth rules. Allowing it here would make those rules bypassable by editing the name at the
+         *      same time — and unlike <code>status</code> and <code>live</code>, there is a real risk of it being sent
+         *      by accident, since it is a field of the response.
+         *
+         *      <p><code>status</code> and <code>live</code> are present, required, and must match what is stored. See
+         *      {@link AdminBrandDtos.UpdateBrandRequest AdminBrandDtos.UpdateBrandRequest}.
+         */
         UpdateCategoryRequest: {
             bannerUrl?: string;
             description?: string;
@@ -2467,7 +5099,31 @@ export interface components {
             slug?: string;
             /** @enum {string} */
             status: "DRAFT" | "IN_REVIEW" | "ACTIVE" | "ARCHIVED";
+            /**
+             * Format: int64
+             * @description the <code>version</code> from the category you read. A mismatch is refused with 409
+             *          <code>VERSION_CONFLICT</code> and nothing is written.
+             */
+            version: number;
         };
+        /** @description Editing an image. */
+        UpdateImageRequest: {
+            altText?: string;
+            url: string;
+            /**
+             * Format: int64
+             * @description the <code>version</code> from the image you read. A mismatch is refused with 409
+             *          <code>VERSION_CONFLICT</code> and nothing is written.
+             */
+            version: number;
+        };
+        /**
+         * @description Editing a product.
+         *
+         *      <p><code>status</code> and <code>live</code> are present, required, and must match what is stored
+         *      (D2.11). Neither is editable here — submit, approve, publish and archive are their own audited
+         *      endpoints.
+         */
         UpdateProductRequest: {
             /** @enum {string} */
             audience?: "PUBLIC" | "TIER_RESTRICTED" | "CUSTOMER_RESTRICTED";
@@ -2484,19 +5140,155 @@ export interface components {
             slug?: string;
             /** @enum {string} */
             status: "DRAFT" | "IN_REVIEW" | "ACTIVE" | "ARCHIVED";
+            /**
+             * Format: int64
+             * @description the <code>version</code> from the product you read. A mismatch is refused with 409
+             *          <code>VERSION_CONFLICT</code> and nothing is written.
+             */
+            version: number;
         };
         UpdateProfileRequest: {
             name: string;
             phone?: string;
+            /**
+             * Format: int64
+             * @description the <code>version</code> from <code>GET /profile</code>. The same optimistic lock as every
+             *          other update — a second browser tab editing the same account is refused, not merged.
+             */
+            version: number;
+        };
+        /**
+         * @description Editing a draft.
+         *
+         *      <p><b>Only a <code>DRAFT</code> can be edited</b> — after approval the order is a document the
+         *      supplier is holding, and a change is a cancellation and a new order. An attempt on anything
+         *      else is refused with <code>BUSINESS_RULE_VIOLATION</code>, never silently ignored.
+         *
+         *      <p><b><code>poNumber</code> is present, required, and must match what is stored</b> (D2.11). It is
+         *      generated and the supplier has it.
+         *
+         *      <p><code>supplierId</code> and <code>currency</code> are absent: changing either makes this a different
+         *      order against a different party, which is a new PO.
+         *
+         *      <p>The <code>lines</code> list <b>replaces</b> the draft's lines. A draft's lines are a list
+         *      somebody is still writing, and a merge protocol over them is a source of silent partial updates
+         *      for no benefit while the document is committed to nothing.
+         */
+        UpdatePurchaseOrderRequest: {
+            /** Format: date */
+            expectedOn?: string;
+            lines?: components["schemas"]["PurchaseOrderLineRequest"][];
+            notes?: string;
+            poNumber: string;
+            /**
+             * Format: int64
+             * @description the <code>version</code> from the order you read. A mismatch is refused with 409
+             *          <code>VERSION_CONFLICT</code> and nothing is written.
+             */
+            version: number;
+            /** Format: uuid */
+            warehouseId: string;
+        };
+        /**
+         * @description Editing a role.
+         *
+         *      <p>Separate from {@link CreateRoleRequest CreateRoleRequest} rather than one shared "save" shape: only one of the
+         *      two can carry a <code>version</code>, because a role that does not exist yet has none.
+         */
+        UpdateRoleRequest: {
+            description?: string;
+            name: string;
+            permissions: string[];
+            /**
+             * Format: int64
+             * @description the <code>version</code> from the role you read. A mismatch is refused with 409
+             *          <code>VERSION_CONFLICT</code> and nothing is written — which matters more here than anywhere
+             *          else in this surface, since a lost update to a permission set silently grants or removes
+             *          access.
+             */
+            version: number;
+        };
+        /**
+         * @description Editing a supplier.
+         *
+         *      <p><b><code>code</code> is present, required, and must match what is stored</b> (D2.11). It is not
+         *      editable — it appears on every purchase order the supplier has received — but omitting it, as
+         *      would be the easy thing, means a client that sends a new code gets a 200 for a rename that
+         *      never happened and then raises an order under it.
+         *
+         *      <p><code>active</code> is absent for the opposite reason: deactivation has a rule of its own (no
+         *      open purchase orders) and is its own endpoint, so there is nothing to compare against here.
+         */
+        UpdateSupplierRequest: {
+            addressLine1: string;
+            addressLine2?: string;
+            city: string;
+            code: string;
+            /** Format: email */
+            contactEmail?: string;
+            contactName?: string;
+            contactPhone?: string;
+            gstin?: string;
+            name: string;
+            /** Format: int32 */
+            paymentTermsDays: number;
+            pincode: string;
+            state: string;
+            /**
+             * Format: int64
+             * @description the <code>version</code> from the supplier you read. A mismatch is refused with 409
+             *          <code>VERSION_CONFLICT</code> and nothing is written.
+             */
+            version: number;
         };
         UpdateTeamMemberRequest: {
             name: string;
             phone?: string;
+            /**
+             * Format: int64
+             * @description the <code>version</code> from the member you read. A mismatch is refused with 409
+             *          <code>VERSION_CONFLICT</code> and nothing is written.
+             */
+            version: number;
         };
+        /**
+         * @description Editing a profile: mobile, email and name.
+         *
+         *      <p><code>status</code> and roles are absent — each has its own endpoint, because each has its own
+         *      rule and its own permission. <code>legacyRef</code> is absent because it is never admin-editable:
+         *      only legacy import writes it.
+         */
+        UpdateUserRequest: {
+            /** Format: email */
+            email?: string;
+            mobile: string;
+            name: string;
+            /**
+             * Format: int64
+             * @description the <code>version</code> from the user you read. A mismatch is refused with 409
+             *          <code>VERSION_CONFLICT</code> and nothing is written.
+             */
+            version: number;
+        };
+        /** @description Editing a value. <code>code</code> must match what is stored — see {@link UpdateAttributeRequest UpdateAttributeRequest}. */
         UpdateValueRequest: {
             code: string;
             label: string;
+            /**
+             * Format: int64
+             * @description the <code>version</code> from the value you read. A mismatch is refused with 409
+             *          <code>VERSION_CONFLICT</code> and nothing is written.
+             */
+            version: number;
         };
+        /**
+         * @description Editing a variant.
+         *
+         *      <p><code>skuCode</code> is carried and compared, not omitted: where it is still editable the change
+         *      applies, and where the product has ever been active it is <b>rejected</b> with the reason (§3).
+         *      Silently dropping it would tell an operator their relabelling worked while the warehouse kept
+         *      printing the old code.
+         */
         UpdateVariantRequest: {
             barcode?: string;
             baseSellingPrice?: components["schemas"]["MoneyPayload"];
@@ -2511,11 +5303,28 @@ export interface components {
             /** Format: int32 */
             shelfLifeDays?: number;
             skuCode: string;
+            /**
+             * Format: int64
+             * @description the <code>version</code> from the variant you read — the variant's own, not the
+             *          product's. A mismatch is refused with 409 <code>VERSION_CONFLICT</code> and nothing is written.
+             */
+            version: number;
             /** Format: int32 */
             weightGrams?: number;
             /** Format: int32 */
             widthMm?: number;
         };
+        /**
+         * @description Editing a warehouse.
+         *
+         *      <p><b><code>code</code> is present, required, and must match what is stored</b> (D2.11). It is not
+         *      editable — it is printed on labels and paperwork that cannot be reprinted — but omitting it, as
+         *      would be the easy thing, means a client that sends a new code gets a 200 for a rename that
+         *      never happened and then prints the new one.
+         *
+         *      <p><code>active</code> is absent for the opposite reason: deactivation has a rule of its own (stock
+         *      must be zero) and is its own endpoint, so there is nothing to compare against here.
+         */
         UpdateWarehouseRequest: {
             addressLine1: string;
             addressLine2?: string;
@@ -2527,6 +5336,64 @@ export interface components {
             state: string;
             /** @enum {string} */
             type: "OWN" | "THIRD_PARTY";
+            /**
+             * Format: int64
+             * @description the <code>version</code> from the warehouse you read. A mismatch is refused with 409
+             *          <code>VERSION_CONFLICT</code> and nothing is written.
+             */
+            version: number;
+        };
+        /** @description One user, with their full role history. */
+        UserResponse: {
+            /**
+             * Format: date-time
+             * @description when the person claimed the account; null while it is unclaimed
+             */
+            activatedAt?: string;
+            /** Format: date-time */
+            createdAt?: string;
+            email?: string;
+            /** Format: uuid */
+            id?: string;
+            legacyRef?: string;
+            mobile?: string;
+            name?: string;
+            /**
+             * @description every grant the account has had, open and revoked, oldest first. A revoked
+             *          grant is kept, never deleted; granting again adds a new entry
+             */
+            roleHistory?: components["schemas"]["RoleGrantResponse"][];
+            /** @description the roles currently held */
+            roles?: ("CONSUMER" | "PARTNER")[];
+            /** @enum {string} */
+            status?: "INVITED" | "ACTIVE" | "SUSPENDED";
+            /** Format: date-time */
+            updatedAt?: string;
+            /** Format: int64 */
+            version?: number;
+        };
+        /** @description A row in the user list. */
+        UserSummaryResponse: {
+            /** Format: date-time */
+            createdAt?: string;
+            email?: string;
+            /** Format: uuid */
+            id?: string;
+            /** @description the legacy system's id for a migrated account, else null */
+            legacyRef?: string;
+            mobile?: string;
+            name?: string;
+            /**
+             * @description the roles currently held. Every user holds <code>CONSUMER</code>; <code>PARTNER</code> is
+             *          additive
+             */
+            roles?: ("CONSUMER" | "PARTNER")[];
+            /** @enum {string} */
+            status?: "INVITED" | "ACTIVE" | "SUSPENDED";
+            /** Format: date-time */
+            updatedAt?: string;
+            /** Format: int64 */
+            version?: number;
         };
         VariantOptionValueResponse: {
             /** Format: uuid */
@@ -2564,6 +5431,8 @@ export interface components {
             updatedAt?: string;
             /** @enum {string} */
             variantStatus?: "ACTIVE" | "DISCONTINUED";
+            /** Format: int64 */
+            version?: number;
             /** Format: int32 */
             weightGrams?: number;
             /** Format: int32 */
@@ -2587,6 +5456,8 @@ export interface components {
             type?: "OWN" | "THIRD_PARTY";
             /** Format: date-time */
             updatedAt?: string;
+            /** Format: int64 */
+            version?: number;
         };
     };
     responses: never;
@@ -2597,7 +5468,7 @@ export interface components {
 }
 export type $defs = Record<string, never>;
 export interface operations {
-    list_8: {
+    list_12: {
         parameters: {
             query?: {
                 active?: boolean;
@@ -2617,7 +5488,7 @@ export interface operations {
                     "*/*": components["schemas"]["AttributeGroupResponse"][];
                 };
             };
-            /** @description Malformed request, or a field failed validation */
+            /** @description `VALIDATION_FAILED` — The request body could not be read, a field failed validation, a required header was absent, or a domain validation rule rejected an input the caller can correct. */
             400: {
                 headers: {
                     [name: string]: unknown;
@@ -2626,7 +5497,7 @@ export interface operations {
                     "application/json": components["schemas"]["ErrorResponse"];
                 };
             };
-            /** @description No valid session — absent, expired or revoked credential */
+            /** @description `AUTHENTICATION_FAILED` — No valid credential. Either none was presented, or the session behind it is expired, revoked, or belongs to a member who can no longer sign in. This status means the session is dead and nothing else does (D2.23) — a wrong *current* password on change-password is a 400 with a `currentPassword` field error, not this. */
             401: {
                 headers: {
                     [name: string]: unknown;
@@ -2635,7 +5506,7 @@ export interface operations {
                     "application/json": components["schemas"]["ErrorResponse"];
                 };
             };
-            /** @description Authenticated, but lacking the required permission */
+            /** @description `ACCESS_DENIED` — Authenticated, but lacking the permission the endpoint declares. The session is valid; do not sign the operator out. */
             403: {
                 headers: {
                     [name: string]: unknown;
@@ -2644,7 +5515,7 @@ export interface operations {
                     "application/json": components["schemas"]["ErrorResponse"];
                 };
             };
-            /** @description Unhandled failure; the traceId identifies the log line */
+            /** @description `INTERNAL_ERROR` — An unhandled failure. The message is deliberately generic; `traceId` identifies the server log line that explains it. */
             500: {
                 headers: {
                     [name: string]: unknown;
@@ -2655,7 +5526,7 @@ export interface operations {
             };
         };
     };
-    create_8: {
+    create_11: {
         parameters: {
             query?: never;
             header?: never;
@@ -2664,7 +5535,7 @@ export interface operations {
         };
         requestBody: {
             content: {
-                "application/json": components["schemas"]["SaveAttributeGroupRequest"];
+                "application/json": components["schemas"]["CreateAttributeGroupRequest"];
             };
         };
         responses: {
@@ -2677,7 +5548,7 @@ export interface operations {
                     "*/*": components["schemas"]["AttributeGroupResponse"];
                 };
             };
-            /** @description Malformed request, or a field failed validation */
+            /** @description `VALIDATION_FAILED` — The request body could not be read, a field failed validation, a required header was absent, or a domain validation rule rejected an input the caller can correct. */
             400: {
                 headers: {
                     [name: string]: unknown;
@@ -2686,7 +5557,7 @@ export interface operations {
                     "application/json": components["schemas"]["ErrorResponse"];
                 };
             };
-            /** @description No valid session — absent, expired or revoked credential */
+            /** @description `AUTHENTICATION_FAILED` — No valid credential. Either none was presented, or the session behind it is expired, revoked, or belongs to a member who can no longer sign in. This status means the session is dead and nothing else does (D2.23) — a wrong *current* password on change-password is a 400 with a `currentPassword` field error, not this. */
             401: {
                 headers: {
                     [name: string]: unknown;
@@ -2695,7 +5566,7 @@ export interface operations {
                     "application/json": components["schemas"]["ErrorResponse"];
                 };
             };
-            /** @description Authenticated, but lacking the required permission */
+            /** @description `ACCESS_DENIED` — Authenticated, but lacking the permission the endpoint declares. The session is valid; do not sign the operator out. */
             403: {
                 headers: {
                     [name: string]: unknown;
@@ -2704,7 +5575,25 @@ export interface operations {
                     "application/json": components["schemas"]["ErrorResponse"];
                 };
             };
-            /** @description Unhandled failure; the traceId identifies the log line */
+            /** @description `CONFLICT` — The request collided with current state for a reason other than a version mismatch: a duplicate natural key (a slug, a code, an email), or a database constraint the application did not catch first. */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description `BUSINESS_RULE_VIOLATION` — The request was well-formed and the entities exist, but a domain rule forbids it — publishing a product with no price, archiving a brand products still reference, issuing more stock than a location holds. Distinct from 400: nothing about the request is malformed. */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description `INTERNAL_ERROR` — An unhandled failure. The message is deliberately generic; `traceId` identifies the server log line that explains it. */
             500: {
                 headers: {
                     [name: string]: unknown;
@@ -2715,7 +5604,7 @@ export interface operations {
             };
         };
     };
-    update_8: {
+    update_11: {
         parameters: {
             query?: never;
             header?: never;
@@ -2726,7 +5615,7 @@ export interface operations {
         };
         requestBody: {
             content: {
-                "application/json": components["schemas"]["SaveAttributeGroupRequest"];
+                "application/json": components["schemas"]["UpdateAttributeGroupRequest"];
             };
         };
         responses: {
@@ -2739,7 +5628,7 @@ export interface operations {
                     "*/*": components["schemas"]["AttributeGroupResponse"];
                 };
             };
-            /** @description Malformed request, or a field failed validation */
+            /** @description `VALIDATION_FAILED` — The request body could not be read, a field failed validation, a required header was absent, or a domain validation rule rejected an input the caller can correct. */
             400: {
                 headers: {
                     [name: string]: unknown;
@@ -2748,7 +5637,7 @@ export interface operations {
                     "application/json": components["schemas"]["ErrorResponse"];
                 };
             };
-            /** @description No valid session — absent, expired or revoked credential */
+            /** @description `AUTHENTICATION_FAILED` — No valid credential. Either none was presented, or the session behind it is expired, revoked, or belongs to a member who can no longer sign in. This status means the session is dead and nothing else does (D2.23) — a wrong *current* password on change-password is a 400 with a `currentPassword` field error, not this. */
             401: {
                 headers: {
                     [name: string]: unknown;
@@ -2757,7 +5646,7 @@ export interface operations {
                     "application/json": components["schemas"]["ErrorResponse"];
                 };
             };
-            /** @description Authenticated, but lacking the required permission */
+            /** @description `ACCESS_DENIED` — Authenticated, but lacking the permission the endpoint declares. The session is valid; do not sign the operator out. */
             403: {
                 headers: {
                     [name: string]: unknown;
@@ -2766,7 +5655,34 @@ export interface operations {
                     "application/json": components["schemas"]["ErrorResponse"];
                 };
             };
-            /** @description Unhandled failure; the traceId identifies the log line */
+            /** @description `NOT_FOUND` — A referenced entity does not exist, or the URL matches no endpoint. Also returned for a known path called with an unsupported method, as 405. */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description `VERSION_CONFLICT` or `CONFLICT` — The `version` sent with an update is not the version stored — the record was changed by someone else since it was read. Nothing was written. Re-read the record, show the operator what changed, and submit again with the new `version`. */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description `BUSINESS_RULE_VIOLATION` — The request was well-formed and the entities exist, but a domain rule forbids it — publishing a product with no price, archiving a brand products still reference, issuing more stock than a location holds. Distinct from 400: nothing about the request is malformed. */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description `INTERNAL_ERROR` — An unhandled failure. The message is deliberately generic; `traceId` identifies the server log line that explains it. */
             500: {
                 headers: {
                     [name: string]: unknown;
@@ -2777,7 +5693,7 @@ export interface operations {
             };
         };
     };
-    deactivate_3: {
+    deactivate_4: {
         parameters: {
             query?: never;
             header?: never;
@@ -2797,7 +5713,7 @@ export interface operations {
                     "*/*": components["schemas"]["AttributeGroupResponse"];
                 };
             };
-            /** @description Malformed request, or a field failed validation */
+            /** @description `VALIDATION_FAILED` — The request body could not be read, a field failed validation, a required header was absent, or a domain validation rule rejected an input the caller can correct. */
             400: {
                 headers: {
                     [name: string]: unknown;
@@ -2806,7 +5722,7 @@ export interface operations {
                     "application/json": components["schemas"]["ErrorResponse"];
                 };
             };
-            /** @description No valid session — absent, expired or revoked credential */
+            /** @description `AUTHENTICATION_FAILED` — No valid credential. Either none was presented, or the session behind it is expired, revoked, or belongs to a member who can no longer sign in. This status means the session is dead and nothing else does (D2.23) — a wrong *current* password on change-password is a 400 with a `currentPassword` field error, not this. */
             401: {
                 headers: {
                     [name: string]: unknown;
@@ -2815,7 +5731,7 @@ export interface operations {
                     "application/json": components["schemas"]["ErrorResponse"];
                 };
             };
-            /** @description Authenticated, but lacking the required permission */
+            /** @description `ACCESS_DENIED` — Authenticated, but lacking the permission the endpoint declares. The session is valid; do not sign the operator out. */
             403: {
                 headers: {
                     [name: string]: unknown;
@@ -2824,7 +5740,34 @@ export interface operations {
                     "application/json": components["schemas"]["ErrorResponse"];
                 };
             };
-            /** @description Unhandled failure; the traceId identifies the log line */
+            /** @description `NOT_FOUND` — A referenced entity does not exist, or the URL matches no endpoint. Also returned for a known path called with an unsupported method, as 405. */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description `CONFLICT` — The request collided with current state for a reason other than a version mismatch: a duplicate natural key (a slug, a code, an email), or a database constraint the application did not catch first. */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description `BUSINESS_RULE_VIOLATION` — The request was well-formed and the entities exist, but a domain rule forbids it — publishing a product with no price, archiving a brand products still reference, issuing more stock than a location holds. Distinct from 400: nothing about the request is malformed. */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description `INTERNAL_ERROR` — An unhandled failure. The message is deliberately generic; `traceId` identifies the server log line that explains it. */
             500: {
                 headers: {
                     [name: string]: unknown;
@@ -2835,7 +5778,7 @@ export interface operations {
             };
         };
     };
-    reactivate_2: {
+    reactivate_3: {
         parameters: {
             query?: never;
             header?: never;
@@ -2855,7 +5798,7 @@ export interface operations {
                     "*/*": components["schemas"]["AttributeGroupResponse"];
                 };
             };
-            /** @description Malformed request, or a field failed validation */
+            /** @description `VALIDATION_FAILED` — The request body could not be read, a field failed validation, a required header was absent, or a domain validation rule rejected an input the caller can correct. */
             400: {
                 headers: {
                     [name: string]: unknown;
@@ -2864,7 +5807,7 @@ export interface operations {
                     "application/json": components["schemas"]["ErrorResponse"];
                 };
             };
-            /** @description No valid session — absent, expired or revoked credential */
+            /** @description `AUTHENTICATION_FAILED` — No valid credential. Either none was presented, or the session behind it is expired, revoked, or belongs to a member who can no longer sign in. This status means the session is dead and nothing else does (D2.23) — a wrong *current* password on change-password is a 400 with a `currentPassword` field error, not this. */
             401: {
                 headers: {
                     [name: string]: unknown;
@@ -2873,7 +5816,7 @@ export interface operations {
                     "application/json": components["schemas"]["ErrorResponse"];
                 };
             };
-            /** @description Authenticated, but lacking the required permission */
+            /** @description `ACCESS_DENIED` — Authenticated, but lacking the permission the endpoint declares. The session is valid; do not sign the operator out. */
             403: {
                 headers: {
                     [name: string]: unknown;
@@ -2882,7 +5825,34 @@ export interface operations {
                     "application/json": components["schemas"]["ErrorResponse"];
                 };
             };
-            /** @description Unhandled failure; the traceId identifies the log line */
+            /** @description `NOT_FOUND` — A referenced entity does not exist, or the URL matches no endpoint. Also returned for a known path called with an unsupported method, as 405. */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description `CONFLICT` — The request collided with current state for a reason other than a version mismatch: a duplicate natural key (a slug, a code, an email), or a database constraint the application did not catch first. */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description `BUSINESS_RULE_VIOLATION` — The request was well-formed and the entities exist, but a domain rule forbids it — publishing a product with no price, archiving a brand products still reference, issuing more stock than a location holds. Distinct from 400: nothing about the request is malformed. */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description `INTERNAL_ERROR` — An unhandled failure. The message is deliberately generic; `traceId` identifies the server log line that explains it. */
             500: {
                 headers: {
                     [name: string]: unknown;
@@ -2915,7 +5885,7 @@ export interface operations {
                     "*/*": components["schemas"]["AttributeGroupResponse"][];
                 };
             };
-            /** @description Malformed request, or a field failed validation */
+            /** @description `VALIDATION_FAILED` — The request body could not be read, a field failed validation, a required header was absent, or a domain validation rule rejected an input the caller can correct. */
             400: {
                 headers: {
                     [name: string]: unknown;
@@ -2924,7 +5894,7 @@ export interface operations {
                     "application/json": components["schemas"]["ErrorResponse"];
                 };
             };
-            /** @description No valid session — absent, expired or revoked credential */
+            /** @description `AUTHENTICATION_FAILED` — No valid credential. Either none was presented, or the session behind it is expired, revoked, or belongs to a member who can no longer sign in. This status means the session is dead and nothing else does (D2.23) — a wrong *current* password on change-password is a 400 with a `currentPassword` field error, not this. */
             401: {
                 headers: {
                     [name: string]: unknown;
@@ -2933,7 +5903,7 @@ export interface operations {
                     "application/json": components["schemas"]["ErrorResponse"];
                 };
             };
-            /** @description Authenticated, but lacking the required permission */
+            /** @description `ACCESS_DENIED` — Authenticated, but lacking the permission the endpoint declares. The session is valid; do not sign the operator out. */
             403: {
                 headers: {
                     [name: string]: unknown;
@@ -2942,7 +5912,25 @@ export interface operations {
                     "application/json": components["schemas"]["ErrorResponse"];
                 };
             };
-            /** @description Unhandled failure; the traceId identifies the log line */
+            /** @description `CONFLICT` — The request collided with current state for a reason other than a version mismatch: a duplicate natural key (a slug, a code, an email), or a database constraint the application did not catch first. */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description `BUSINESS_RULE_VIOLATION` — The request was well-formed and the entities exist, but a domain rule forbids it — publishing a product with no price, archiving a brand products still reference, issuing more stock than a location holds. Distinct from 400: nothing about the request is malformed. */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description `INTERNAL_ERROR` — An unhandled failure. The message is deliberately generic; `traceId` identifies the server log line that explains it. */
             500: {
                 headers: {
                     [name: string]: unknown;
@@ -2953,7 +5941,7 @@ export interface operations {
             };
         };
     };
-    list_7: {
+    list_11: {
         parameters: {
             query: {
                 active?: boolean;
@@ -2977,7 +5965,7 @@ export interface operations {
                     "*/*": components["schemas"]["PageResponseAttributeResponse"];
                 };
             };
-            /** @description Malformed request, or a field failed validation */
+            /** @description `VALIDATION_FAILED` — The request body could not be read, a field failed validation, a required header was absent, or a domain validation rule rejected an input the caller can correct. */
             400: {
                 headers: {
                     [name: string]: unknown;
@@ -2986,7 +5974,7 @@ export interface operations {
                     "application/json": components["schemas"]["ErrorResponse"];
                 };
             };
-            /** @description No valid session — absent, expired or revoked credential */
+            /** @description `AUTHENTICATION_FAILED` — No valid credential. Either none was presented, or the session behind it is expired, revoked, or belongs to a member who can no longer sign in. This status means the session is dead and nothing else does (D2.23) — a wrong *current* password on change-password is a 400 with a `currentPassword` field error, not this. */
             401: {
                 headers: {
                     [name: string]: unknown;
@@ -2995,7 +5983,7 @@ export interface operations {
                     "application/json": components["schemas"]["ErrorResponse"];
                 };
             };
-            /** @description Authenticated, but lacking the required permission */
+            /** @description `ACCESS_DENIED` — Authenticated, but lacking the permission the endpoint declares. The session is valid; do not sign the operator out. */
             403: {
                 headers: {
                     [name: string]: unknown;
@@ -3004,7 +5992,7 @@ export interface operations {
                     "application/json": components["schemas"]["ErrorResponse"];
                 };
             };
-            /** @description Unhandled failure; the traceId identifies the log line */
+            /** @description `INTERNAL_ERROR` — An unhandled failure. The message is deliberately generic; `traceId` identifies the server log line that explains it. */
             500: {
                 headers: {
                     [name: string]: unknown;
@@ -3015,7 +6003,7 @@ export interface operations {
             };
         };
     };
-    create_7: {
+    create_10: {
         parameters: {
             query?: never;
             header?: never;
@@ -3037,7 +6025,7 @@ export interface operations {
                     "*/*": components["schemas"]["AttributeResponse"];
                 };
             };
-            /** @description Malformed request, or a field failed validation */
+            /** @description `VALIDATION_FAILED` — The request body could not be read, a field failed validation, a required header was absent, or a domain validation rule rejected an input the caller can correct. */
             400: {
                 headers: {
                     [name: string]: unknown;
@@ -3046,7 +6034,7 @@ export interface operations {
                     "application/json": components["schemas"]["ErrorResponse"];
                 };
             };
-            /** @description No valid session — absent, expired or revoked credential */
+            /** @description `AUTHENTICATION_FAILED` — No valid credential. Either none was presented, or the session behind it is expired, revoked, or belongs to a member who can no longer sign in. This status means the session is dead and nothing else does (D2.23) — a wrong *current* password on change-password is a 400 with a `currentPassword` field error, not this. */
             401: {
                 headers: {
                     [name: string]: unknown;
@@ -3055,7 +6043,7 @@ export interface operations {
                     "application/json": components["schemas"]["ErrorResponse"];
                 };
             };
-            /** @description Authenticated, but lacking the required permission */
+            /** @description `ACCESS_DENIED` — Authenticated, but lacking the permission the endpoint declares. The session is valid; do not sign the operator out. */
             403: {
                 headers: {
                     [name: string]: unknown;
@@ -3064,7 +6052,25 @@ export interface operations {
                     "application/json": components["schemas"]["ErrorResponse"];
                 };
             };
-            /** @description Unhandled failure; the traceId identifies the log line */
+            /** @description `CONFLICT` — The request collided with current state for a reason other than a version mismatch: a duplicate natural key (a slug, a code, an email), or a database constraint the application did not catch first. */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description `BUSINESS_RULE_VIOLATION` — The request was well-formed and the entities exist, but a domain rule forbids it — publishing a product with no price, archiving a brand products still reference, issuing more stock than a location holds. Distinct from 400: nothing about the request is malformed. */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description `INTERNAL_ERROR` — An unhandled failure. The message is deliberately generic; `traceId` identifies the server log line that explains it. */
             500: {
                 headers: {
                     [name: string]: unknown;
@@ -3095,7 +6101,7 @@ export interface operations {
                     "*/*": components["schemas"]["AttributeValueResponse"][];
                 };
             };
-            /** @description Malformed request, or a field failed validation */
+            /** @description `VALIDATION_FAILED` — The request body could not be read, a field failed validation, a required header was absent, or a domain validation rule rejected an input the caller can correct. */
             400: {
                 headers: {
                     [name: string]: unknown;
@@ -3104,7 +6110,7 @@ export interface operations {
                     "application/json": components["schemas"]["ErrorResponse"];
                 };
             };
-            /** @description No valid session — absent, expired or revoked credential */
+            /** @description `AUTHENTICATION_FAILED` — No valid credential. Either none was presented, or the session behind it is expired, revoked, or belongs to a member who can no longer sign in. This status means the session is dead and nothing else does (D2.23) — a wrong *current* password on change-password is a 400 with a `currentPassword` field error, not this. */
             401: {
                 headers: {
                     [name: string]: unknown;
@@ -3113,7 +6119,7 @@ export interface operations {
                     "application/json": components["schemas"]["ErrorResponse"];
                 };
             };
-            /** @description Authenticated, but lacking the required permission */
+            /** @description `ACCESS_DENIED` — Authenticated, but lacking the permission the endpoint declares. The session is valid; do not sign the operator out. */
             403: {
                 headers: {
                     [name: string]: unknown;
@@ -3122,7 +6128,16 @@ export interface operations {
                     "application/json": components["schemas"]["ErrorResponse"];
                 };
             };
-            /** @description Unhandled failure; the traceId identifies the log line */
+            /** @description `NOT_FOUND` — A referenced entity does not exist, or the URL matches no endpoint. Also returned for a known path called with an unsupported method, as 405. */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description `INTERNAL_ERROR` — An unhandled failure. The message is deliberately generic; `traceId` identifies the server log line that explains it. */
             500: {
                 headers: {
                     [name: string]: unknown;
@@ -3157,7 +6172,7 @@ export interface operations {
                     "*/*": components["schemas"]["AttributeValueResponse"];
                 };
             };
-            /** @description Malformed request, or a field failed validation */
+            /** @description `VALIDATION_FAILED` — The request body could not be read, a field failed validation, a required header was absent, or a domain validation rule rejected an input the caller can correct. */
             400: {
                 headers: {
                     [name: string]: unknown;
@@ -3166,7 +6181,7 @@ export interface operations {
                     "application/json": components["schemas"]["ErrorResponse"];
                 };
             };
-            /** @description No valid session — absent, expired or revoked credential */
+            /** @description `AUTHENTICATION_FAILED` — No valid credential. Either none was presented, or the session behind it is expired, revoked, or belongs to a member who can no longer sign in. This status means the session is dead and nothing else does (D2.23) — a wrong *current* password on change-password is a 400 with a `currentPassword` field error, not this. */
             401: {
                 headers: {
                     [name: string]: unknown;
@@ -3175,7 +6190,7 @@ export interface operations {
                     "application/json": components["schemas"]["ErrorResponse"];
                 };
             };
-            /** @description Authenticated, but lacking the required permission */
+            /** @description `ACCESS_DENIED` — Authenticated, but lacking the permission the endpoint declares. The session is valid; do not sign the operator out. */
             403: {
                 headers: {
                     [name: string]: unknown;
@@ -3184,7 +6199,34 @@ export interface operations {
                     "application/json": components["schemas"]["ErrorResponse"];
                 };
             };
-            /** @description Unhandled failure; the traceId identifies the log line */
+            /** @description `NOT_FOUND` — A referenced entity does not exist, or the URL matches no endpoint. Also returned for a known path called with an unsupported method, as 405. */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description `CONFLICT` — The request collided with current state for a reason other than a version mismatch: a duplicate natural key (a slug, a code, an email), or a database constraint the application did not catch first. */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description `BUSINESS_RULE_VIOLATION` — The request was well-formed and the entities exist, but a domain rule forbids it — publishing a product with no price, archiving a brand products still reference, issuing more stock than a location holds. Distinct from 400: nothing about the request is malformed. */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description `INTERNAL_ERROR` — An unhandled failure. The message is deliberately generic; `traceId` identifies the server log line that explains it. */
             500: {
                 headers: {
                     [name: string]: unknown;
@@ -3220,7 +6262,7 @@ export interface operations {
                     "*/*": components["schemas"]["AttributeValueResponse"];
                 };
             };
-            /** @description Malformed request, or a field failed validation */
+            /** @description `VALIDATION_FAILED` — The request body could not be read, a field failed validation, a required header was absent, or a domain validation rule rejected an input the caller can correct. */
             400: {
                 headers: {
                     [name: string]: unknown;
@@ -3229,7 +6271,7 @@ export interface operations {
                     "application/json": components["schemas"]["ErrorResponse"];
                 };
             };
-            /** @description No valid session — absent, expired or revoked credential */
+            /** @description `AUTHENTICATION_FAILED` — No valid credential. Either none was presented, or the session behind it is expired, revoked, or belongs to a member who can no longer sign in. This status means the session is dead and nothing else does (D2.23) — a wrong *current* password on change-password is a 400 with a `currentPassword` field error, not this. */
             401: {
                 headers: {
                     [name: string]: unknown;
@@ -3238,7 +6280,7 @@ export interface operations {
                     "application/json": components["schemas"]["ErrorResponse"];
                 };
             };
-            /** @description Authenticated, but lacking the required permission */
+            /** @description `ACCESS_DENIED` — Authenticated, but lacking the permission the endpoint declares. The session is valid; do not sign the operator out. */
             403: {
                 headers: {
                     [name: string]: unknown;
@@ -3247,7 +6289,34 @@ export interface operations {
                     "application/json": components["schemas"]["ErrorResponse"];
                 };
             };
-            /** @description Unhandled failure; the traceId identifies the log line */
+            /** @description `NOT_FOUND` — A referenced entity does not exist, or the URL matches no endpoint. Also returned for a known path called with an unsupported method, as 405. */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description `VERSION_CONFLICT` or `CONFLICT` — The `version` sent with an update is not the version stored — the record was changed by someone else since it was read. Nothing was written. Re-read the record, show the operator what changed, and submit again with the new `version`. */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description `BUSINESS_RULE_VIOLATION` — The request was well-formed and the entities exist, but a domain rule forbids it — publishing a product with no price, archiving a brand products still reference, issuing more stock than a location holds. Distinct from 400: nothing about the request is malformed. */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description `INTERNAL_ERROR` — An unhandled failure. The message is deliberately generic; `traceId` identifies the server log line that explains it. */
             500: {
                 headers: {
                     [name: string]: unknown;
@@ -3279,7 +6348,7 @@ export interface operations {
                     "*/*": components["schemas"]["AttributeValueResponse"];
                 };
             };
-            /** @description Malformed request, or a field failed validation */
+            /** @description `VALIDATION_FAILED` — The request body could not be read, a field failed validation, a required header was absent, or a domain validation rule rejected an input the caller can correct. */
             400: {
                 headers: {
                     [name: string]: unknown;
@@ -3288,7 +6357,7 @@ export interface operations {
                     "application/json": components["schemas"]["ErrorResponse"];
                 };
             };
-            /** @description No valid session — absent, expired or revoked credential */
+            /** @description `AUTHENTICATION_FAILED` — No valid credential. Either none was presented, or the session behind it is expired, revoked, or belongs to a member who can no longer sign in. This status means the session is dead and nothing else does (D2.23) — a wrong *current* password on change-password is a 400 with a `currentPassword` field error, not this. */
             401: {
                 headers: {
                     [name: string]: unknown;
@@ -3297,7 +6366,7 @@ export interface operations {
                     "application/json": components["schemas"]["ErrorResponse"];
                 };
             };
-            /** @description Authenticated, but lacking the required permission */
+            /** @description `ACCESS_DENIED` — Authenticated, but lacking the permission the endpoint declares. The session is valid; do not sign the operator out. */
             403: {
                 headers: {
                     [name: string]: unknown;
@@ -3306,7 +6375,34 @@ export interface operations {
                     "application/json": components["schemas"]["ErrorResponse"];
                 };
             };
-            /** @description Unhandled failure; the traceId identifies the log line */
+            /** @description `NOT_FOUND` — A referenced entity does not exist, or the URL matches no endpoint. Also returned for a known path called with an unsupported method, as 405. */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description `CONFLICT` — The request collided with current state for a reason other than a version mismatch: a duplicate natural key (a slug, a code, an email), or a database constraint the application did not catch first. */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description `BUSINESS_RULE_VIOLATION` — The request was well-formed and the entities exist, but a domain rule forbids it — publishing a product with no price, archiving a brand products still reference, issuing more stock than a location holds. Distinct from 400: nothing about the request is malformed. */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description `INTERNAL_ERROR` — An unhandled failure. The message is deliberately generic; `traceId` identifies the server log line that explains it. */
             500: {
                 headers: {
                     [name: string]: unknown;
@@ -3338,7 +6434,7 @@ export interface operations {
                     "*/*": components["schemas"]["AttributeValueResponse"];
                 };
             };
-            /** @description Malformed request, or a field failed validation */
+            /** @description `VALIDATION_FAILED` — The request body could not be read, a field failed validation, a required header was absent, or a domain validation rule rejected an input the caller can correct. */
             400: {
                 headers: {
                     [name: string]: unknown;
@@ -3347,7 +6443,7 @@ export interface operations {
                     "application/json": components["schemas"]["ErrorResponse"];
                 };
             };
-            /** @description No valid session — absent, expired or revoked credential */
+            /** @description `AUTHENTICATION_FAILED` — No valid credential. Either none was presented, or the session behind it is expired, revoked, or belongs to a member who can no longer sign in. This status means the session is dead and nothing else does (D2.23) — a wrong *current* password on change-password is a 400 with a `currentPassword` field error, not this. */
             401: {
                 headers: {
                     [name: string]: unknown;
@@ -3356,7 +6452,7 @@ export interface operations {
                     "application/json": components["schemas"]["ErrorResponse"];
                 };
             };
-            /** @description Authenticated, but lacking the required permission */
+            /** @description `ACCESS_DENIED` — Authenticated, but lacking the permission the endpoint declares. The session is valid; do not sign the operator out. */
             403: {
                 headers: {
                     [name: string]: unknown;
@@ -3365,7 +6461,34 @@ export interface operations {
                     "application/json": components["schemas"]["ErrorResponse"];
                 };
             };
-            /** @description Unhandled failure; the traceId identifies the log line */
+            /** @description `NOT_FOUND` — A referenced entity does not exist, or the URL matches no endpoint. Also returned for a known path called with an unsupported method, as 405. */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description `CONFLICT` — The request collided with current state for a reason other than a version mismatch: a duplicate natural key (a slug, a code, an email), or a database constraint the application did not catch first. */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description `BUSINESS_RULE_VIOLATION` — The request was well-formed and the entities exist, but a domain rule forbids it — publishing a product with no price, archiving a brand products still reference, issuing more stock than a location holds. Distinct from 400: nothing about the request is malformed. */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description `INTERNAL_ERROR` — An unhandled failure. The message is deliberately generic; `traceId` identifies the server log line that explains it. */
             500: {
                 headers: {
                     [name: string]: unknown;
@@ -3400,7 +6523,7 @@ export interface operations {
                     "*/*": components["schemas"]["AttributeValueResponse"][];
                 };
             };
-            /** @description Malformed request, or a field failed validation */
+            /** @description `VALIDATION_FAILED` — The request body could not be read, a field failed validation, a required header was absent, or a domain validation rule rejected an input the caller can correct. */
             400: {
                 headers: {
                     [name: string]: unknown;
@@ -3409,7 +6532,7 @@ export interface operations {
                     "application/json": components["schemas"]["ErrorResponse"];
                 };
             };
-            /** @description No valid session — absent, expired or revoked credential */
+            /** @description `AUTHENTICATION_FAILED` — No valid credential. Either none was presented, or the session behind it is expired, revoked, or belongs to a member who can no longer sign in. This status means the session is dead and nothing else does (D2.23) — a wrong *current* password on change-password is a 400 with a `currentPassword` field error, not this. */
             401: {
                 headers: {
                     [name: string]: unknown;
@@ -3418,7 +6541,7 @@ export interface operations {
                     "application/json": components["schemas"]["ErrorResponse"];
                 };
             };
-            /** @description Authenticated, but lacking the required permission */
+            /** @description `ACCESS_DENIED` — Authenticated, but lacking the permission the endpoint declares. The session is valid; do not sign the operator out. */
             403: {
                 headers: {
                     [name: string]: unknown;
@@ -3427,7 +6550,34 @@ export interface operations {
                     "application/json": components["schemas"]["ErrorResponse"];
                 };
             };
-            /** @description Unhandled failure; the traceId identifies the log line */
+            /** @description `NOT_FOUND` — A referenced entity does not exist, or the URL matches no endpoint. Also returned for a known path called with an unsupported method, as 405. */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description `CONFLICT` — The request collided with current state for a reason other than a version mismatch: a duplicate natural key (a slug, a code, an email), or a database constraint the application did not catch first. */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description `BUSINESS_RULE_VIOLATION` — The request was well-formed and the entities exist, but a domain rule forbids it — publishing a product with no price, archiving a brand products still reference, issuing more stock than a location holds. Distinct from 400: nothing about the request is malformed. */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description `INTERNAL_ERROR` — An unhandled failure. The message is deliberately generic; `traceId` identifies the server log line that explains it. */
             500: {
                 headers: {
                     [name: string]: unknown;
@@ -3438,7 +6588,7 @@ export interface operations {
             };
         };
     };
-    get_7: {
+    get_10: {
         parameters: {
             query?: never;
             header?: never;
@@ -3458,7 +6608,7 @@ export interface operations {
                     "*/*": components["schemas"]["AttributeDetailResponse"];
                 };
             };
-            /** @description Malformed request, or a field failed validation */
+            /** @description `VALIDATION_FAILED` — The request body could not be read, a field failed validation, a required header was absent, or a domain validation rule rejected an input the caller can correct. */
             400: {
                 headers: {
                     [name: string]: unknown;
@@ -3467,7 +6617,7 @@ export interface operations {
                     "application/json": components["schemas"]["ErrorResponse"];
                 };
             };
-            /** @description No valid session — absent, expired or revoked credential */
+            /** @description `AUTHENTICATION_FAILED` — No valid credential. Either none was presented, or the session behind it is expired, revoked, or belongs to a member who can no longer sign in. This status means the session is dead and nothing else does (D2.23) — a wrong *current* password on change-password is a 400 with a `currentPassword` field error, not this. */
             401: {
                 headers: {
                     [name: string]: unknown;
@@ -3476,7 +6626,7 @@ export interface operations {
                     "application/json": components["schemas"]["ErrorResponse"];
                 };
             };
-            /** @description Authenticated, but lacking the required permission */
+            /** @description `ACCESS_DENIED` — Authenticated, but lacking the permission the endpoint declares. The session is valid; do not sign the operator out. */
             403: {
                 headers: {
                     [name: string]: unknown;
@@ -3485,7 +6635,16 @@ export interface operations {
                     "application/json": components["schemas"]["ErrorResponse"];
                 };
             };
-            /** @description Unhandled failure; the traceId identifies the log line */
+            /** @description `NOT_FOUND` — A referenced entity does not exist, or the URL matches no endpoint. Also returned for a known path called with an unsupported method, as 405. */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description `INTERNAL_ERROR` — An unhandled failure. The message is deliberately generic; `traceId` identifies the server log line that explains it. */
             500: {
                 headers: {
                     [name: string]: unknown;
@@ -3496,7 +6655,7 @@ export interface operations {
             };
         };
     };
-    update_7: {
+    update_10: {
         parameters: {
             query?: never;
             header?: never;
@@ -3520,7 +6679,7 @@ export interface operations {
                     "*/*": components["schemas"]["AttributeResponse"];
                 };
             };
-            /** @description Malformed request, or a field failed validation */
+            /** @description `VALIDATION_FAILED` — The request body could not be read, a field failed validation, a required header was absent, or a domain validation rule rejected an input the caller can correct. */
             400: {
                 headers: {
                     [name: string]: unknown;
@@ -3529,7 +6688,7 @@ export interface operations {
                     "application/json": components["schemas"]["ErrorResponse"];
                 };
             };
-            /** @description No valid session — absent, expired or revoked credential */
+            /** @description `AUTHENTICATION_FAILED` — No valid credential. Either none was presented, or the session behind it is expired, revoked, or belongs to a member who can no longer sign in. This status means the session is dead and nothing else does (D2.23) — a wrong *current* password on change-password is a 400 with a `currentPassword` field error, not this. */
             401: {
                 headers: {
                     [name: string]: unknown;
@@ -3538,7 +6697,7 @@ export interface operations {
                     "application/json": components["schemas"]["ErrorResponse"];
                 };
             };
-            /** @description Authenticated, but lacking the required permission */
+            /** @description `ACCESS_DENIED` — Authenticated, but lacking the permission the endpoint declares. The session is valid; do not sign the operator out. */
             403: {
                 headers: {
                     [name: string]: unknown;
@@ -3547,7 +6706,34 @@ export interface operations {
                     "application/json": components["schemas"]["ErrorResponse"];
                 };
             };
-            /** @description Unhandled failure; the traceId identifies the log line */
+            /** @description `NOT_FOUND` — A referenced entity does not exist, or the URL matches no endpoint. Also returned for a known path called with an unsupported method, as 405. */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description `VERSION_CONFLICT` or `CONFLICT` — The `version` sent with an update is not the version stored — the record was changed by someone else since it was read. Nothing was written. Re-read the record, show the operator what changed, and submit again with the new `version`. */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description `BUSINESS_RULE_VIOLATION` — The request was well-formed and the entities exist, but a domain rule forbids it — publishing a product with no price, archiving a brand products still reference, issuing more stock than a location holds. Distinct from 400: nothing about the request is malformed. */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description `INTERNAL_ERROR` — An unhandled failure. The message is deliberately generic; `traceId` identifies the server log line that explains it. */
             500: {
                 headers: {
                     [name: string]: unknown;
@@ -3558,7 +6744,7 @@ export interface operations {
             };
         };
     };
-    deactivate_2: {
+    deactivate_3: {
         parameters: {
             query?: never;
             header?: never;
@@ -3578,7 +6764,7 @@ export interface operations {
                     "*/*": components["schemas"]["AttributeResponse"];
                 };
             };
-            /** @description Malformed request, or a field failed validation */
+            /** @description `VALIDATION_FAILED` — The request body could not be read, a field failed validation, a required header was absent, or a domain validation rule rejected an input the caller can correct. */
             400: {
                 headers: {
                     [name: string]: unknown;
@@ -3587,7 +6773,7 @@ export interface operations {
                     "application/json": components["schemas"]["ErrorResponse"];
                 };
             };
-            /** @description No valid session — absent, expired or revoked credential */
+            /** @description `AUTHENTICATION_FAILED` — No valid credential. Either none was presented, or the session behind it is expired, revoked, or belongs to a member who can no longer sign in. This status means the session is dead and nothing else does (D2.23) — a wrong *current* password on change-password is a 400 with a `currentPassword` field error, not this. */
             401: {
                 headers: {
                     [name: string]: unknown;
@@ -3596,7 +6782,7 @@ export interface operations {
                     "application/json": components["schemas"]["ErrorResponse"];
                 };
             };
-            /** @description Authenticated, but lacking the required permission */
+            /** @description `ACCESS_DENIED` — Authenticated, but lacking the permission the endpoint declares. The session is valid; do not sign the operator out. */
             403: {
                 headers: {
                     [name: string]: unknown;
@@ -3605,7 +6791,34 @@ export interface operations {
                     "application/json": components["schemas"]["ErrorResponse"];
                 };
             };
-            /** @description Unhandled failure; the traceId identifies the log line */
+            /** @description `NOT_FOUND` — A referenced entity does not exist, or the URL matches no endpoint. Also returned for a known path called with an unsupported method, as 405. */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description `CONFLICT` — The request collided with current state for a reason other than a version mismatch: a duplicate natural key (a slug, a code, an email), or a database constraint the application did not catch first. */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description `BUSINESS_RULE_VIOLATION` — The request was well-formed and the entities exist, but a domain rule forbids it — publishing a product with no price, archiving a brand products still reference, issuing more stock than a location holds. Distinct from 400: nothing about the request is malformed. */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description `INTERNAL_ERROR` — An unhandled failure. The message is deliberately generic; `traceId` identifies the server log line that explains it. */
             500: {
                 headers: {
                     [name: string]: unknown;
@@ -3616,7 +6829,7 @@ export interface operations {
             };
         };
     };
-    reactivate_1: {
+    reactivate_2: {
         parameters: {
             query?: never;
             header?: never;
@@ -3636,7 +6849,7 @@ export interface operations {
                     "*/*": components["schemas"]["AttributeResponse"];
                 };
             };
-            /** @description Malformed request, or a field failed validation */
+            /** @description `VALIDATION_FAILED` — The request body could not be read, a field failed validation, a required header was absent, or a domain validation rule rejected an input the caller can correct. */
             400: {
                 headers: {
                     [name: string]: unknown;
@@ -3645,7 +6858,7 @@ export interface operations {
                     "application/json": components["schemas"]["ErrorResponse"];
                 };
             };
-            /** @description No valid session — absent, expired or revoked credential */
+            /** @description `AUTHENTICATION_FAILED` — No valid credential. Either none was presented, or the session behind it is expired, revoked, or belongs to a member who can no longer sign in. This status means the session is dead and nothing else does (D2.23) — a wrong *current* password on change-password is a 400 with a `currentPassword` field error, not this. */
             401: {
                 headers: {
                     [name: string]: unknown;
@@ -3654,7 +6867,7 @@ export interface operations {
                     "application/json": components["schemas"]["ErrorResponse"];
                 };
             };
-            /** @description Authenticated, but lacking the required permission */
+            /** @description `ACCESS_DENIED` — Authenticated, but lacking the permission the endpoint declares. The session is valid; do not sign the operator out. */
             403: {
                 headers: {
                     [name: string]: unknown;
@@ -3663,7 +6876,34 @@ export interface operations {
                     "application/json": components["schemas"]["ErrorResponse"];
                 };
             };
-            /** @description Unhandled failure; the traceId identifies the log line */
+            /** @description `NOT_FOUND` — A referenced entity does not exist, or the URL matches no endpoint. Also returned for a known path called with an unsupported method, as 405. */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description `CONFLICT` — The request collided with current state for a reason other than a version mismatch: a duplicate natural key (a slug, a code, an email), or a database constraint the application did not catch first. */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description `BUSINESS_RULE_VIOLATION` — The request was well-formed and the entities exist, but a domain rule forbids it — publishing a product with no price, archiving a brand products still reference, issuing more stock than a location holds. Distinct from 400: nothing about the request is malformed. */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description `INTERNAL_ERROR` — An unhandled failure. The message is deliberately generic; `traceId` identifies the server log line that explains it. */
             500: {
                 headers: {
                     [name: string]: unknown;
@@ -3696,7 +6936,7 @@ export interface operations {
                     "*/*": components["schemas"]["AttributeResponse"][];
                 };
             };
-            /** @description Malformed request, or a field failed validation */
+            /** @description `VALIDATION_FAILED` — The request body could not be read, a field failed validation, a required header was absent, or a domain validation rule rejected an input the caller can correct. */
             400: {
                 headers: {
                     [name: string]: unknown;
@@ -3705,7 +6945,7 @@ export interface operations {
                     "application/json": components["schemas"]["ErrorResponse"];
                 };
             };
-            /** @description No valid session — absent, expired or revoked credential */
+            /** @description `AUTHENTICATION_FAILED` — No valid credential. Either none was presented, or the session behind it is expired, revoked, or belongs to a member who can no longer sign in. This status means the session is dead and nothing else does (D2.23) — a wrong *current* password on change-password is a 400 with a `currentPassword` field error, not this. */
             401: {
                 headers: {
                     [name: string]: unknown;
@@ -3714,7 +6954,7 @@ export interface operations {
                     "application/json": components["schemas"]["ErrorResponse"];
                 };
             };
-            /** @description Authenticated, but lacking the required permission */
+            /** @description `ACCESS_DENIED` — Authenticated, but lacking the permission the endpoint declares. The session is valid; do not sign the operator out. */
             403: {
                 headers: {
                     [name: string]: unknown;
@@ -3723,7 +6963,25 @@ export interface operations {
                     "application/json": components["schemas"]["ErrorResponse"];
                 };
             };
-            /** @description Unhandled failure; the traceId identifies the log line */
+            /** @description `CONFLICT` — The request collided with current state for a reason other than a version mismatch: a duplicate natural key (a slug, a code, an email), or a database constraint the application did not catch first. */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description `BUSINESS_RULE_VIOLATION` — The request was well-formed and the entities exist, but a domain rule forbids it — publishing a product with no price, archiving a brand products still reference, issuing more stock than a location holds. Distinct from 400: nothing about the request is malformed. */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description `INTERNAL_ERROR` — An unhandled failure. The message is deliberately generic; `traceId` identifies the server log line that explains it. */
             500: {
                 headers: {
                     [name: string]: unknown;
@@ -3734,7 +6992,7 @@ export interface operations {
             };
         };
     };
-    list_11: {
+    list_15: {
         parameters: {
             query: {
                 action?: string;
@@ -3760,7 +7018,7 @@ export interface operations {
                     "*/*": components["schemas"]["PageResponseAuditEntryResponse"];
                 };
             };
-            /** @description Malformed request, or a field failed validation */
+            /** @description `VALIDATION_FAILED` — The request body could not be read, a field failed validation, a required header was absent, or a domain validation rule rejected an input the caller can correct. */
             400: {
                 headers: {
                     [name: string]: unknown;
@@ -3769,7 +7027,7 @@ export interface operations {
                     "application/json": components["schemas"]["ErrorResponse"];
                 };
             };
-            /** @description No valid session — absent, expired or revoked credential */
+            /** @description `AUTHENTICATION_FAILED` — No valid credential. Either none was presented, or the session behind it is expired, revoked, or belongs to a member who can no longer sign in. This status means the session is dead and nothing else does (D2.23) — a wrong *current* password on change-password is a 400 with a `currentPassword` field error, not this. */
             401: {
                 headers: {
                     [name: string]: unknown;
@@ -3778,7 +7036,7 @@ export interface operations {
                     "application/json": components["schemas"]["ErrorResponse"];
                 };
             };
-            /** @description Authenticated, but lacking the required permission */
+            /** @description `ACCESS_DENIED` — Authenticated, but lacking the permission the endpoint declares. The session is valid; do not sign the operator out. */
             403: {
                 headers: {
                     [name: string]: unknown;
@@ -3787,7 +7045,7 @@ export interface operations {
                     "application/json": components["schemas"]["ErrorResponse"];
                 };
             };
-            /** @description Unhandled failure; the traceId identifies the log line */
+            /** @description `INTERNAL_ERROR` — An unhandled failure. The message is deliberately generic; `traceId` identifies the server log line that explains it. */
             500: {
                 headers: {
                     [name: string]: unknown;
@@ -3818,7 +7076,7 @@ export interface operations {
                 };
                 content?: never;
             };
-            /** @description Malformed request, or a field failed validation */
+            /** @description `VALIDATION_FAILED` — The request body could not be read, a field failed validation, a required header was absent, or a domain validation rule rejected an input the caller can correct. */
             400: {
                 headers: {
                     [name: string]: unknown;
@@ -3827,7 +7085,25 @@ export interface operations {
                     "application/json": components["schemas"]["ErrorResponse"];
                 };
             };
-            /** @description Unhandled failure; the traceId identifies the log line */
+            /** @description `CONFLICT` — The request collided with current state for a reason other than a version mismatch: a duplicate natural key (a slug, a code, an email), or a database constraint the application did not catch first. */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description `BUSINESS_RULE_VIOLATION` — The request was well-formed and the entities exist, but a domain rule forbids it — publishing a product with no price, archiving a brand products still reference, issuing more stock than a location holds. Distinct from 400: nothing about the request is malformed. */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description `INTERNAL_ERROR` — An unhandled failure. The message is deliberately generic; `traceId` identifies the server log line that explains it. */
             500: {
                 headers: {
                     [name: string]: unknown;
@@ -3858,7 +7134,7 @@ export interface operations {
                 };
                 content?: never;
             };
-            /** @description Malformed request, or a field failed validation */
+            /** @description `VALIDATION_FAILED` — The request body could not be read, a field failed validation, a required header was absent, or a domain validation rule rejected an input the caller can correct. */
             400: {
                 headers: {
                     [name: string]: unknown;
@@ -3867,7 +7143,25 @@ export interface operations {
                     "application/json": components["schemas"]["ErrorResponse"];
                 };
             };
-            /** @description Unhandled failure; the traceId identifies the log line */
+            /** @description `CONFLICT` — The request collided with current state for a reason other than a version mismatch: a duplicate natural key (a slug, a code, an email), or a database constraint the application did not catch first. */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description `BUSINESS_RULE_VIOLATION` — The request was well-formed and the entities exist, but a domain rule forbids it — publishing a product with no price, archiving a brand products still reference, issuing more stock than a location holds. Distinct from 400: nothing about the request is malformed. */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description `INTERNAL_ERROR` — An unhandled failure. The message is deliberately generic; `traceId` identifies the server log line that explains it. */
             500: {
                 headers: {
                     [name: string]: unknown;
@@ -3900,7 +7194,7 @@ export interface operations {
                     "*/*": components["schemas"]["LoginResponse"];
                 };
             };
-            /** @description Malformed request, or a field failed validation */
+            /** @description `VALIDATION_FAILED` — The request body could not be read, a field failed validation, a required header was absent, or a domain validation rule rejected an input the caller can correct. */
             400: {
                 headers: {
                     [name: string]: unknown;
@@ -3909,7 +7203,25 @@ export interface operations {
                     "application/json": components["schemas"]["ErrorResponse"];
                 };
             };
-            /** @description Unhandled failure; the traceId identifies the log line */
+            /** @description `CONFLICT` — The request collided with current state for a reason other than a version mismatch: a duplicate natural key (a slug, a code, an email), or a database constraint the application did not catch first. */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description `BUSINESS_RULE_VIOLATION` — The request was well-formed and the entities exist, but a domain rule forbids it — publishing a product with no price, archiving a brand products still reference, issuing more stock than a location holds. Distinct from 400: nothing about the request is malformed. */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description `INTERNAL_ERROR` — An unhandled failure. The message is deliberately generic; `traceId` identifies the server log line that explains it. */
             500: {
                 headers: {
                     [name: string]: unknown;
@@ -3936,7 +7248,7 @@ export interface operations {
                 };
                 content?: never;
             };
-            /** @description Malformed request, or a field failed validation */
+            /** @description `VALIDATION_FAILED` — The request body could not be read, a field failed validation, a required header was absent, or a domain validation rule rejected an input the caller can correct. */
             400: {
                 headers: {
                     [name: string]: unknown;
@@ -3945,7 +7257,7 @@ export interface operations {
                     "application/json": components["schemas"]["ErrorResponse"];
                 };
             };
-            /** @description No valid session — absent, expired or revoked credential */
+            /** @description `AUTHENTICATION_FAILED` — No valid credential. Either none was presented, or the session behind it is expired, revoked, or belongs to a member who can no longer sign in. This status means the session is dead and nothing else does (D2.23) — a wrong *current* password on change-password is a 400 with a `currentPassword` field error, not this. */
             401: {
                 headers: {
                     [name: string]: unknown;
@@ -3954,7 +7266,7 @@ export interface operations {
                     "application/json": components["schemas"]["ErrorResponse"];
                 };
             };
-            /** @description Authenticated, but lacking the required permission */
+            /** @description `ACCESS_DENIED` — Authenticated, but lacking the permission the endpoint declares. The session is valid; do not sign the operator out. */
             403: {
                 headers: {
                     [name: string]: unknown;
@@ -3963,7 +7275,25 @@ export interface operations {
                     "application/json": components["schemas"]["ErrorResponse"];
                 };
             };
-            /** @description Unhandled failure; the traceId identifies the log line */
+            /** @description `CONFLICT` — The request collided with current state for a reason other than a version mismatch: a duplicate natural key (a slug, a code, an email), or a database constraint the application did not catch first. */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description `BUSINESS_RULE_VIOLATION` — The request was well-formed and the entities exist, but a domain rule forbids it — publishing a product with no price, archiving a brand products still reference, issuing more stock than a location holds. Distinct from 400: nothing about the request is malformed. */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description `INTERNAL_ERROR` — An unhandled failure. The message is deliberately generic; `traceId` identifies the server log line that explains it. */
             500: {
                 headers: {
                     [name: string]: unknown;
@@ -3996,7 +7326,7 @@ export interface operations {
                     "*/*": components["schemas"]["GenericAcknowledgement"];
                 };
             };
-            /** @description Malformed request, or a field failed validation */
+            /** @description `VALIDATION_FAILED` — The request body could not be read, a field failed validation, a required header was absent, or a domain validation rule rejected an input the caller can correct. */
             400: {
                 headers: {
                     [name: string]: unknown;
@@ -4005,7 +7335,25 @@ export interface operations {
                     "application/json": components["schemas"]["ErrorResponse"];
                 };
             };
-            /** @description Unhandled failure; the traceId identifies the log line */
+            /** @description `CONFLICT` — The request collided with current state for a reason other than a version mismatch: a duplicate natural key (a slug, a code, an email), or a database constraint the application did not catch first. */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description `BUSINESS_RULE_VIOLATION` — The request was well-formed and the entities exist, but a domain rule forbids it — publishing a product with no price, archiving a brand products still reference, issuing more stock than a location holds. Distinct from 400: nothing about the request is malformed. */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description `INTERNAL_ERROR` — An unhandled failure. The message is deliberately generic; `traceId` identifies the server log line that explains it. */
             500: {
                 headers: {
                     [name: string]: unknown;
@@ -4016,7 +7364,7 @@ export interface operations {
             };
         };
     };
-    list_6: {
+    list_10: {
         parameters: {
             query: {
                 expiringWithinDays?: number;
@@ -4039,7 +7387,7 @@ export interface operations {
                     "*/*": components["schemas"]["PageResponseBatchResponse"];
                 };
             };
-            /** @description Malformed request, or a field failed validation */
+            /** @description `VALIDATION_FAILED` — The request body could not be read, a field failed validation, a required header was absent, or a domain validation rule rejected an input the caller can correct. */
             400: {
                 headers: {
                     [name: string]: unknown;
@@ -4048,7 +7396,7 @@ export interface operations {
                     "application/json": components["schemas"]["ErrorResponse"];
                 };
             };
-            /** @description No valid session — absent, expired or revoked credential */
+            /** @description `AUTHENTICATION_FAILED` — No valid credential. Either none was presented, or the session behind it is expired, revoked, or belongs to a member who can no longer sign in. This status means the session is dead and nothing else does (D2.23) — a wrong *current* password on change-password is a 400 with a `currentPassword` field error, not this. */
             401: {
                 headers: {
                     [name: string]: unknown;
@@ -4057,7 +7405,7 @@ export interface operations {
                     "application/json": components["schemas"]["ErrorResponse"];
                 };
             };
-            /** @description Authenticated, but lacking the required permission */
+            /** @description `ACCESS_DENIED` — Authenticated, but lacking the permission the endpoint declares. The session is valid; do not sign the operator out. */
             403: {
                 headers: {
                     [name: string]: unknown;
@@ -4066,7 +7414,7 @@ export interface operations {
                     "application/json": components["schemas"]["ErrorResponse"];
                 };
             };
-            /** @description Unhandled failure; the traceId identifies the log line */
+            /** @description `INTERNAL_ERROR` — An unhandled failure. The message is deliberately generic; `traceId` identifies the server log line that explains it. */
             500: {
                 headers: {
                     [name: string]: unknown;
@@ -4077,7 +7425,7 @@ export interface operations {
             };
         };
     };
-    create_6: {
+    create_9: {
         parameters: {
             query?: never;
             header?: never;
@@ -4099,7 +7447,7 @@ export interface operations {
                     "*/*": components["schemas"]["BatchResponse"];
                 };
             };
-            /** @description Malformed request, or a field failed validation */
+            /** @description `VALIDATION_FAILED` — The request body could not be read, a field failed validation, a required header was absent, or a domain validation rule rejected an input the caller can correct. */
             400: {
                 headers: {
                     [name: string]: unknown;
@@ -4108,7 +7456,7 @@ export interface operations {
                     "application/json": components["schemas"]["ErrorResponse"];
                 };
             };
-            /** @description No valid session — absent, expired or revoked credential */
+            /** @description `AUTHENTICATION_FAILED` — No valid credential. Either none was presented, or the session behind it is expired, revoked, or belongs to a member who can no longer sign in. This status means the session is dead and nothing else does (D2.23) — a wrong *current* password on change-password is a 400 with a `currentPassword` field error, not this. */
             401: {
                 headers: {
                     [name: string]: unknown;
@@ -4117,7 +7465,7 @@ export interface operations {
                     "application/json": components["schemas"]["ErrorResponse"];
                 };
             };
-            /** @description Authenticated, but lacking the required permission */
+            /** @description `ACCESS_DENIED` — Authenticated, but lacking the permission the endpoint declares. The session is valid; do not sign the operator out. */
             403: {
                 headers: {
                     [name: string]: unknown;
@@ -4126,7 +7474,25 @@ export interface operations {
                     "application/json": components["schemas"]["ErrorResponse"];
                 };
             };
-            /** @description Unhandled failure; the traceId identifies the log line */
+            /** @description `CONFLICT` — The request collided with current state for a reason other than a version mismatch: a duplicate natural key (a slug, a code, an email), or a database constraint the application did not catch first. */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description `BUSINESS_RULE_VIOLATION` — The request was well-formed and the entities exist, but a domain rule forbids it — publishing a product with no price, archiving a brand products still reference, issuing more stock than a location holds. Distinct from 400: nothing about the request is malformed. */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description `INTERNAL_ERROR` — An unhandled failure. The message is deliberately generic; `traceId` identifies the server log line that explains it. */
             500: {
                 headers: {
                     [name: string]: unknown;
@@ -4137,7 +7503,7 @@ export interface operations {
             };
         };
     };
-    get_8: {
+    get_12: {
         parameters: {
             query?: never;
             header?: never;
@@ -4157,7 +7523,7 @@ export interface operations {
                     "*/*": components["schemas"]["BatchResponse"];
                 };
             };
-            /** @description Malformed request, or a field failed validation */
+            /** @description `VALIDATION_FAILED` — The request body could not be read, a field failed validation, a required header was absent, or a domain validation rule rejected an input the caller can correct. */
             400: {
                 headers: {
                     [name: string]: unknown;
@@ -4166,7 +7532,7 @@ export interface operations {
                     "application/json": components["schemas"]["ErrorResponse"];
                 };
             };
-            /** @description No valid session — absent, expired or revoked credential */
+            /** @description `AUTHENTICATION_FAILED` — No valid credential. Either none was presented, or the session behind it is expired, revoked, or belongs to a member who can no longer sign in. This status means the session is dead and nothing else does (D2.23) — a wrong *current* password on change-password is a 400 with a `currentPassword` field error, not this. */
             401: {
                 headers: {
                     [name: string]: unknown;
@@ -4175,7 +7541,7 @@ export interface operations {
                     "application/json": components["schemas"]["ErrorResponse"];
                 };
             };
-            /** @description Authenticated, but lacking the required permission */
+            /** @description `ACCESS_DENIED` — Authenticated, but lacking the permission the endpoint declares. The session is valid; do not sign the operator out. */
             403: {
                 headers: {
                     [name: string]: unknown;
@@ -4184,7 +7550,16 @@ export interface operations {
                     "application/json": components["schemas"]["ErrorResponse"];
                 };
             };
-            /** @description Unhandled failure; the traceId identifies the log line */
+            /** @description `NOT_FOUND` — A referenced entity does not exist, or the URL matches no endpoint. Also returned for a known path called with an unsupported method, as 405. */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description `INTERNAL_ERROR` — An unhandled failure. The message is deliberately generic; `traceId` identifies the server log line that explains it. */
             500: {
                 headers: {
                     [name: string]: unknown;
@@ -4195,12 +7570,18 @@ export interface operations {
             };
         };
     };
-    list_5: {
+    list_9: {
         parameters: {
             query: {
+                /**
+                 * @description only brands that are (or are not) on sale. Independent of <code>status</code>: a brand
+                 *          can be approved and not yet published
+                 */
                 live?: boolean;
                 pageable: components["schemas"]["Pageable"];
+                /** @description substring of the name or the slug */
                 search?: string;
+                /** @description only brands in this lifecycle state */
                 status?: "DRAFT" | "IN_REVIEW" | "ACTIVE" | "ARCHIVED";
             };
             header?: never;
@@ -4218,7 +7599,7 @@ export interface operations {
                     "*/*": components["schemas"]["PageResponseBrandResponse"];
                 };
             };
-            /** @description Malformed request, or a field failed validation */
+            /** @description `VALIDATION_FAILED` — The request body could not be read, a field failed validation, a required header was absent, or a domain validation rule rejected an input the caller can correct. */
             400: {
                 headers: {
                     [name: string]: unknown;
@@ -4227,7 +7608,7 @@ export interface operations {
                     "application/json": components["schemas"]["ErrorResponse"];
                 };
             };
-            /** @description No valid session — absent, expired or revoked credential */
+            /** @description `AUTHENTICATION_FAILED` — No valid credential. Either none was presented, or the session behind it is expired, revoked, or belongs to a member who can no longer sign in. This status means the session is dead and nothing else does (D2.23) — a wrong *current* password on change-password is a 400 with a `currentPassword` field error, not this. */
             401: {
                 headers: {
                     [name: string]: unknown;
@@ -4236,7 +7617,7 @@ export interface operations {
                     "application/json": components["schemas"]["ErrorResponse"];
                 };
             };
-            /** @description Authenticated, but lacking the required permission */
+            /** @description `ACCESS_DENIED` — Authenticated, but lacking the permission the endpoint declares. The session is valid; do not sign the operator out. */
             403: {
                 headers: {
                     [name: string]: unknown;
@@ -4245,7 +7626,7 @@ export interface operations {
                     "application/json": components["schemas"]["ErrorResponse"];
                 };
             };
-            /** @description Unhandled failure; the traceId identifies the log line */
+            /** @description `INTERNAL_ERROR` — An unhandled failure. The message is deliberately generic; `traceId` identifies the server log line that explains it. */
             500: {
                 headers: {
                     [name: string]: unknown;
@@ -4256,7 +7637,7 @@ export interface operations {
             };
         };
     };
-    create_5: {
+    create_8: {
         parameters: {
             query?: never;
             header?: never;
@@ -4278,7 +7659,7 @@ export interface operations {
                     "*/*": components["schemas"]["BrandResponse"];
                 };
             };
-            /** @description Malformed request, or a field failed validation */
+            /** @description `VALIDATION_FAILED` — The request body could not be read, a field failed validation, a required header was absent, or a domain validation rule rejected an input the caller can correct. */
             400: {
                 headers: {
                     [name: string]: unknown;
@@ -4287,7 +7668,7 @@ export interface operations {
                     "application/json": components["schemas"]["ErrorResponse"];
                 };
             };
-            /** @description No valid session — absent, expired or revoked credential */
+            /** @description `AUTHENTICATION_FAILED` — No valid credential. Either none was presented, or the session behind it is expired, revoked, or belongs to a member who can no longer sign in. This status means the session is dead and nothing else does (D2.23) — a wrong *current* password on change-password is a 400 with a `currentPassword` field error, not this. */
             401: {
                 headers: {
                     [name: string]: unknown;
@@ -4296,7 +7677,7 @@ export interface operations {
                     "application/json": components["schemas"]["ErrorResponse"];
                 };
             };
-            /** @description Authenticated, but lacking the required permission */
+            /** @description `ACCESS_DENIED` — Authenticated, but lacking the permission the endpoint declares. The session is valid; do not sign the operator out. */
             403: {
                 headers: {
                     [name: string]: unknown;
@@ -4305,7 +7686,25 @@ export interface operations {
                     "application/json": components["schemas"]["ErrorResponse"];
                 };
             };
-            /** @description Unhandled failure; the traceId identifies the log line */
+            /** @description `CONFLICT` — The request collided with current state for a reason other than a version mismatch: a duplicate natural key (a slug, a code, an email), or a database constraint the application did not catch first. */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description `BUSINESS_RULE_VIOLATION` — The request was well-formed and the entities exist, but a domain rule forbids it — publishing a product with no price, archiving a brand products still reference, issuing more stock than a location holds. Distinct from 400: nothing about the request is malformed. */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description `INTERNAL_ERROR` — An unhandled failure. The message is deliberately generic; `traceId` identifies the server log line that explains it. */
             500: {
                 headers: {
                     [name: string]: unknown;
@@ -4316,7 +7715,7 @@ export interface operations {
             };
         };
     };
-    get_6: {
+    get_9: {
         parameters: {
             query?: never;
             header?: never;
@@ -4336,7 +7735,7 @@ export interface operations {
                     "*/*": components["schemas"]["BrandResponse"];
                 };
             };
-            /** @description Malformed request, or a field failed validation */
+            /** @description `VALIDATION_FAILED` — The request body could not be read, a field failed validation, a required header was absent, or a domain validation rule rejected an input the caller can correct. */
             400: {
                 headers: {
                     [name: string]: unknown;
@@ -4345,7 +7744,7 @@ export interface operations {
                     "application/json": components["schemas"]["ErrorResponse"];
                 };
             };
-            /** @description No valid session — absent, expired or revoked credential */
+            /** @description `AUTHENTICATION_FAILED` — No valid credential. Either none was presented, or the session behind it is expired, revoked, or belongs to a member who can no longer sign in. This status means the session is dead and nothing else does (D2.23) — a wrong *current* password on change-password is a 400 with a `currentPassword` field error, not this. */
             401: {
                 headers: {
                     [name: string]: unknown;
@@ -4354,7 +7753,7 @@ export interface operations {
                     "application/json": components["schemas"]["ErrorResponse"];
                 };
             };
-            /** @description Authenticated, but lacking the required permission */
+            /** @description `ACCESS_DENIED` — Authenticated, but lacking the permission the endpoint declares. The session is valid; do not sign the operator out. */
             403: {
                 headers: {
                     [name: string]: unknown;
@@ -4363,7 +7762,16 @@ export interface operations {
                     "application/json": components["schemas"]["ErrorResponse"];
                 };
             };
-            /** @description Unhandled failure; the traceId identifies the log line */
+            /** @description `NOT_FOUND` — A referenced entity does not exist, or the URL matches no endpoint. Also returned for a known path called with an unsupported method, as 405. */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description `INTERNAL_ERROR` — An unhandled failure. The message is deliberately generic; `traceId` identifies the server log line that explains it. */
             500: {
                 headers: {
                     [name: string]: unknown;
@@ -4374,7 +7782,7 @@ export interface operations {
             };
         };
     };
-    update_6: {
+    update_9: {
         parameters: {
             query?: never;
             header?: never;
@@ -4398,7 +7806,7 @@ export interface operations {
                     "*/*": components["schemas"]["BrandResponse"];
                 };
             };
-            /** @description Malformed request, or a field failed validation */
+            /** @description `VALIDATION_FAILED` — The request body could not be read, a field failed validation, a required header was absent, or a domain validation rule rejected an input the caller can correct. */
             400: {
                 headers: {
                     [name: string]: unknown;
@@ -4407,7 +7815,7 @@ export interface operations {
                     "application/json": components["schemas"]["ErrorResponse"];
                 };
             };
-            /** @description No valid session — absent, expired or revoked credential */
+            /** @description `AUTHENTICATION_FAILED` — No valid credential. Either none was presented, or the session behind it is expired, revoked, or belongs to a member who can no longer sign in. This status means the session is dead and nothing else does (D2.23) — a wrong *current* password on change-password is a 400 with a `currentPassword` field error, not this. */
             401: {
                 headers: {
                     [name: string]: unknown;
@@ -4416,7 +7824,7 @@ export interface operations {
                     "application/json": components["schemas"]["ErrorResponse"];
                 };
             };
-            /** @description Authenticated, but lacking the required permission */
+            /** @description `ACCESS_DENIED` — Authenticated, but lacking the permission the endpoint declares. The session is valid; do not sign the operator out. */
             403: {
                 headers: {
                     [name: string]: unknown;
@@ -4425,7 +7833,34 @@ export interface operations {
                     "application/json": components["schemas"]["ErrorResponse"];
                 };
             };
-            /** @description Unhandled failure; the traceId identifies the log line */
+            /** @description `NOT_FOUND` — A referenced entity does not exist, or the URL matches no endpoint. Also returned for a known path called with an unsupported method, as 405. */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description `VERSION_CONFLICT` or `CONFLICT` — The `version` sent with an update is not the version stored — the record was changed by someone else since it was read. Nothing was written. Re-read the record, show the operator what changed, and submit again with the new `version`. */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description `BUSINESS_RULE_VIOLATION` — The request was well-formed and the entities exist, but a domain rule forbids it — publishing a product with no price, archiving a brand products still reference, issuing more stock than a location holds. Distinct from 400: nothing about the request is malformed. */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description `INTERNAL_ERROR` — An unhandled failure. The message is deliberately generic; `traceId` identifies the server log line that explains it. */
             500: {
                 headers: {
                     [name: string]: unknown;
@@ -4456,7 +7891,7 @@ export interface operations {
                     "*/*": components["schemas"]["BrandResponse"];
                 };
             };
-            /** @description Malformed request, or a field failed validation */
+            /** @description `VALIDATION_FAILED` — The request body could not be read, a field failed validation, a required header was absent, or a domain validation rule rejected an input the caller can correct. */
             400: {
                 headers: {
                     [name: string]: unknown;
@@ -4465,7 +7900,7 @@ export interface operations {
                     "application/json": components["schemas"]["ErrorResponse"];
                 };
             };
-            /** @description No valid session — absent, expired or revoked credential */
+            /** @description `AUTHENTICATION_FAILED` — No valid credential. Either none was presented, or the session behind it is expired, revoked, or belongs to a member who can no longer sign in. This status means the session is dead and nothing else does (D2.23) — a wrong *current* password on change-password is a 400 with a `currentPassword` field error, not this. */
             401: {
                 headers: {
                     [name: string]: unknown;
@@ -4474,7 +7909,7 @@ export interface operations {
                     "application/json": components["schemas"]["ErrorResponse"];
                 };
             };
-            /** @description Authenticated, but lacking the required permission */
+            /** @description `ACCESS_DENIED` — Authenticated, but lacking the permission the endpoint declares. The session is valid; do not sign the operator out. */
             403: {
                 headers: {
                     [name: string]: unknown;
@@ -4483,7 +7918,34 @@ export interface operations {
                     "application/json": components["schemas"]["ErrorResponse"];
                 };
             };
-            /** @description Unhandled failure; the traceId identifies the log line */
+            /** @description `NOT_FOUND` — A referenced entity does not exist, or the URL matches no endpoint. Also returned for a known path called with an unsupported method, as 405. */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description `CONFLICT` — The request collided with current state for a reason other than a version mismatch: a duplicate natural key (a slug, a code, an email), or a database constraint the application did not catch first. */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description `BUSINESS_RULE_VIOLATION` — The request was well-formed and the entities exist, but a domain rule forbids it — publishing a product with no price, archiving a brand products still reference, issuing more stock than a location holds. Distinct from 400: nothing about the request is malformed. */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description `INTERNAL_ERROR` — An unhandled failure. The message is deliberately generic; `traceId` identifies the server log line that explains it. */
             500: {
                 headers: {
                     [name: string]: unknown;
@@ -4514,7 +7976,7 @@ export interface operations {
                     "*/*": components["schemas"]["BrandResponse"];
                 };
             };
-            /** @description Malformed request, or a field failed validation */
+            /** @description `VALIDATION_FAILED` — The request body could not be read, a field failed validation, a required header was absent, or a domain validation rule rejected an input the caller can correct. */
             400: {
                 headers: {
                     [name: string]: unknown;
@@ -4523,7 +7985,7 @@ export interface operations {
                     "application/json": components["schemas"]["ErrorResponse"];
                 };
             };
-            /** @description No valid session — absent, expired or revoked credential */
+            /** @description `AUTHENTICATION_FAILED` — No valid credential. Either none was presented, or the session behind it is expired, revoked, or belongs to a member who can no longer sign in. This status means the session is dead and nothing else does (D2.23) — a wrong *current* password on change-password is a 400 with a `currentPassword` field error, not this. */
             401: {
                 headers: {
                     [name: string]: unknown;
@@ -4532,7 +7994,7 @@ export interface operations {
                     "application/json": components["schemas"]["ErrorResponse"];
                 };
             };
-            /** @description Authenticated, but lacking the required permission */
+            /** @description `ACCESS_DENIED` — Authenticated, but lacking the permission the endpoint declares. The session is valid; do not sign the operator out. */
             403: {
                 headers: {
                     [name: string]: unknown;
@@ -4541,7 +8003,34 @@ export interface operations {
                     "application/json": components["schemas"]["ErrorResponse"];
                 };
             };
-            /** @description Unhandled failure; the traceId identifies the log line */
+            /** @description `NOT_FOUND` — A referenced entity does not exist, or the URL matches no endpoint. Also returned for a known path called with an unsupported method, as 405. */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description `CONFLICT` — The request collided with current state for a reason other than a version mismatch: a duplicate natural key (a slug, a code, an email), or a database constraint the application did not catch first. */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description `BUSINESS_RULE_VIOLATION` — The request was well-formed and the entities exist, but a domain rule forbids it — publishing a product with no price, archiving a brand products still reference, issuing more stock than a location holds. Distinct from 400: nothing about the request is malformed. */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description `INTERNAL_ERROR` — An unhandled failure. The message is deliberately generic; `traceId` identifies the server log line that explains it. */
             500: {
                 headers: {
                     [name: string]: unknown;
@@ -4572,7 +8061,7 @@ export interface operations {
                     "*/*": components["schemas"]["BrandResponse"];
                 };
             };
-            /** @description Malformed request, or a field failed validation */
+            /** @description `VALIDATION_FAILED` — The request body could not be read, a field failed validation, a required header was absent, or a domain validation rule rejected an input the caller can correct. */
             400: {
                 headers: {
                     [name: string]: unknown;
@@ -4581,7 +8070,7 @@ export interface operations {
                     "application/json": components["schemas"]["ErrorResponse"];
                 };
             };
-            /** @description No valid session — absent, expired or revoked credential */
+            /** @description `AUTHENTICATION_FAILED` — No valid credential. Either none was presented, or the session behind it is expired, revoked, or belongs to a member who can no longer sign in. This status means the session is dead and nothing else does (D2.23) — a wrong *current* password on change-password is a 400 with a `currentPassword` field error, not this. */
             401: {
                 headers: {
                     [name: string]: unknown;
@@ -4590,7 +8079,7 @@ export interface operations {
                     "application/json": components["schemas"]["ErrorResponse"];
                 };
             };
-            /** @description Authenticated, but lacking the required permission */
+            /** @description `ACCESS_DENIED` — Authenticated, but lacking the permission the endpoint declares. The session is valid; do not sign the operator out. */
             403: {
                 headers: {
                     [name: string]: unknown;
@@ -4599,7 +8088,34 @@ export interface operations {
                     "application/json": components["schemas"]["ErrorResponse"];
                 };
             };
-            /** @description Unhandled failure; the traceId identifies the log line */
+            /** @description `NOT_FOUND` — A referenced entity does not exist, or the URL matches no endpoint. Also returned for a known path called with an unsupported method, as 405. */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description `CONFLICT` — The request collided with current state for a reason other than a version mismatch: a duplicate natural key (a slug, a code, an email), or a database constraint the application did not catch first. */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description `BUSINESS_RULE_VIOLATION` — The request was well-formed and the entities exist, but a domain rule forbids it — publishing a product with no price, archiving a brand products still reference, issuing more stock than a location holds. Distinct from 400: nothing about the request is malformed. */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description `INTERNAL_ERROR` — An unhandled failure. The message is deliberately generic; `traceId` identifies the server log line that explains it. */
             500: {
                 headers: {
                     [name: string]: unknown;
@@ -4630,7 +8146,7 @@ export interface operations {
                     "*/*": components["schemas"]["BrandResponse"];
                 };
             };
-            /** @description Malformed request, or a field failed validation */
+            /** @description `VALIDATION_FAILED` — The request body could not be read, a field failed validation, a required header was absent, or a domain validation rule rejected an input the caller can correct. */
             400: {
                 headers: {
                     [name: string]: unknown;
@@ -4639,7 +8155,7 @@ export interface operations {
                     "application/json": components["schemas"]["ErrorResponse"];
                 };
             };
-            /** @description No valid session — absent, expired or revoked credential */
+            /** @description `AUTHENTICATION_FAILED` — No valid credential. Either none was presented, or the session behind it is expired, revoked, or belongs to a member who can no longer sign in. This status means the session is dead and nothing else does (D2.23) — a wrong *current* password on change-password is a 400 with a `currentPassword` field error, not this. */
             401: {
                 headers: {
                     [name: string]: unknown;
@@ -4648,7 +8164,7 @@ export interface operations {
                     "application/json": components["schemas"]["ErrorResponse"];
                 };
             };
-            /** @description Authenticated, but lacking the required permission */
+            /** @description `ACCESS_DENIED` — Authenticated, but lacking the permission the endpoint declares. The session is valid; do not sign the operator out. */
             403: {
                 headers: {
                     [name: string]: unknown;
@@ -4657,7 +8173,34 @@ export interface operations {
                     "application/json": components["schemas"]["ErrorResponse"];
                 };
             };
-            /** @description Unhandled failure; the traceId identifies the log line */
+            /** @description `NOT_FOUND` — A referenced entity does not exist, or the URL matches no endpoint. Also returned for a known path called with an unsupported method, as 405. */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description `CONFLICT` — The request collided with current state for a reason other than a version mismatch: a duplicate natural key (a slug, a code, an email), or a database constraint the application did not catch first. */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description `BUSINESS_RULE_VIOLATION` — The request was well-formed and the entities exist, but a domain rule forbids it — publishing a product with no price, archiving a brand products still reference, issuing more stock than a location holds. Distinct from 400: nothing about the request is malformed. */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description `INTERNAL_ERROR` — An unhandled failure. The message is deliberately generic; `traceId` identifies the server log line that explains it. */
             500: {
                 headers: {
                     [name: string]: unknown;
@@ -4690,7 +8233,7 @@ export interface operations {
                     "*/*": components["schemas"]["BrandResponse"][];
                 };
             };
-            /** @description Malformed request, or a field failed validation */
+            /** @description `VALIDATION_FAILED` — The request body could not be read, a field failed validation, a required header was absent, or a domain validation rule rejected an input the caller can correct. */
             400: {
                 headers: {
                     [name: string]: unknown;
@@ -4699,7 +8242,7 @@ export interface operations {
                     "application/json": components["schemas"]["ErrorResponse"];
                 };
             };
-            /** @description No valid session — absent, expired or revoked credential */
+            /** @description `AUTHENTICATION_FAILED` — No valid credential. Either none was presented, or the session behind it is expired, revoked, or belongs to a member who can no longer sign in. This status means the session is dead and nothing else does (D2.23) — a wrong *current* password on change-password is a 400 with a `currentPassword` field error, not this. */
             401: {
                 headers: {
                     [name: string]: unknown;
@@ -4708,7 +8251,7 @@ export interface operations {
                     "application/json": components["schemas"]["ErrorResponse"];
                 };
             };
-            /** @description Authenticated, but lacking the required permission */
+            /** @description `ACCESS_DENIED` — Authenticated, but lacking the permission the endpoint declares. The session is valid; do not sign the operator out. */
             403: {
                 headers: {
                     [name: string]: unknown;
@@ -4717,7 +8260,25 @@ export interface operations {
                     "application/json": components["schemas"]["ErrorResponse"];
                 };
             };
-            /** @description Unhandled failure; the traceId identifies the log line */
+            /** @description `CONFLICT` — The request collided with current state for a reason other than a version mismatch: a duplicate natural key (a slug, a code, an email), or a database constraint the application did not catch first. */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description `BUSINESS_RULE_VIOLATION` — The request was well-formed and the entities exist, but a domain rule forbids it — publishing a product with no price, archiving a brand products still reference, issuing more stock than a location holds. Distinct from 400: nothing about the request is malformed. */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description `INTERNAL_ERROR` — An unhandled failure. The message is deliberately generic; `traceId` identifies the server log line that explains it. */
             500: {
                 headers: {
                     [name: string]: unknown;
@@ -4728,7 +8289,7 @@ export interface operations {
             };
         };
     };
-    list_4: {
+    list_8: {
         parameters: {
             query: {
                 live?: boolean;
@@ -4752,7 +8313,7 @@ export interface operations {
                     "*/*": components["schemas"]["PageResponseCategoryResponse"];
                 };
             };
-            /** @description Malformed request, or a field failed validation */
+            /** @description `VALIDATION_FAILED` — The request body could not be read, a field failed validation, a required header was absent, or a domain validation rule rejected an input the caller can correct. */
             400: {
                 headers: {
                     [name: string]: unknown;
@@ -4761,7 +8322,7 @@ export interface operations {
                     "application/json": components["schemas"]["ErrorResponse"];
                 };
             };
-            /** @description No valid session — absent, expired or revoked credential */
+            /** @description `AUTHENTICATION_FAILED` — No valid credential. Either none was presented, or the session behind it is expired, revoked, or belongs to a member who can no longer sign in. This status means the session is dead and nothing else does (D2.23) — a wrong *current* password on change-password is a 400 with a `currentPassword` field error, not this. */
             401: {
                 headers: {
                     [name: string]: unknown;
@@ -4770,7 +8331,7 @@ export interface operations {
                     "application/json": components["schemas"]["ErrorResponse"];
                 };
             };
-            /** @description Authenticated, but lacking the required permission */
+            /** @description `ACCESS_DENIED` — Authenticated, but lacking the permission the endpoint declares. The session is valid; do not sign the operator out. */
             403: {
                 headers: {
                     [name: string]: unknown;
@@ -4779,7 +8340,7 @@ export interface operations {
                     "application/json": components["schemas"]["ErrorResponse"];
                 };
             };
-            /** @description Unhandled failure; the traceId identifies the log line */
+            /** @description `INTERNAL_ERROR` — An unhandled failure. The message is deliberately generic; `traceId` identifies the server log line that explains it. */
             500: {
                 headers: {
                     [name: string]: unknown;
@@ -4790,7 +8351,7 @@ export interface operations {
             };
         };
     };
-    create_4: {
+    create_7: {
         parameters: {
             query?: never;
             header?: never;
@@ -4812,7 +8373,7 @@ export interface operations {
                     "*/*": components["schemas"]["CategoryResponse"];
                 };
             };
-            /** @description Malformed request, or a field failed validation */
+            /** @description `VALIDATION_FAILED` — The request body could not be read, a field failed validation, a required header was absent, or a domain validation rule rejected an input the caller can correct. */
             400: {
                 headers: {
                     [name: string]: unknown;
@@ -4821,7 +8382,7 @@ export interface operations {
                     "application/json": components["schemas"]["ErrorResponse"];
                 };
             };
-            /** @description No valid session — absent, expired or revoked credential */
+            /** @description `AUTHENTICATION_FAILED` — No valid credential. Either none was presented, or the session behind it is expired, revoked, or belongs to a member who can no longer sign in. This status means the session is dead and nothing else does (D2.23) — a wrong *current* password on change-password is a 400 with a `currentPassword` field error, not this. */
             401: {
                 headers: {
                     [name: string]: unknown;
@@ -4830,7 +8391,7 @@ export interface operations {
                     "application/json": components["schemas"]["ErrorResponse"];
                 };
             };
-            /** @description Authenticated, but lacking the required permission */
+            /** @description `ACCESS_DENIED` — Authenticated, but lacking the permission the endpoint declares. The session is valid; do not sign the operator out. */
             403: {
                 headers: {
                     [name: string]: unknown;
@@ -4839,7 +8400,25 @@ export interface operations {
                     "application/json": components["schemas"]["ErrorResponse"];
                 };
             };
-            /** @description Unhandled failure; the traceId identifies the log line */
+            /** @description `CONFLICT` — The request collided with current state for a reason other than a version mismatch: a duplicate natural key (a slug, a code, an email), or a database constraint the application did not catch first. */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description `BUSINESS_RULE_VIOLATION` — The request was well-formed and the entities exist, but a domain rule forbids it — publishing a product with no price, archiving a brand products still reference, issuing more stock than a location holds. Distinct from 400: nothing about the request is malformed. */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description `INTERNAL_ERROR` — An unhandled failure. The message is deliberately generic; `traceId` identifies the server log line that explains it. */
             500: {
                 headers: {
                     [name: string]: unknown;
@@ -4850,7 +8429,7 @@ export interface operations {
             };
         };
     };
-    get_5: {
+    get_8: {
         parameters: {
             query?: never;
             header?: never;
@@ -4870,7 +8449,7 @@ export interface operations {
                     "*/*": components["schemas"]["CategoryResponse"];
                 };
             };
-            /** @description Malformed request, or a field failed validation */
+            /** @description `VALIDATION_FAILED` — The request body could not be read, a field failed validation, a required header was absent, or a domain validation rule rejected an input the caller can correct. */
             400: {
                 headers: {
                     [name: string]: unknown;
@@ -4879,7 +8458,7 @@ export interface operations {
                     "application/json": components["schemas"]["ErrorResponse"];
                 };
             };
-            /** @description No valid session — absent, expired or revoked credential */
+            /** @description `AUTHENTICATION_FAILED` — No valid credential. Either none was presented, or the session behind it is expired, revoked, or belongs to a member who can no longer sign in. This status means the session is dead and nothing else does (D2.23) — a wrong *current* password on change-password is a 400 with a `currentPassword` field error, not this. */
             401: {
                 headers: {
                     [name: string]: unknown;
@@ -4888,7 +8467,7 @@ export interface operations {
                     "application/json": components["schemas"]["ErrorResponse"];
                 };
             };
-            /** @description Authenticated, but lacking the required permission */
+            /** @description `ACCESS_DENIED` — Authenticated, but lacking the permission the endpoint declares. The session is valid; do not sign the operator out. */
             403: {
                 headers: {
                     [name: string]: unknown;
@@ -4897,7 +8476,16 @@ export interface operations {
                     "application/json": components["schemas"]["ErrorResponse"];
                 };
             };
-            /** @description Unhandled failure; the traceId identifies the log line */
+            /** @description `NOT_FOUND` — A referenced entity does not exist, or the URL matches no endpoint. Also returned for a known path called with an unsupported method, as 405. */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description `INTERNAL_ERROR` — An unhandled failure. The message is deliberately generic; `traceId` identifies the server log line that explains it. */
             500: {
                 headers: {
                     [name: string]: unknown;
@@ -4908,7 +8496,7 @@ export interface operations {
             };
         };
     };
-    update_5: {
+    update_8: {
         parameters: {
             query?: never;
             header?: never;
@@ -4932,7 +8520,7 @@ export interface operations {
                     "*/*": components["schemas"]["CategoryResponse"];
                 };
             };
-            /** @description Malformed request, or a field failed validation */
+            /** @description `VALIDATION_FAILED` — The request body could not be read, a field failed validation, a required header was absent, or a domain validation rule rejected an input the caller can correct. */
             400: {
                 headers: {
                     [name: string]: unknown;
@@ -4941,7 +8529,7 @@ export interface operations {
                     "application/json": components["schemas"]["ErrorResponse"];
                 };
             };
-            /** @description No valid session — absent, expired or revoked credential */
+            /** @description `AUTHENTICATION_FAILED` — No valid credential. Either none was presented, or the session behind it is expired, revoked, or belongs to a member who can no longer sign in. This status means the session is dead and nothing else does (D2.23) — a wrong *current* password on change-password is a 400 with a `currentPassword` field error, not this. */
             401: {
                 headers: {
                     [name: string]: unknown;
@@ -4950,7 +8538,7 @@ export interface operations {
                     "application/json": components["schemas"]["ErrorResponse"];
                 };
             };
-            /** @description Authenticated, but lacking the required permission */
+            /** @description `ACCESS_DENIED` — Authenticated, but lacking the permission the endpoint declares. The session is valid; do not sign the operator out. */
             403: {
                 headers: {
                     [name: string]: unknown;
@@ -4959,7 +8547,34 @@ export interface operations {
                     "application/json": components["schemas"]["ErrorResponse"];
                 };
             };
-            /** @description Unhandled failure; the traceId identifies the log line */
+            /** @description `NOT_FOUND` — A referenced entity does not exist, or the URL matches no endpoint. Also returned for a known path called with an unsupported method, as 405. */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description `VERSION_CONFLICT` or `CONFLICT` — The `version` sent with an update is not the version stored — the record was changed by someone else since it was read. Nothing was written. Re-read the record, show the operator what changed, and submit again with the new `version`. */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description `BUSINESS_RULE_VIOLATION` — The request was well-formed and the entities exist, but a domain rule forbids it — publishing a product with no price, archiving a brand products still reference, issuing more stock than a location holds. Distinct from 400: nothing about the request is malformed. */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description `INTERNAL_ERROR` — An unhandled failure. The message is deliberately generic; `traceId` identifies the server log line that explains it. */
             500: {
                 headers: {
                     [name: string]: unknown;
@@ -4990,7 +8605,7 @@ export interface operations {
                     "*/*": components["schemas"]["CategoryResponse"];
                 };
             };
-            /** @description Malformed request, or a field failed validation */
+            /** @description `VALIDATION_FAILED` — The request body could not be read, a field failed validation, a required header was absent, or a domain validation rule rejected an input the caller can correct. */
             400: {
                 headers: {
                     [name: string]: unknown;
@@ -4999,7 +8614,7 @@ export interface operations {
                     "application/json": components["schemas"]["ErrorResponse"];
                 };
             };
-            /** @description No valid session — absent, expired or revoked credential */
+            /** @description `AUTHENTICATION_FAILED` — No valid credential. Either none was presented, or the session behind it is expired, revoked, or belongs to a member who can no longer sign in. This status means the session is dead and nothing else does (D2.23) — a wrong *current* password on change-password is a 400 with a `currentPassword` field error, not this. */
             401: {
                 headers: {
                     [name: string]: unknown;
@@ -5008,7 +8623,7 @@ export interface operations {
                     "application/json": components["schemas"]["ErrorResponse"];
                 };
             };
-            /** @description Authenticated, but lacking the required permission */
+            /** @description `ACCESS_DENIED` — Authenticated, but lacking the permission the endpoint declares. The session is valid; do not sign the operator out. */
             403: {
                 headers: {
                     [name: string]: unknown;
@@ -5017,7 +8632,34 @@ export interface operations {
                     "application/json": components["schemas"]["ErrorResponse"];
                 };
             };
-            /** @description Unhandled failure; the traceId identifies the log line */
+            /** @description `NOT_FOUND` — A referenced entity does not exist, or the URL matches no endpoint. Also returned for a known path called with an unsupported method, as 405. */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description `CONFLICT` — The request collided with current state for a reason other than a version mismatch: a duplicate natural key (a slug, a code, an email), or a database constraint the application did not catch first. */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description `BUSINESS_RULE_VIOLATION` — The request was well-formed and the entities exist, but a domain rule forbids it — publishing a product with no price, archiving a brand products still reference, issuing more stock than a location holds. Distinct from 400: nothing about the request is malformed. */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description `INTERNAL_ERROR` — An unhandled failure. The message is deliberately generic; `traceId` identifies the server log line that explains it. */
             500: {
                 headers: {
                     [name: string]: unknown;
@@ -5048,7 +8690,7 @@ export interface operations {
                     "*/*": components["schemas"]["CategoryResponse"];
                 };
             };
-            /** @description Malformed request, or a field failed validation */
+            /** @description `VALIDATION_FAILED` — The request body could not be read, a field failed validation, a required header was absent, or a domain validation rule rejected an input the caller can correct. */
             400: {
                 headers: {
                     [name: string]: unknown;
@@ -5057,7 +8699,7 @@ export interface operations {
                     "application/json": components["schemas"]["ErrorResponse"];
                 };
             };
-            /** @description No valid session — absent, expired or revoked credential */
+            /** @description `AUTHENTICATION_FAILED` — No valid credential. Either none was presented, or the session behind it is expired, revoked, or belongs to a member who can no longer sign in. This status means the session is dead and nothing else does (D2.23) — a wrong *current* password on change-password is a 400 with a `currentPassword` field error, not this. */
             401: {
                 headers: {
                     [name: string]: unknown;
@@ -5066,7 +8708,7 @@ export interface operations {
                     "application/json": components["schemas"]["ErrorResponse"];
                 };
             };
-            /** @description Authenticated, but lacking the required permission */
+            /** @description `ACCESS_DENIED` — Authenticated, but lacking the permission the endpoint declares. The session is valid; do not sign the operator out. */
             403: {
                 headers: {
                     [name: string]: unknown;
@@ -5075,7 +8717,34 @@ export interface operations {
                     "application/json": components["schemas"]["ErrorResponse"];
                 };
             };
-            /** @description Unhandled failure; the traceId identifies the log line */
+            /** @description `NOT_FOUND` — A referenced entity does not exist, or the URL matches no endpoint. Also returned for a known path called with an unsupported method, as 405. */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description `CONFLICT` — The request collided with current state for a reason other than a version mismatch: a duplicate natural key (a slug, a code, an email), or a database constraint the application did not catch first. */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description `BUSINESS_RULE_VIOLATION` — The request was well-formed and the entities exist, but a domain rule forbids it — publishing a product with no price, archiving a brand products still reference, issuing more stock than a location holds. Distinct from 400: nothing about the request is malformed. */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description `INTERNAL_ERROR` — An unhandled failure. The message is deliberately generic; `traceId` identifies the server log line that explains it. */
             500: {
                 headers: {
                     [name: string]: unknown;
@@ -5110,7 +8779,7 @@ export interface operations {
                     "*/*": components["schemas"]["CategoryResponse"];
                 };
             };
-            /** @description Malformed request, or a field failed validation */
+            /** @description `VALIDATION_FAILED` — The request body could not be read, a field failed validation, a required header was absent, or a domain validation rule rejected an input the caller can correct. */
             400: {
                 headers: {
                     [name: string]: unknown;
@@ -5119,7 +8788,7 @@ export interface operations {
                     "application/json": components["schemas"]["ErrorResponse"];
                 };
             };
-            /** @description No valid session — absent, expired or revoked credential */
+            /** @description `AUTHENTICATION_FAILED` — No valid credential. Either none was presented, or the session behind it is expired, revoked, or belongs to a member who can no longer sign in. This status means the session is dead and nothing else does (D2.23) — a wrong *current* password on change-password is a 400 with a `currentPassword` field error, not this. */
             401: {
                 headers: {
                     [name: string]: unknown;
@@ -5128,7 +8797,7 @@ export interface operations {
                     "application/json": components["schemas"]["ErrorResponse"];
                 };
             };
-            /** @description Authenticated, but lacking the required permission */
+            /** @description `ACCESS_DENIED` — Authenticated, but lacking the permission the endpoint declares. The session is valid; do not sign the operator out. */
             403: {
                 headers: {
                     [name: string]: unknown;
@@ -5137,7 +8806,34 @@ export interface operations {
                     "application/json": components["schemas"]["ErrorResponse"];
                 };
             };
-            /** @description Unhandled failure; the traceId identifies the log line */
+            /** @description `NOT_FOUND` — A referenced entity does not exist, or the URL matches no endpoint. Also returned for a known path called with an unsupported method, as 405. */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description `CONFLICT` — The request collided with current state for a reason other than a version mismatch: a duplicate natural key (a slug, a code, an email), or a database constraint the application did not catch first. */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description `BUSINESS_RULE_VIOLATION` — The request was well-formed and the entities exist, but a domain rule forbids it — publishing a product with no price, archiving a brand products still reference, issuing more stock than a location holds. Distinct from 400: nothing about the request is malformed. */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description `INTERNAL_ERROR` — An unhandled failure. The message is deliberately generic; `traceId` identifies the server log line that explains it. */
             500: {
                 headers: {
                     [name: string]: unknown;
@@ -5168,7 +8864,7 @@ export interface operations {
                     "*/*": components["schemas"]["CategoryResponse"];
                 };
             };
-            /** @description Malformed request, or a field failed validation */
+            /** @description `VALIDATION_FAILED` — The request body could not be read, a field failed validation, a required header was absent, or a domain validation rule rejected an input the caller can correct. */
             400: {
                 headers: {
                     [name: string]: unknown;
@@ -5177,7 +8873,7 @@ export interface operations {
                     "application/json": components["schemas"]["ErrorResponse"];
                 };
             };
-            /** @description No valid session — absent, expired or revoked credential */
+            /** @description `AUTHENTICATION_FAILED` — No valid credential. Either none was presented, or the session behind it is expired, revoked, or belongs to a member who can no longer sign in. This status means the session is dead and nothing else does (D2.23) — a wrong *current* password on change-password is a 400 with a `currentPassword` field error, not this. */
             401: {
                 headers: {
                     [name: string]: unknown;
@@ -5186,7 +8882,7 @@ export interface operations {
                     "application/json": components["schemas"]["ErrorResponse"];
                 };
             };
-            /** @description Authenticated, but lacking the required permission */
+            /** @description `ACCESS_DENIED` — Authenticated, but lacking the permission the endpoint declares. The session is valid; do not sign the operator out. */
             403: {
                 headers: {
                     [name: string]: unknown;
@@ -5195,7 +8891,34 @@ export interface operations {
                     "application/json": components["schemas"]["ErrorResponse"];
                 };
             };
-            /** @description Unhandled failure; the traceId identifies the log line */
+            /** @description `NOT_FOUND` — A referenced entity does not exist, or the URL matches no endpoint. Also returned for a known path called with an unsupported method, as 405. */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description `CONFLICT` — The request collided with current state for a reason other than a version mismatch: a duplicate natural key (a slug, a code, an email), or a database constraint the application did not catch first. */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description `BUSINESS_RULE_VIOLATION` — The request was well-formed and the entities exist, but a domain rule forbids it — publishing a product with no price, archiving a brand products still reference, issuing more stock than a location holds. Distinct from 400: nothing about the request is malformed. */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description `INTERNAL_ERROR` — An unhandled failure. The message is deliberately generic; `traceId` identifies the server log line that explains it. */
             500: {
                 headers: {
                     [name: string]: unknown;
@@ -5226,7 +8949,7 @@ export interface operations {
                     "*/*": components["schemas"]["CategoryResponse"];
                 };
             };
-            /** @description Malformed request, or a field failed validation */
+            /** @description `VALIDATION_FAILED` — The request body could not be read, a field failed validation, a required header was absent, or a domain validation rule rejected an input the caller can correct. */
             400: {
                 headers: {
                     [name: string]: unknown;
@@ -5235,7 +8958,7 @@ export interface operations {
                     "application/json": components["schemas"]["ErrorResponse"];
                 };
             };
-            /** @description No valid session — absent, expired or revoked credential */
+            /** @description `AUTHENTICATION_FAILED` — No valid credential. Either none was presented, or the session behind it is expired, revoked, or belongs to a member who can no longer sign in. This status means the session is dead and nothing else does (D2.23) — a wrong *current* password on change-password is a 400 with a `currentPassword` field error, not this. */
             401: {
                 headers: {
                     [name: string]: unknown;
@@ -5244,7 +8967,7 @@ export interface operations {
                     "application/json": components["schemas"]["ErrorResponse"];
                 };
             };
-            /** @description Authenticated, but lacking the required permission */
+            /** @description `ACCESS_DENIED` — Authenticated, but lacking the permission the endpoint declares. The session is valid; do not sign the operator out. */
             403: {
                 headers: {
                     [name: string]: unknown;
@@ -5253,7 +8976,34 @@ export interface operations {
                     "application/json": components["schemas"]["ErrorResponse"];
                 };
             };
-            /** @description Unhandled failure; the traceId identifies the log line */
+            /** @description `NOT_FOUND` — A referenced entity does not exist, or the URL matches no endpoint. Also returned for a known path called with an unsupported method, as 405. */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description `CONFLICT` — The request collided with current state for a reason other than a version mismatch: a duplicate natural key (a slug, a code, an email), or a database constraint the application did not catch first. */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description `BUSINESS_RULE_VIOLATION` — The request was well-formed and the entities exist, but a domain rule forbids it — publishing a product with no price, archiving a brand products still reference, issuing more stock than a location holds. Distinct from 400: nothing about the request is malformed. */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description `INTERNAL_ERROR` — An unhandled failure. The message is deliberately generic; `traceId` identifies the server log line that explains it. */
             500: {
                 headers: {
                     [name: string]: unknown;
@@ -5286,7 +9036,7 @@ export interface operations {
                     "*/*": components["schemas"]["CategoryResponse"][];
                 };
             };
-            /** @description Malformed request, or a field failed validation */
+            /** @description `VALIDATION_FAILED` — The request body could not be read, a field failed validation, a required header was absent, or a domain validation rule rejected an input the caller can correct. */
             400: {
                 headers: {
                     [name: string]: unknown;
@@ -5295,7 +9045,7 @@ export interface operations {
                     "application/json": components["schemas"]["ErrorResponse"];
                 };
             };
-            /** @description No valid session — absent, expired or revoked credential */
+            /** @description `AUTHENTICATION_FAILED` — No valid credential. Either none was presented, or the session behind it is expired, revoked, or belongs to a member who can no longer sign in. This status means the session is dead and nothing else does (D2.23) — a wrong *current* password on change-password is a 400 with a `currentPassword` field error, not this. */
             401: {
                 headers: {
                     [name: string]: unknown;
@@ -5304,7 +9054,7 @@ export interface operations {
                     "application/json": components["schemas"]["ErrorResponse"];
                 };
             };
-            /** @description Authenticated, but lacking the required permission */
+            /** @description `ACCESS_DENIED` — Authenticated, but lacking the permission the endpoint declares. The session is valid; do not sign the operator out. */
             403: {
                 headers: {
                     [name: string]: unknown;
@@ -5313,7 +9063,25 @@ export interface operations {
                     "application/json": components["schemas"]["ErrorResponse"];
                 };
             };
-            /** @description Unhandled failure; the traceId identifies the log line */
+            /** @description `CONFLICT` — The request collided with current state for a reason other than a version mismatch: a duplicate natural key (a slug, a code, an email), or a database constraint the application did not catch first. */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description `BUSINESS_RULE_VIOLATION` — The request was well-formed and the entities exist, but a domain rule forbids it — publishing a product with no price, archiving a brand products still reference, issuing more stock than a location holds. Distinct from 400: nothing about the request is malformed. */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description `INTERNAL_ERROR` — An unhandled failure. The message is deliberately generic; `traceId` identifies the server log line that explains it. */
             500: {
                 headers: {
                     [name: string]: unknown;
@@ -5342,7 +9110,7 @@ export interface operations {
                     "*/*": components["schemas"]["CategoryTreeResponse"][];
                 };
             };
-            /** @description Malformed request, or a field failed validation */
+            /** @description `VALIDATION_FAILED` — The request body could not be read, a field failed validation, a required header was absent, or a domain validation rule rejected an input the caller can correct. */
             400: {
                 headers: {
                     [name: string]: unknown;
@@ -5351,7 +9119,7 @@ export interface operations {
                     "application/json": components["schemas"]["ErrorResponse"];
                 };
             };
-            /** @description No valid session — absent, expired or revoked credential */
+            /** @description `AUTHENTICATION_FAILED` — No valid credential. Either none was presented, or the session behind it is expired, revoked, or belongs to a member who can no longer sign in. This status means the session is dead and nothing else does (D2.23) — a wrong *current* password on change-password is a 400 with a `currentPassword` field error, not this. */
             401: {
                 headers: {
                     [name: string]: unknown;
@@ -5360,7 +9128,7 @@ export interface operations {
                     "application/json": components["schemas"]["ErrorResponse"];
                 };
             };
-            /** @description Authenticated, but lacking the required permission */
+            /** @description `ACCESS_DENIED` — Authenticated, but lacking the permission the endpoint declares. The session is valid; do not sign the operator out. */
             403: {
                 headers: {
                     [name: string]: unknown;
@@ -5369,7 +9137,7 @@ export interface operations {
                     "application/json": components["schemas"]["ErrorResponse"];
                 };
             };
-            /** @description Unhandled failure; the traceId identifies the log line */
+            /** @description `INTERNAL_ERROR` — An unhandled failure. The message is deliberately generic; `traceId` identifies the server log line that explains it. */
             500: {
                 headers: {
                     [name: string]: unknown;
@@ -5380,14 +9148,235 @@ export interface operations {
             };
         };
     };
-    list_10: {
+    list_7: {
         parameters: {
             query: {
+                pageable: components["schemas"]["Pageable"];
+                purchaseOrderId?: string;
+                search?: string;
+                warehouseId?: string;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "*/*": components["schemas"]["PageResponseGoodsReceiptResponse"];
+                };
+            };
+            /** @description `VALIDATION_FAILED` — The request body could not be read, a field failed validation, a required header was absent, or a domain validation rule rejected an input the caller can correct. */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description `AUTHENTICATION_FAILED` — No valid credential. Either none was presented, or the session behind it is expired, revoked, or belongs to a member who can no longer sign in. This status means the session is dead and nothing else does (D2.23) — a wrong *current* password on change-password is a 400 with a `currentPassword` field error, not this. */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description `ACCESS_DENIED` — Authenticated, but lacking the permission the endpoint declares. The session is valid; do not sign the operator out. */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description `INTERNAL_ERROR` — An unhandled failure. The message is deliberately generic; `traceId` identifies the server log line that explains it. */
+            500: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+        };
+    };
+    post: {
+        parameters: {
+            query: {
+                purchaseOrderId: string;
+            };
+            header: {
+                "Idempotency-Key": string;
+            };
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["PostGoodsReceiptRequest"];
+            };
+        };
+        responses: {
+            /** @description Created */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "*/*": components["schemas"]["GoodsReceiptResponse"];
+                };
+            };
+            /** @description `VALIDATION_FAILED` — The request body could not be read, a field failed validation, a required header was absent, or a domain validation rule rejected an input the caller can correct. */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description `AUTHENTICATION_FAILED` — No valid credential. Either none was presented, or the session behind it is expired, revoked, or belongs to a member who can no longer sign in. This status means the session is dead and nothing else does (D2.23) — a wrong *current* password on change-password is a 400 with a `currentPassword` field error, not this. */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description `ACCESS_DENIED` — Authenticated, but lacking the permission the endpoint declares. The session is valid; do not sign the operator out. */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description `CONFLICT` — The request collided with current state for a reason other than a version mismatch: a duplicate natural key (a slug, a code, an email), or a database constraint the application did not catch first. */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description `BUSINESS_RULE_VIOLATION` — The request was well-formed and the entities exist, but a domain rule forbids it — publishing a product with no price, archiving a brand products still reference, issuing more stock than a location holds. Distinct from 400: nothing about the request is malformed. */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description `INTERNAL_ERROR` — An unhandled failure. The message is deliberately generic; `traceId` identifies the server log line that explains it. */
+            500: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+        };
+    };
+    get_11: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "*/*": components["schemas"]["GoodsReceiptResponse"];
+                };
+            };
+            /** @description `VALIDATION_FAILED` — The request body could not be read, a field failed validation, a required header was absent, or a domain validation rule rejected an input the caller can correct. */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description `AUTHENTICATION_FAILED` — No valid credential. Either none was presented, or the session behind it is expired, revoked, or belongs to a member who can no longer sign in. This status means the session is dead and nothing else does (D2.23) — a wrong *current* password on change-password is a 400 with a `currentPassword` field error, not this. */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description `ACCESS_DENIED` — Authenticated, but lacking the permission the endpoint declares. The session is valid; do not sign the operator out. */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description `NOT_FOUND` — A referenced entity does not exist, or the URL matches no endpoint. Also returned for a known path called with an unsupported method, as 405. */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description `INTERNAL_ERROR` — An unhandled failure. The message is deliberately generic; `traceId` identifies the server log line that explains it. */
+            500: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+        };
+    };
+    list_14: {
+        parameters: {
+            query: {
+                /** @description the address as it was typed, matched case-insensitively */
                 email?: string;
+                /** @description inclusive lower bound on <code>occurredAt</code> */
                 from?: string;
+                /**
+                 * @description one of the recorded outcomes — success, bad password, unknown email, locked,
+                 *          inactive, logout, session revoked
+                 */
                 outcome?: "SUCCESS" | "BAD_PASSWORD" | "LOCKED" | "INACTIVE" | "UNKNOWN_EMAIL" | "PASSWORD_RESET_REQUESTED" | "PASSWORD_RESET_COMPLETED" | "INVITE_ACCEPTED" | "LOGOUT" | "SESSION_REVOKED";
                 pageable: components["schemas"]["Pageable"];
+                /**
+                 * @description only events attributed to this member. Excludes attempts on unknown
+                 *          addresses, which have no member
+                 */
                 teamMemberId?: string;
+                /** @description exclusive upper bound on <code>occurredAt</code> */
                 to?: string;
             };
             header?: never;
@@ -5405,7 +9394,7 @@ export interface operations {
                     "*/*": components["schemas"]["PageResponseLoginEventResponse"];
                 };
             };
-            /** @description Malformed request, or a field failed validation */
+            /** @description `VALIDATION_FAILED` — The request body could not be read, a field failed validation, a required header was absent, or a domain validation rule rejected an input the caller can correct. */
             400: {
                 headers: {
                     [name: string]: unknown;
@@ -5414,7 +9403,7 @@ export interface operations {
                     "application/json": components["schemas"]["ErrorResponse"];
                 };
             };
-            /** @description No valid session — absent, expired or revoked credential */
+            /** @description `AUTHENTICATION_FAILED` — No valid credential. Either none was presented, or the session behind it is expired, revoked, or belongs to a member who can no longer sign in. This status means the session is dead and nothing else does (D2.23) — a wrong *current* password on change-password is a 400 with a `currentPassword` field error, not this. */
             401: {
                 headers: {
                     [name: string]: unknown;
@@ -5423,7 +9412,7 @@ export interface operations {
                     "application/json": components["schemas"]["ErrorResponse"];
                 };
             };
-            /** @description Authenticated, but lacking the required permission */
+            /** @description `ACCESS_DENIED` — Authenticated, but lacking the permission the endpoint declares. The session is valid; do not sign the operator out. */
             403: {
                 headers: {
                     [name: string]: unknown;
@@ -5432,7 +9421,7 @@ export interface operations {
                     "application/json": components["schemas"]["ErrorResponse"];
                 };
             };
-            /** @description Unhandled failure; the traceId identifies the log line */
+            /** @description `INTERNAL_ERROR` — An unhandled failure. The message is deliberately generic; `traceId` identifies the server log line that explains it. */
             500: {
                 headers: {
                     [name: string]: unknown;
@@ -5443,7 +9432,7 @@ export interface operations {
             };
         };
     };
-    list_9: {
+    list_13: {
         parameters: {
             query?: never;
             header?: never;
@@ -5461,7 +9450,7 @@ export interface operations {
                     "*/*": components["schemas"]["PermissionDomainResponse"][];
                 };
             };
-            /** @description Malformed request, or a field failed validation */
+            /** @description `VALIDATION_FAILED` — The request body could not be read, a field failed validation, a required header was absent, or a domain validation rule rejected an input the caller can correct. */
             400: {
                 headers: {
                     [name: string]: unknown;
@@ -5470,7 +9459,7 @@ export interface operations {
                     "application/json": components["schemas"]["ErrorResponse"];
                 };
             };
-            /** @description No valid session — absent, expired or revoked credential */
+            /** @description `AUTHENTICATION_FAILED` — No valid credential. Either none was presented, or the session behind it is expired, revoked, or belongs to a member who can no longer sign in. This status means the session is dead and nothing else does (D2.23) — a wrong *current* password on change-password is a 400 with a `currentPassword` field error, not this. */
             401: {
                 headers: {
                     [name: string]: unknown;
@@ -5479,7 +9468,7 @@ export interface operations {
                     "application/json": components["schemas"]["ErrorResponse"];
                 };
             };
-            /** @description Authenticated, but lacking the required permission */
+            /** @description `ACCESS_DENIED` — Authenticated, but lacking the permission the endpoint declares. The session is valid; do not sign the operator out. */
             403: {
                 headers: {
                     [name: string]: unknown;
@@ -5488,7 +9477,7 @@ export interface operations {
                     "application/json": components["schemas"]["ErrorResponse"];
                 };
             };
-            /** @description Unhandled failure; the traceId identifies the log line */
+            /** @description `INTERNAL_ERROR` — An unhandled failure. The message is deliberately generic; `traceId` identifies the server log line that explains it. */
             500: {
                 headers: {
                     [name: string]: unknown;
@@ -5499,7 +9488,7 @@ export interface operations {
             };
         };
     };
-    list_3: {
+    list_6: {
         parameters: {
             query: {
                 audience?: "PUBLIC" | "TIER_RESTRICTED" | "CUSTOMER_RESTRICTED";
@@ -5525,7 +9514,7 @@ export interface operations {
                     "*/*": components["schemas"]["PageResponseProductResponse"];
                 };
             };
-            /** @description Malformed request, or a field failed validation */
+            /** @description `VALIDATION_FAILED` — The request body could not be read, a field failed validation, a required header was absent, or a domain validation rule rejected an input the caller can correct. */
             400: {
                 headers: {
                     [name: string]: unknown;
@@ -5534,7 +9523,7 @@ export interface operations {
                     "application/json": components["schemas"]["ErrorResponse"];
                 };
             };
-            /** @description No valid session — absent, expired or revoked credential */
+            /** @description `AUTHENTICATION_FAILED` — No valid credential. Either none was presented, or the session behind it is expired, revoked, or belongs to a member who can no longer sign in. This status means the session is dead and nothing else does (D2.23) — a wrong *current* password on change-password is a 400 with a `currentPassword` field error, not this. */
             401: {
                 headers: {
                     [name: string]: unknown;
@@ -5543,7 +9532,7 @@ export interface operations {
                     "application/json": components["schemas"]["ErrorResponse"];
                 };
             };
-            /** @description Authenticated, but lacking the required permission */
+            /** @description `ACCESS_DENIED` — Authenticated, but lacking the permission the endpoint declares. The session is valid; do not sign the operator out. */
             403: {
                 headers: {
                     [name: string]: unknown;
@@ -5552,7 +9541,7 @@ export interface operations {
                     "application/json": components["schemas"]["ErrorResponse"];
                 };
             };
-            /** @description Unhandled failure; the traceId identifies the log line */
+            /** @description `INTERNAL_ERROR` — An unhandled failure. The message is deliberately generic; `traceId` identifies the server log line that explains it. */
             500: {
                 headers: {
                     [name: string]: unknown;
@@ -5563,7 +9552,7 @@ export interface operations {
             };
         };
     };
-    create_3: {
+    create_6: {
         parameters: {
             query?: never;
             header?: never;
@@ -5585,7 +9574,7 @@ export interface operations {
                     "*/*": components["schemas"]["ProductResponse"];
                 };
             };
-            /** @description Malformed request, or a field failed validation */
+            /** @description `VALIDATION_FAILED` — The request body could not be read, a field failed validation, a required header was absent, or a domain validation rule rejected an input the caller can correct. */
             400: {
                 headers: {
                     [name: string]: unknown;
@@ -5594,7 +9583,7 @@ export interface operations {
                     "application/json": components["schemas"]["ErrorResponse"];
                 };
             };
-            /** @description No valid session — absent, expired or revoked credential */
+            /** @description `AUTHENTICATION_FAILED` — No valid credential. Either none was presented, or the session behind it is expired, revoked, or belongs to a member who can no longer sign in. This status means the session is dead and nothing else does (D2.23) — a wrong *current* password on change-password is a 400 with a `currentPassword` field error, not this. */
             401: {
                 headers: {
                     [name: string]: unknown;
@@ -5603,7 +9592,7 @@ export interface operations {
                     "application/json": components["schemas"]["ErrorResponse"];
                 };
             };
-            /** @description Authenticated, but lacking the required permission */
+            /** @description `ACCESS_DENIED` — Authenticated, but lacking the permission the endpoint declares. The session is valid; do not sign the operator out. */
             403: {
                 headers: {
                     [name: string]: unknown;
@@ -5612,7 +9601,25 @@ export interface operations {
                     "application/json": components["schemas"]["ErrorResponse"];
                 };
             };
-            /** @description Unhandled failure; the traceId identifies the log line */
+            /** @description `CONFLICT` — The request collided with current state for a reason other than a version mismatch: a duplicate natural key (a slug, a code, an email), or a database constraint the application did not catch first. */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description `BUSINESS_RULE_VIOLATION` — The request was well-formed and the entities exist, but a domain rule forbids it — publishing a product with no price, archiving a brand products still reference, issuing more stock than a location holds. Distinct from 400: nothing about the request is malformed. */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description `INTERNAL_ERROR` — An unhandled failure. The message is deliberately generic; `traceId` identifies the server log line that explains it. */
             500: {
                 headers: {
                     [name: string]: unknown;
@@ -5623,7 +9630,7 @@ export interface operations {
             };
         };
     };
-    get_4: {
+    get_7: {
         parameters: {
             query?: never;
             header?: never;
@@ -5643,7 +9650,7 @@ export interface operations {
                     "*/*": components["schemas"]["ProductDetailResponse"];
                 };
             };
-            /** @description Malformed request, or a field failed validation */
+            /** @description `VALIDATION_FAILED` — The request body could not be read, a field failed validation, a required header was absent, or a domain validation rule rejected an input the caller can correct. */
             400: {
                 headers: {
                     [name: string]: unknown;
@@ -5652,7 +9659,7 @@ export interface operations {
                     "application/json": components["schemas"]["ErrorResponse"];
                 };
             };
-            /** @description No valid session — absent, expired or revoked credential */
+            /** @description `AUTHENTICATION_FAILED` — No valid credential. Either none was presented, or the session behind it is expired, revoked, or belongs to a member who can no longer sign in. This status means the session is dead and nothing else does (D2.23) — a wrong *current* password on change-password is a 400 with a `currentPassword` field error, not this. */
             401: {
                 headers: {
                     [name: string]: unknown;
@@ -5661,7 +9668,7 @@ export interface operations {
                     "application/json": components["schemas"]["ErrorResponse"];
                 };
             };
-            /** @description Authenticated, but lacking the required permission */
+            /** @description `ACCESS_DENIED` — Authenticated, but lacking the permission the endpoint declares. The session is valid; do not sign the operator out. */
             403: {
                 headers: {
                     [name: string]: unknown;
@@ -5670,7 +9677,16 @@ export interface operations {
                     "application/json": components["schemas"]["ErrorResponse"];
                 };
             };
-            /** @description Unhandled failure; the traceId identifies the log line */
+            /** @description `NOT_FOUND` — A referenced entity does not exist, or the URL matches no endpoint. Also returned for a known path called with an unsupported method, as 405. */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description `INTERNAL_ERROR` — An unhandled failure. The message is deliberately generic; `traceId` identifies the server log line that explains it. */
             500: {
                 headers: {
                     [name: string]: unknown;
@@ -5681,7 +9697,7 @@ export interface operations {
             };
         };
     };
-    update_4: {
+    update_7: {
         parameters: {
             query?: never;
             header?: never;
@@ -5705,7 +9721,7 @@ export interface operations {
                     "*/*": components["schemas"]["ProductResponse"];
                 };
             };
-            /** @description Malformed request, or a field failed validation */
+            /** @description `VALIDATION_FAILED` — The request body could not be read, a field failed validation, a required header was absent, or a domain validation rule rejected an input the caller can correct. */
             400: {
                 headers: {
                     [name: string]: unknown;
@@ -5714,7 +9730,7 @@ export interface operations {
                     "application/json": components["schemas"]["ErrorResponse"];
                 };
             };
-            /** @description No valid session — absent, expired or revoked credential */
+            /** @description `AUTHENTICATION_FAILED` — No valid credential. Either none was presented, or the session behind it is expired, revoked, or belongs to a member who can no longer sign in. This status means the session is dead and nothing else does (D2.23) — a wrong *current* password on change-password is a 400 with a `currentPassword` field error, not this. */
             401: {
                 headers: {
                     [name: string]: unknown;
@@ -5723,7 +9739,7 @@ export interface operations {
                     "application/json": components["schemas"]["ErrorResponse"];
                 };
             };
-            /** @description Authenticated, but lacking the required permission */
+            /** @description `ACCESS_DENIED` — Authenticated, but lacking the permission the endpoint declares. The session is valid; do not sign the operator out. */
             403: {
                 headers: {
                     [name: string]: unknown;
@@ -5732,7 +9748,34 @@ export interface operations {
                     "application/json": components["schemas"]["ErrorResponse"];
                 };
             };
-            /** @description Unhandled failure; the traceId identifies the log line */
+            /** @description `NOT_FOUND` — A referenced entity does not exist, or the URL matches no endpoint. Also returned for a known path called with an unsupported method, as 405. */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description `VERSION_CONFLICT` or `CONFLICT` — The `version` sent with an update is not the version stored — the record was changed by someone else since it was read. Nothing was written. Re-read the record, show the operator what changed, and submit again with the new `version`. */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description `BUSINESS_RULE_VIOLATION` — The request was well-formed and the entities exist, but a domain rule forbids it — publishing a product with no price, archiving a brand products still reference, issuing more stock than a location holds. Distinct from 400: nothing about the request is malformed. */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description `INTERNAL_ERROR` — An unhandled failure. The message is deliberately generic; `traceId` identifies the server log line that explains it. */
             500: {
                 headers: {
                     [name: string]: unknown;
@@ -5743,7 +9786,7 @@ export interface operations {
             };
         };
     };
-    approve: {
+    approve_1: {
         parameters: {
             query?: never;
             header?: never;
@@ -5763,7 +9806,7 @@ export interface operations {
                     "*/*": components["schemas"]["ProductResponse"];
                 };
             };
-            /** @description Malformed request, or a field failed validation */
+            /** @description `VALIDATION_FAILED` — The request body could not be read, a field failed validation, a required header was absent, or a domain validation rule rejected an input the caller can correct. */
             400: {
                 headers: {
                     [name: string]: unknown;
@@ -5772,7 +9815,7 @@ export interface operations {
                     "application/json": components["schemas"]["ErrorResponse"];
                 };
             };
-            /** @description No valid session — absent, expired or revoked credential */
+            /** @description `AUTHENTICATION_FAILED` — No valid credential. Either none was presented, or the session behind it is expired, revoked, or belongs to a member who can no longer sign in. This status means the session is dead and nothing else does (D2.23) — a wrong *current* password on change-password is a 400 with a `currentPassword` field error, not this. */
             401: {
                 headers: {
                     [name: string]: unknown;
@@ -5781,7 +9824,7 @@ export interface operations {
                     "application/json": components["schemas"]["ErrorResponse"];
                 };
             };
-            /** @description Authenticated, but lacking the required permission */
+            /** @description `ACCESS_DENIED` — Authenticated, but lacking the permission the endpoint declares. The session is valid; do not sign the operator out. */
             403: {
                 headers: {
                     [name: string]: unknown;
@@ -5790,7 +9833,34 @@ export interface operations {
                     "application/json": components["schemas"]["ErrorResponse"];
                 };
             };
-            /** @description Unhandled failure; the traceId identifies the log line */
+            /** @description `NOT_FOUND` — A referenced entity does not exist, or the URL matches no endpoint. Also returned for a known path called with an unsupported method, as 405. */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description `CONFLICT` — The request collided with current state for a reason other than a version mismatch: a duplicate natural key (a slug, a code, an email), or a database constraint the application did not catch first. */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description `BUSINESS_RULE_VIOLATION` — The request was well-formed and the entities exist, but a domain rule forbids it — publishing a product with no price, archiving a brand products still reference, issuing more stock than a location holds. Distinct from 400: nothing about the request is malformed. */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description `INTERNAL_ERROR` — An unhandled failure. The message is deliberately generic; `traceId` identifies the server log line that explains it. */
             500: {
                 headers: {
                     [name: string]: unknown;
@@ -5821,7 +9891,7 @@ export interface operations {
                     "*/*": components["schemas"]["ProductResponse"];
                 };
             };
-            /** @description Malformed request, or a field failed validation */
+            /** @description `VALIDATION_FAILED` — The request body could not be read, a field failed validation, a required header was absent, or a domain validation rule rejected an input the caller can correct. */
             400: {
                 headers: {
                     [name: string]: unknown;
@@ -5830,7 +9900,7 @@ export interface operations {
                     "application/json": components["schemas"]["ErrorResponse"];
                 };
             };
-            /** @description No valid session — absent, expired or revoked credential */
+            /** @description `AUTHENTICATION_FAILED` — No valid credential. Either none was presented, or the session behind it is expired, revoked, or belongs to a member who can no longer sign in. This status means the session is dead and nothing else does (D2.23) — a wrong *current* password on change-password is a 400 with a `currentPassword` field error, not this. */
             401: {
                 headers: {
                     [name: string]: unknown;
@@ -5839,7 +9909,7 @@ export interface operations {
                     "application/json": components["schemas"]["ErrorResponse"];
                 };
             };
-            /** @description Authenticated, but lacking the required permission */
+            /** @description `ACCESS_DENIED` — Authenticated, but lacking the permission the endpoint declares. The session is valid; do not sign the operator out. */
             403: {
                 headers: {
                     [name: string]: unknown;
@@ -5848,7 +9918,34 @@ export interface operations {
                     "application/json": components["schemas"]["ErrorResponse"];
                 };
             };
-            /** @description Unhandled failure; the traceId identifies the log line */
+            /** @description `NOT_FOUND` — A referenced entity does not exist, or the URL matches no endpoint. Also returned for a known path called with an unsupported method, as 405. */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description `CONFLICT` — The request collided with current state for a reason other than a version mismatch: a duplicate natural key (a slug, a code, an email), or a database constraint the application did not catch first. */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description `BUSINESS_RULE_VIOLATION` — The request was well-formed and the entities exist, but a domain rule forbids it — publishing a product with no price, archiving a brand products still reference, issuing more stock than a location holds. Distinct from 400: nothing about the request is malformed. */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description `INTERNAL_ERROR` — An unhandled failure. The message is deliberately generic; `traceId` identifies the server log line that explains it. */
             500: {
                 headers: {
                     [name: string]: unknown;
@@ -5883,7 +9980,7 @@ export interface operations {
                     "*/*": components["schemas"]["ProductCategoryResponse"][];
                 };
             };
-            /** @description Malformed request, or a field failed validation */
+            /** @description `VALIDATION_FAILED` — The request body could not be read, a field failed validation, a required header was absent, or a domain validation rule rejected an input the caller can correct. */
             400: {
                 headers: {
                     [name: string]: unknown;
@@ -5892,7 +9989,7 @@ export interface operations {
                     "application/json": components["schemas"]["ErrorResponse"];
                 };
             };
-            /** @description No valid session — absent, expired or revoked credential */
+            /** @description `AUTHENTICATION_FAILED` — No valid credential. Either none was presented, or the session behind it is expired, revoked, or belongs to a member who can no longer sign in. This status means the session is dead and nothing else does (D2.23) — a wrong *current* password on change-password is a 400 with a `currentPassword` field error, not this. */
             401: {
                 headers: {
                     [name: string]: unknown;
@@ -5901,7 +9998,7 @@ export interface operations {
                     "application/json": components["schemas"]["ErrorResponse"];
                 };
             };
-            /** @description Authenticated, but lacking the required permission */
+            /** @description `ACCESS_DENIED` — Authenticated, but lacking the permission the endpoint declares. The session is valid; do not sign the operator out. */
             403: {
                 headers: {
                     [name: string]: unknown;
@@ -5910,7 +10007,34 @@ export interface operations {
                     "application/json": components["schemas"]["ErrorResponse"];
                 };
             };
-            /** @description Unhandled failure; the traceId identifies the log line */
+            /** @description `NOT_FOUND` — A referenced entity does not exist, or the URL matches no endpoint. Also returned for a known path called with an unsupported method, as 405. */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description `VERSION_CONFLICT` or `CONFLICT` — The `version` sent with an update is not the version stored — the record was changed by someone else since it was read. Nothing was written. Re-read the record, show the operator what changed, and submit again with the new `version`. */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description `BUSINESS_RULE_VIOLATION` — The request was well-formed and the entities exist, but a domain rule forbids it — publishing a product with no price, archiving a brand products still reference, issuing more stock than a location holds. Distinct from 400: nothing about the request is malformed. */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description `INTERNAL_ERROR` — An unhandled failure. The message is deliberately generic; `traceId` identifies the server log line that explains it. */
             500: {
                 headers: {
                     [name: string]: unknown;
@@ -5941,7 +10065,7 @@ export interface operations {
                     "*/*": components["schemas"]["ProductResponse"];
                 };
             };
-            /** @description Malformed request, or a field failed validation */
+            /** @description `VALIDATION_FAILED` — The request body could not be read, a field failed validation, a required header was absent, or a domain validation rule rejected an input the caller can correct. */
             400: {
                 headers: {
                     [name: string]: unknown;
@@ -5950,7 +10074,7 @@ export interface operations {
                     "application/json": components["schemas"]["ErrorResponse"];
                 };
             };
-            /** @description No valid session — absent, expired or revoked credential */
+            /** @description `AUTHENTICATION_FAILED` — No valid credential. Either none was presented, or the session behind it is expired, revoked, or belongs to a member who can no longer sign in. This status means the session is dead and nothing else does (D2.23) — a wrong *current* password on change-password is a 400 with a `currentPassword` field error, not this. */
             401: {
                 headers: {
                     [name: string]: unknown;
@@ -5959,7 +10083,7 @@ export interface operations {
                     "application/json": components["schemas"]["ErrorResponse"];
                 };
             };
-            /** @description Authenticated, but lacking the required permission */
+            /** @description `ACCESS_DENIED` — Authenticated, but lacking the permission the endpoint declares. The session is valid; do not sign the operator out. */
             403: {
                 headers: {
                     [name: string]: unknown;
@@ -5968,7 +10092,34 @@ export interface operations {
                     "application/json": components["schemas"]["ErrorResponse"];
                 };
             };
-            /** @description Unhandled failure; the traceId identifies the log line */
+            /** @description `NOT_FOUND` — A referenced entity does not exist, or the URL matches no endpoint. Also returned for a known path called with an unsupported method, as 405. */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description `CONFLICT` — The request collided with current state for a reason other than a version mismatch: a duplicate natural key (a slug, a code, an email), or a database constraint the application did not catch first. */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description `BUSINESS_RULE_VIOLATION` — The request was well-formed and the entities exist, but a domain rule forbids it — publishing a product with no price, archiving a brand products still reference, issuing more stock than a location holds. Distinct from 400: nothing about the request is malformed. */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description `INTERNAL_ERROR` — An unhandled failure. The message is deliberately generic; `traceId` identifies the server log line that explains it. */
             500: {
                 headers: {
                     [name: string]: unknown;
@@ -5999,7 +10150,7 @@ export interface operations {
                     "*/*": components["schemas"]["ProductResponse"];
                 };
             };
-            /** @description Malformed request, or a field failed validation */
+            /** @description `VALIDATION_FAILED` — The request body could not be read, a field failed validation, a required header was absent, or a domain validation rule rejected an input the caller can correct. */
             400: {
                 headers: {
                     [name: string]: unknown;
@@ -6008,7 +10159,7 @@ export interface operations {
                     "application/json": components["schemas"]["ErrorResponse"];
                 };
             };
-            /** @description No valid session — absent, expired or revoked credential */
+            /** @description `AUTHENTICATION_FAILED` — No valid credential. Either none was presented, or the session behind it is expired, revoked, or belongs to a member who can no longer sign in. This status means the session is dead and nothing else does (D2.23) — a wrong *current* password on change-password is a 400 with a `currentPassword` field error, not this. */
             401: {
                 headers: {
                     [name: string]: unknown;
@@ -6017,7 +10168,7 @@ export interface operations {
                     "application/json": components["schemas"]["ErrorResponse"];
                 };
             };
-            /** @description Authenticated, but lacking the required permission */
+            /** @description `ACCESS_DENIED` — Authenticated, but lacking the permission the endpoint declares. The session is valid; do not sign the operator out. */
             403: {
                 headers: {
                     [name: string]: unknown;
@@ -6026,7 +10177,34 @@ export interface operations {
                     "application/json": components["schemas"]["ErrorResponse"];
                 };
             };
-            /** @description Unhandled failure; the traceId identifies the log line */
+            /** @description `NOT_FOUND` — A referenced entity does not exist, or the URL matches no endpoint. Also returned for a known path called with an unsupported method, as 405. */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description `CONFLICT` — The request collided with current state for a reason other than a version mismatch: a duplicate natural key (a slug, a code, an email), or a database constraint the application did not catch first. */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description `BUSINESS_RULE_VIOLATION` — The request was well-formed and the entities exist, but a domain rule forbids it — publishing a product with no price, archiving a brand products still reference, issuing more stock than a location holds. Distinct from 400: nothing about the request is malformed. */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description `INTERNAL_ERROR` — An unhandled failure. The message is deliberately generic; `traceId` identifies the server log line that explains it. */
             500: {
                 headers: {
                     [name: string]: unknown;
@@ -6057,7 +10235,7 @@ export interface operations {
                     "*/*": components["schemas"]["ProductResponse"];
                 };
             };
-            /** @description Malformed request, or a field failed validation */
+            /** @description `VALIDATION_FAILED` — The request body could not be read, a field failed validation, a required header was absent, or a domain validation rule rejected an input the caller can correct. */
             400: {
                 headers: {
                     [name: string]: unknown;
@@ -6066,7 +10244,7 @@ export interface operations {
                     "application/json": components["schemas"]["ErrorResponse"];
                 };
             };
-            /** @description No valid session — absent, expired or revoked credential */
+            /** @description `AUTHENTICATION_FAILED` — No valid credential. Either none was presented, or the session behind it is expired, revoked, or belongs to a member who can no longer sign in. This status means the session is dead and nothing else does (D2.23) — a wrong *current* password on change-password is a 400 with a `currentPassword` field error, not this. */
             401: {
                 headers: {
                     [name: string]: unknown;
@@ -6075,7 +10253,7 @@ export interface operations {
                     "application/json": components["schemas"]["ErrorResponse"];
                 };
             };
-            /** @description Authenticated, but lacking the required permission */
+            /** @description `ACCESS_DENIED` — Authenticated, but lacking the permission the endpoint declares. The session is valid; do not sign the operator out. */
             403: {
                 headers: {
                     [name: string]: unknown;
@@ -6084,7 +10262,34 @@ export interface operations {
                     "application/json": components["schemas"]["ErrorResponse"];
                 };
             };
-            /** @description Unhandled failure; the traceId identifies the log line */
+            /** @description `NOT_FOUND` — A referenced entity does not exist, or the URL matches no endpoint. Also returned for a known path called with an unsupported method, as 405. */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description `CONFLICT` — The request collided with current state for a reason other than a version mismatch: a duplicate natural key (a slug, a code, an email), or a database constraint the application did not catch first. */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description `BUSINESS_RULE_VIOLATION` — The request was well-formed and the entities exist, but a domain rule forbids it — publishing a product with no price, archiving a brand products still reference, issuing more stock than a location holds. Distinct from 400: nothing about the request is malformed. */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description `INTERNAL_ERROR` — An unhandled failure. The message is deliberately generic; `traceId` identifies the server log line that explains it. */
             500: {
                 headers: {
                     [name: string]: unknown;
@@ -6115,7 +10320,7 @@ export interface operations {
                     "*/*": components["schemas"]["ProductResponse"];
                 };
             };
-            /** @description Malformed request, or a field failed validation */
+            /** @description `VALIDATION_FAILED` — The request body could not be read, a field failed validation, a required header was absent, or a domain validation rule rejected an input the caller can correct. */
             400: {
                 headers: {
                     [name: string]: unknown;
@@ -6124,7 +10329,7 @@ export interface operations {
                     "application/json": components["schemas"]["ErrorResponse"];
                 };
             };
-            /** @description No valid session — absent, expired or revoked credential */
+            /** @description `AUTHENTICATION_FAILED` — No valid credential. Either none was presented, or the session behind it is expired, revoked, or belongs to a member who can no longer sign in. This status means the session is dead and nothing else does (D2.23) — a wrong *current* password on change-password is a 400 with a `currentPassword` field error, not this. */
             401: {
                 headers: {
                     [name: string]: unknown;
@@ -6133,7 +10338,7 @@ export interface operations {
                     "application/json": components["schemas"]["ErrorResponse"];
                 };
             };
-            /** @description Authenticated, but lacking the required permission */
+            /** @description `ACCESS_DENIED` — Authenticated, but lacking the permission the endpoint declares. The session is valid; do not sign the operator out. */
             403: {
                 headers: {
                     [name: string]: unknown;
@@ -6142,7 +10347,34 @@ export interface operations {
                     "application/json": components["schemas"]["ErrorResponse"];
                 };
             };
-            /** @description Unhandled failure; the traceId identifies the log line */
+            /** @description `NOT_FOUND` — A referenced entity does not exist, or the URL matches no endpoint. Also returned for a known path called with an unsupported method, as 405. */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description `CONFLICT` — The request collided with current state for a reason other than a version mismatch: a duplicate natural key (a slug, a code, an email), or a database constraint the application did not catch first. */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description `BUSINESS_RULE_VIOLATION` — The request was well-formed and the entities exist, but a domain rule forbids it — publishing a product with no price, archiving a brand products still reference, issuing more stock than a location holds. Distinct from 400: nothing about the request is malformed. */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description `INTERNAL_ERROR` — An unhandled failure. The message is deliberately generic; `traceId` identifies the server log line that explains it. */
             500: {
                 headers: {
                     [name: string]: unknown;
@@ -6173,7 +10405,7 @@ export interface operations {
                     "*/*": components["schemas"]["ImageResponse"][];
                 };
             };
-            /** @description Malformed request, or a field failed validation */
+            /** @description `VALIDATION_FAILED` — The request body could not be read, a field failed validation, a required header was absent, or a domain validation rule rejected an input the caller can correct. */
             400: {
                 headers: {
                     [name: string]: unknown;
@@ -6182,7 +10414,7 @@ export interface operations {
                     "application/json": components["schemas"]["ErrorResponse"];
                 };
             };
-            /** @description No valid session — absent, expired or revoked credential */
+            /** @description `AUTHENTICATION_FAILED` — No valid credential. Either none was presented, or the session behind it is expired, revoked, or belongs to a member who can no longer sign in. This status means the session is dead and nothing else does (D2.23) — a wrong *current* password on change-password is a 400 with a `currentPassword` field error, not this. */
             401: {
                 headers: {
                     [name: string]: unknown;
@@ -6191,7 +10423,7 @@ export interface operations {
                     "application/json": components["schemas"]["ErrorResponse"];
                 };
             };
-            /** @description Authenticated, but lacking the required permission */
+            /** @description `ACCESS_DENIED` — Authenticated, but lacking the permission the endpoint declares. The session is valid; do not sign the operator out. */
             403: {
                 headers: {
                     [name: string]: unknown;
@@ -6200,7 +10432,16 @@ export interface operations {
                     "application/json": components["schemas"]["ErrorResponse"];
                 };
             };
-            /** @description Unhandled failure; the traceId identifies the log line */
+            /** @description `NOT_FOUND` — A referenced entity does not exist, or the URL matches no endpoint. Also returned for a known path called with an unsupported method, as 405. */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description `INTERNAL_ERROR` — An unhandled failure. The message is deliberately generic; `traceId` identifies the server log line that explains it. */
             500: {
                 headers: {
                     [name: string]: unknown;
@@ -6222,7 +10463,7 @@ export interface operations {
         };
         requestBody: {
             content: {
-                "application/json": components["schemas"]["SaveImageRequest"];
+                "application/json": components["schemas"]["AddImageRequest"];
             };
         };
         responses: {
@@ -6235,7 +10476,7 @@ export interface operations {
                     "*/*": components["schemas"]["ImageResponse"];
                 };
             };
-            /** @description Malformed request, or a field failed validation */
+            /** @description `VALIDATION_FAILED` — The request body could not be read, a field failed validation, a required header was absent, or a domain validation rule rejected an input the caller can correct. */
             400: {
                 headers: {
                     [name: string]: unknown;
@@ -6244,7 +10485,7 @@ export interface operations {
                     "application/json": components["schemas"]["ErrorResponse"];
                 };
             };
-            /** @description No valid session — absent, expired or revoked credential */
+            /** @description `AUTHENTICATION_FAILED` — No valid credential. Either none was presented, or the session behind it is expired, revoked, or belongs to a member who can no longer sign in. This status means the session is dead and nothing else does (D2.23) — a wrong *current* password on change-password is a 400 with a `currentPassword` field error, not this. */
             401: {
                 headers: {
                     [name: string]: unknown;
@@ -6253,7 +10494,7 @@ export interface operations {
                     "application/json": components["schemas"]["ErrorResponse"];
                 };
             };
-            /** @description Authenticated, but lacking the required permission */
+            /** @description `ACCESS_DENIED` — Authenticated, but lacking the permission the endpoint declares. The session is valid; do not sign the operator out. */
             403: {
                 headers: {
                     [name: string]: unknown;
@@ -6262,7 +10503,34 @@ export interface operations {
                     "application/json": components["schemas"]["ErrorResponse"];
                 };
             };
-            /** @description Unhandled failure; the traceId identifies the log line */
+            /** @description `NOT_FOUND` — A referenced entity does not exist, or the URL matches no endpoint. Also returned for a known path called with an unsupported method, as 405. */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description `CONFLICT` — The request collided with current state for a reason other than a version mismatch: a duplicate natural key (a slug, a code, an email), or a database constraint the application did not catch first. */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description `BUSINESS_RULE_VIOLATION` — The request was well-formed and the entities exist, but a domain rule forbids it — publishing a product with no price, archiving a brand products still reference, issuing more stock than a location holds. Distinct from 400: nothing about the request is malformed. */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description `INTERNAL_ERROR` — An unhandled failure. The message is deliberately generic; `traceId` identifies the server log line that explains it. */
             500: {
                 headers: {
                     [name: string]: unknown;
@@ -6285,7 +10553,7 @@ export interface operations {
         };
         requestBody: {
             content: {
-                "application/json": components["schemas"]["SaveImageRequest"];
+                "application/json": components["schemas"]["UpdateImageRequest"];
             };
         };
         responses: {
@@ -6298,7 +10566,7 @@ export interface operations {
                     "*/*": components["schemas"]["ImageResponse"];
                 };
             };
-            /** @description Malformed request, or a field failed validation */
+            /** @description `VALIDATION_FAILED` — The request body could not be read, a field failed validation, a required header was absent, or a domain validation rule rejected an input the caller can correct. */
             400: {
                 headers: {
                     [name: string]: unknown;
@@ -6307,7 +10575,7 @@ export interface operations {
                     "application/json": components["schemas"]["ErrorResponse"];
                 };
             };
-            /** @description No valid session — absent, expired or revoked credential */
+            /** @description `AUTHENTICATION_FAILED` — No valid credential. Either none was presented, or the session behind it is expired, revoked, or belongs to a member who can no longer sign in. This status means the session is dead and nothing else does (D2.23) — a wrong *current* password on change-password is a 400 with a `currentPassword` field error, not this. */
             401: {
                 headers: {
                     [name: string]: unknown;
@@ -6316,7 +10584,7 @@ export interface operations {
                     "application/json": components["schemas"]["ErrorResponse"];
                 };
             };
-            /** @description Authenticated, but lacking the required permission */
+            /** @description `ACCESS_DENIED` — Authenticated, but lacking the permission the endpoint declares. The session is valid; do not sign the operator out. */
             403: {
                 headers: {
                     [name: string]: unknown;
@@ -6325,7 +10593,34 @@ export interface operations {
                     "application/json": components["schemas"]["ErrorResponse"];
                 };
             };
-            /** @description Unhandled failure; the traceId identifies the log line */
+            /** @description `NOT_FOUND` — A referenced entity does not exist, or the URL matches no endpoint. Also returned for a known path called with an unsupported method, as 405. */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description `VERSION_CONFLICT` or `CONFLICT` — The `version` sent with an update is not the version stored — the record was changed by someone else since it was read. Nothing was written. Re-read the record, show the operator what changed, and submit again with the new `version`. */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description `BUSINESS_RULE_VIOLATION` — The request was well-formed and the entities exist, but a domain rule forbids it — publishing a product with no price, archiving a brand products still reference, issuing more stock than a location holds. Distinct from 400: nothing about the request is malformed. */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description `INTERNAL_ERROR` — An unhandled failure. The message is deliberately generic; `traceId` identifies the server log line that explains it. */
             500: {
                 headers: {
                     [name: string]: unknown;
@@ -6355,7 +10650,7 @@ export interface operations {
                 };
                 content?: never;
             };
-            /** @description Malformed request, or a field failed validation */
+            /** @description `VALIDATION_FAILED` — The request body could not be read, a field failed validation, a required header was absent, or a domain validation rule rejected an input the caller can correct. */
             400: {
                 headers: {
                     [name: string]: unknown;
@@ -6364,7 +10659,7 @@ export interface operations {
                     "application/json": components["schemas"]["ErrorResponse"];
                 };
             };
-            /** @description No valid session — absent, expired or revoked credential */
+            /** @description `AUTHENTICATION_FAILED` — No valid credential. Either none was presented, or the session behind it is expired, revoked, or belongs to a member who can no longer sign in. This status means the session is dead and nothing else does (D2.23) — a wrong *current* password on change-password is a 400 with a `currentPassword` field error, not this. */
             401: {
                 headers: {
                     [name: string]: unknown;
@@ -6373,7 +10668,7 @@ export interface operations {
                     "application/json": components["schemas"]["ErrorResponse"];
                 };
             };
-            /** @description Authenticated, but lacking the required permission */
+            /** @description `ACCESS_DENIED` — Authenticated, but lacking the permission the endpoint declares. The session is valid; do not sign the operator out. */
             403: {
                 headers: {
                     [name: string]: unknown;
@@ -6382,7 +10677,34 @@ export interface operations {
                     "application/json": components["schemas"]["ErrorResponse"];
                 };
             };
-            /** @description Unhandled failure; the traceId identifies the log line */
+            /** @description `NOT_FOUND` — A referenced entity does not exist, or the URL matches no endpoint. Also returned for a known path called with an unsupported method, as 405. */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description `CONFLICT` — The request collided with current state for a reason other than a version mismatch: a duplicate natural key (a slug, a code, an email), or a database constraint the application did not catch first. */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description `BUSINESS_RULE_VIOLATION` — The request was well-formed and the entities exist, but a domain rule forbids it — publishing a product with no price, archiving a brand products still reference, issuing more stock than a location holds. Distinct from 400: nothing about the request is malformed. */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description `INTERNAL_ERROR` — An unhandled failure. The message is deliberately generic; `traceId` identifies the server log line that explains it. */
             500: {
                 headers: {
                     [name: string]: unknown;
@@ -6417,7 +10739,7 @@ export interface operations {
                     "*/*": components["schemas"]["ImageResponse"][];
                 };
             };
-            /** @description Malformed request, or a field failed validation */
+            /** @description `VALIDATION_FAILED` — The request body could not be read, a field failed validation, a required header was absent, or a domain validation rule rejected an input the caller can correct. */
             400: {
                 headers: {
                     [name: string]: unknown;
@@ -6426,7 +10748,7 @@ export interface operations {
                     "application/json": components["schemas"]["ErrorResponse"];
                 };
             };
-            /** @description No valid session — absent, expired or revoked credential */
+            /** @description `AUTHENTICATION_FAILED` — No valid credential. Either none was presented, or the session behind it is expired, revoked, or belongs to a member who can no longer sign in. This status means the session is dead and nothing else does (D2.23) — a wrong *current* password on change-password is a 400 with a `currentPassword` field error, not this. */
             401: {
                 headers: {
                     [name: string]: unknown;
@@ -6435,7 +10757,7 @@ export interface operations {
                     "application/json": components["schemas"]["ErrorResponse"];
                 };
             };
-            /** @description Authenticated, but lacking the required permission */
+            /** @description `ACCESS_DENIED` — Authenticated, but lacking the permission the endpoint declares. The session is valid; do not sign the operator out. */
             403: {
                 headers: {
                     [name: string]: unknown;
@@ -6444,7 +10766,34 @@ export interface operations {
                     "application/json": components["schemas"]["ErrorResponse"];
                 };
             };
-            /** @description Unhandled failure; the traceId identifies the log line */
+            /** @description `NOT_FOUND` — A referenced entity does not exist, or the URL matches no endpoint. Also returned for a known path called with an unsupported method, as 405. */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description `CONFLICT` — The request collided with current state for a reason other than a version mismatch: a duplicate natural key (a slug, a code, an email), or a database constraint the application did not catch first. */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description `BUSINESS_RULE_VIOLATION` — The request was well-formed and the entities exist, but a domain rule forbids it — publishing a product with no price, archiving a brand products still reference, issuing more stock than a location holds. Distinct from 400: nothing about the request is malformed. */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description `INTERNAL_ERROR` — An unhandled failure. The message is deliberately generic; `traceId` identifies the server log line that explains it. */
             500: {
                 headers: {
                     [name: string]: unknown;
@@ -6475,7 +10824,7 @@ export interface operations {
                     "*/*": components["schemas"]["ProductOptionResponse"][];
                 };
             };
-            /** @description Malformed request, or a field failed validation */
+            /** @description `VALIDATION_FAILED` — The request body could not be read, a field failed validation, a required header was absent, or a domain validation rule rejected an input the caller can correct. */
             400: {
                 headers: {
                     [name: string]: unknown;
@@ -6484,7 +10833,7 @@ export interface operations {
                     "application/json": components["schemas"]["ErrorResponse"];
                 };
             };
-            /** @description No valid session — absent, expired or revoked credential */
+            /** @description `AUTHENTICATION_FAILED` — No valid credential. Either none was presented, or the session behind it is expired, revoked, or belongs to a member who can no longer sign in. This status means the session is dead and nothing else does (D2.23) — a wrong *current* password on change-password is a 400 with a `currentPassword` field error, not this. */
             401: {
                 headers: {
                     [name: string]: unknown;
@@ -6493,7 +10842,7 @@ export interface operations {
                     "application/json": components["schemas"]["ErrorResponse"];
                 };
             };
-            /** @description Authenticated, but lacking the required permission */
+            /** @description `ACCESS_DENIED` — Authenticated, but lacking the permission the endpoint declares. The session is valid; do not sign the operator out. */
             403: {
                 headers: {
                     [name: string]: unknown;
@@ -6502,7 +10851,16 @@ export interface operations {
                     "application/json": components["schemas"]["ErrorResponse"];
                 };
             };
-            /** @description Unhandled failure; the traceId identifies the log line */
+            /** @description `NOT_FOUND` — A referenced entity does not exist, or the URL matches no endpoint. Also returned for a known path called with an unsupported method, as 405. */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description `INTERNAL_ERROR` — An unhandled failure. The message is deliberately generic; `traceId` identifies the server log line that explains it. */
             500: {
                 headers: {
                     [name: string]: unknown;
@@ -6537,7 +10895,7 @@ export interface operations {
                     "*/*": components["schemas"]["ProductOptionResponse"];
                 };
             };
-            /** @description Malformed request, or a field failed validation */
+            /** @description `VALIDATION_FAILED` — The request body could not be read, a field failed validation, a required header was absent, or a domain validation rule rejected an input the caller can correct. */
             400: {
                 headers: {
                     [name: string]: unknown;
@@ -6546,7 +10904,7 @@ export interface operations {
                     "application/json": components["schemas"]["ErrorResponse"];
                 };
             };
-            /** @description No valid session — absent, expired or revoked credential */
+            /** @description `AUTHENTICATION_FAILED` — No valid credential. Either none was presented, or the session behind it is expired, revoked, or belongs to a member who can no longer sign in. This status means the session is dead and nothing else does (D2.23) — a wrong *current* password on change-password is a 400 with a `currentPassword` field error, not this. */
             401: {
                 headers: {
                     [name: string]: unknown;
@@ -6555,7 +10913,7 @@ export interface operations {
                     "application/json": components["schemas"]["ErrorResponse"];
                 };
             };
-            /** @description Authenticated, but lacking the required permission */
+            /** @description `ACCESS_DENIED` — Authenticated, but lacking the permission the endpoint declares. The session is valid; do not sign the operator out. */
             403: {
                 headers: {
                     [name: string]: unknown;
@@ -6564,7 +10922,34 @@ export interface operations {
                     "application/json": components["schemas"]["ErrorResponse"];
                 };
             };
-            /** @description Unhandled failure; the traceId identifies the log line */
+            /** @description `NOT_FOUND` — A referenced entity does not exist, or the URL matches no endpoint. Also returned for a known path called with an unsupported method, as 405. */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description `CONFLICT` — The request collided with current state for a reason other than a version mismatch: a duplicate natural key (a slug, a code, an email), or a database constraint the application did not catch first. */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description `BUSINESS_RULE_VIOLATION` — The request was well-formed and the entities exist, but a domain rule forbids it — publishing a product with no price, archiving a brand products still reference, issuing more stock than a location holds. Distinct from 400: nothing about the request is malformed. */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description `INTERNAL_ERROR` — An unhandled failure. The message is deliberately generic; `traceId` identifies the server log line that explains it. */
             500: {
                 headers: {
                     [name: string]: unknown;
@@ -6596,7 +10981,7 @@ export interface operations {
                     "*/*": components["schemas"]["ProductOptionResponse"][];
                 };
             };
-            /** @description Malformed request, or a field failed validation */
+            /** @description `VALIDATION_FAILED` — The request body could not be read, a field failed validation, a required header was absent, or a domain validation rule rejected an input the caller can correct. */
             400: {
                 headers: {
                     [name: string]: unknown;
@@ -6605,7 +10990,7 @@ export interface operations {
                     "application/json": components["schemas"]["ErrorResponse"];
                 };
             };
-            /** @description No valid session — absent, expired or revoked credential */
+            /** @description `AUTHENTICATION_FAILED` — No valid credential. Either none was presented, or the session behind it is expired, revoked, or belongs to a member who can no longer sign in. This status means the session is dead and nothing else does (D2.23) — a wrong *current* password on change-password is a 400 with a `currentPassword` field error, not this. */
             401: {
                 headers: {
                     [name: string]: unknown;
@@ -6614,7 +10999,7 @@ export interface operations {
                     "application/json": components["schemas"]["ErrorResponse"];
                 };
             };
-            /** @description Authenticated, but lacking the required permission */
+            /** @description `ACCESS_DENIED` — Authenticated, but lacking the permission the endpoint declares. The session is valid; do not sign the operator out. */
             403: {
                 headers: {
                     [name: string]: unknown;
@@ -6623,7 +11008,34 @@ export interface operations {
                     "application/json": components["schemas"]["ErrorResponse"];
                 };
             };
-            /** @description Unhandled failure; the traceId identifies the log line */
+            /** @description `NOT_FOUND` — A referenced entity does not exist, or the URL matches no endpoint. Also returned for a known path called with an unsupported method, as 405. */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description `CONFLICT` — The request collided with current state for a reason other than a version mismatch: a duplicate natural key (a slug, a code, an email), or a database constraint the application did not catch first. */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description `BUSINESS_RULE_VIOLATION` — The request was well-formed and the entities exist, but a domain rule forbids it — publishing a product with no price, archiving a brand products still reference, issuing more stock than a location holds. Distinct from 400: nothing about the request is malformed. */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description `INTERNAL_ERROR` — An unhandled failure. The message is deliberately generic; `traceId` identifies the server log line that explains it. */
             500: {
                 headers: {
                     [name: string]: unknown;
@@ -6658,7 +11070,7 @@ export interface operations {
                     "*/*": components["schemas"]["ProductOptionResponse"][];
                 };
             };
-            /** @description Malformed request, or a field failed validation */
+            /** @description `VALIDATION_FAILED` — The request body could not be read, a field failed validation, a required header was absent, or a domain validation rule rejected an input the caller can correct. */
             400: {
                 headers: {
                     [name: string]: unknown;
@@ -6667,7 +11079,7 @@ export interface operations {
                     "application/json": components["schemas"]["ErrorResponse"];
                 };
             };
-            /** @description No valid session — absent, expired or revoked credential */
+            /** @description `AUTHENTICATION_FAILED` — No valid credential. Either none was presented, or the session behind it is expired, revoked, or belongs to a member who can no longer sign in. This status means the session is dead and nothing else does (D2.23) — a wrong *current* password on change-password is a 400 with a `currentPassword` field error, not this. */
             401: {
                 headers: {
                     [name: string]: unknown;
@@ -6676,7 +11088,7 @@ export interface operations {
                     "application/json": components["schemas"]["ErrorResponse"];
                 };
             };
-            /** @description Authenticated, but lacking the required permission */
+            /** @description `ACCESS_DENIED` — Authenticated, but lacking the permission the endpoint declares. The session is valid; do not sign the operator out. */
             403: {
                 headers: {
                     [name: string]: unknown;
@@ -6685,7 +11097,34 @@ export interface operations {
                     "application/json": components["schemas"]["ErrorResponse"];
                 };
             };
-            /** @description Unhandled failure; the traceId identifies the log line */
+            /** @description `NOT_FOUND` — A referenced entity does not exist, or the URL matches no endpoint. Also returned for a known path called with an unsupported method, as 405. */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description `CONFLICT` — The request collided with current state for a reason other than a version mismatch: a duplicate natural key (a slug, a code, an email), or a database constraint the application did not catch first. */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description `BUSINESS_RULE_VIOLATION` — The request was well-formed and the entities exist, but a domain rule forbids it — publishing a product with no price, archiving a brand products still reference, issuing more stock than a location holds. Distinct from 400: nothing about the request is malformed. */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description `INTERNAL_ERROR` — An unhandled failure. The message is deliberately generic; `traceId` identifies the server log line that explains it. */
             500: {
                 headers: {
                     [name: string]: unknown;
@@ -6716,7 +11155,7 @@ export interface operations {
                     "*/*": components["schemas"]["SpecValueResponse"][];
                 };
             };
-            /** @description Malformed request, or a field failed validation */
+            /** @description `VALIDATION_FAILED` — The request body could not be read, a field failed validation, a required header was absent, or a domain validation rule rejected an input the caller can correct. */
             400: {
                 headers: {
                     [name: string]: unknown;
@@ -6725,7 +11164,7 @@ export interface operations {
                     "application/json": components["schemas"]["ErrorResponse"];
                 };
             };
-            /** @description No valid session — absent, expired or revoked credential */
+            /** @description `AUTHENTICATION_FAILED` — No valid credential. Either none was presented, or the session behind it is expired, revoked, or belongs to a member who can no longer sign in. This status means the session is dead and nothing else does (D2.23) — a wrong *current* password on change-password is a 400 with a `currentPassword` field error, not this. */
             401: {
                 headers: {
                     [name: string]: unknown;
@@ -6734,7 +11173,7 @@ export interface operations {
                     "application/json": components["schemas"]["ErrorResponse"];
                 };
             };
-            /** @description Authenticated, but lacking the required permission */
+            /** @description `ACCESS_DENIED` — Authenticated, but lacking the permission the endpoint declares. The session is valid; do not sign the operator out. */
             403: {
                 headers: {
                     [name: string]: unknown;
@@ -6743,7 +11182,16 @@ export interface operations {
                     "application/json": components["schemas"]["ErrorResponse"];
                 };
             };
-            /** @description Unhandled failure; the traceId identifies the log line */
+            /** @description `NOT_FOUND` — A referenced entity does not exist, or the URL matches no endpoint. Also returned for a known path called with an unsupported method, as 405. */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description `INTERNAL_ERROR` — An unhandled failure. The message is deliberately generic; `traceId` identifies the server log line that explains it. */
             500: {
                 headers: {
                     [name: string]: unknown;
@@ -6778,7 +11226,7 @@ export interface operations {
                     "*/*": components["schemas"]["SpecValueResponse"];
                 };
             };
-            /** @description Malformed request, or a field failed validation */
+            /** @description `VALIDATION_FAILED` — The request body could not be read, a field failed validation, a required header was absent, or a domain validation rule rejected an input the caller can correct. */
             400: {
                 headers: {
                     [name: string]: unknown;
@@ -6787,7 +11235,7 @@ export interface operations {
                     "application/json": components["schemas"]["ErrorResponse"];
                 };
             };
-            /** @description No valid session — absent, expired or revoked credential */
+            /** @description `AUTHENTICATION_FAILED` — No valid credential. Either none was presented, or the session behind it is expired, revoked, or belongs to a member who can no longer sign in. This status means the session is dead and nothing else does (D2.23) — a wrong *current* password on change-password is a 400 with a `currentPassword` field error, not this. */
             401: {
                 headers: {
                     [name: string]: unknown;
@@ -6796,7 +11244,7 @@ export interface operations {
                     "application/json": components["schemas"]["ErrorResponse"];
                 };
             };
-            /** @description Authenticated, but lacking the required permission */
+            /** @description `ACCESS_DENIED` — Authenticated, but lacking the permission the endpoint declares. The session is valid; do not sign the operator out. */
             403: {
                 headers: {
                     [name: string]: unknown;
@@ -6805,7 +11253,34 @@ export interface operations {
                     "application/json": components["schemas"]["ErrorResponse"];
                 };
             };
-            /** @description Unhandled failure; the traceId identifies the log line */
+            /** @description `NOT_FOUND` — A referenced entity does not exist, or the URL matches no endpoint. Also returned for a known path called with an unsupported method, as 405. */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description `CONFLICT` — The request collided with current state for a reason other than a version mismatch: a duplicate natural key (a slug, a code, an email), or a database constraint the application did not catch first. */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description `BUSINESS_RULE_VIOLATION` — The request was well-formed and the entities exist, but a domain rule forbids it — publishing a product with no price, archiving a brand products still reference, issuing more stock than a location holds. Distinct from 400: nothing about the request is malformed. */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description `INTERNAL_ERROR` — An unhandled failure. The message is deliberately generic; `traceId` identifies the server log line that explains it. */
             500: {
                 headers: {
                     [name: string]: unknown;
@@ -6835,7 +11310,7 @@ export interface operations {
                 };
                 content?: never;
             };
-            /** @description Malformed request, or a field failed validation */
+            /** @description `VALIDATION_FAILED` — The request body could not be read, a field failed validation, a required header was absent, or a domain validation rule rejected an input the caller can correct. */
             400: {
                 headers: {
                     [name: string]: unknown;
@@ -6844,7 +11319,7 @@ export interface operations {
                     "application/json": components["schemas"]["ErrorResponse"];
                 };
             };
-            /** @description No valid session — absent, expired or revoked credential */
+            /** @description `AUTHENTICATION_FAILED` — No valid credential. Either none was presented, or the session behind it is expired, revoked, or belongs to a member who can no longer sign in. This status means the session is dead and nothing else does (D2.23) — a wrong *current* password on change-password is a 400 with a `currentPassword` field error, not this. */
             401: {
                 headers: {
                     [name: string]: unknown;
@@ -6853,7 +11328,7 @@ export interface operations {
                     "application/json": components["schemas"]["ErrorResponse"];
                 };
             };
-            /** @description Authenticated, but lacking the required permission */
+            /** @description `ACCESS_DENIED` — Authenticated, but lacking the permission the endpoint declares. The session is valid; do not sign the operator out. */
             403: {
                 headers: {
                     [name: string]: unknown;
@@ -6862,7 +11337,34 @@ export interface operations {
                     "application/json": components["schemas"]["ErrorResponse"];
                 };
             };
-            /** @description Unhandled failure; the traceId identifies the log line */
+            /** @description `NOT_FOUND` — A referenced entity does not exist, or the URL matches no endpoint. Also returned for a known path called with an unsupported method, as 405. */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description `CONFLICT` — The request collided with current state for a reason other than a version mismatch: a duplicate natural key (a slug, a code, an email), or a database constraint the application did not catch first. */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description `BUSINESS_RULE_VIOLATION` — The request was well-formed and the entities exist, but a domain rule forbids it — publishing a product with no price, archiving a brand products still reference, issuing more stock than a location holds. Distinct from 400: nothing about the request is malformed. */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description `INTERNAL_ERROR` — An unhandled failure. The message is deliberately generic; `traceId` identifies the server log line that explains it. */
             500: {
                 headers: {
                     [name: string]: unknown;
@@ -6893,7 +11395,7 @@ export interface operations {
                     "*/*": components["schemas"]["VariantResponse"][];
                 };
             };
-            /** @description Malformed request, or a field failed validation */
+            /** @description `VALIDATION_FAILED` — The request body could not be read, a field failed validation, a required header was absent, or a domain validation rule rejected an input the caller can correct. */
             400: {
                 headers: {
                     [name: string]: unknown;
@@ -6902,7 +11404,7 @@ export interface operations {
                     "application/json": components["schemas"]["ErrorResponse"];
                 };
             };
-            /** @description No valid session — absent, expired or revoked credential */
+            /** @description `AUTHENTICATION_FAILED` — No valid credential. Either none was presented, or the session behind it is expired, revoked, or belongs to a member who can no longer sign in. This status means the session is dead and nothing else does (D2.23) — a wrong *current* password on change-password is a 400 with a `currentPassword` field error, not this. */
             401: {
                 headers: {
                     [name: string]: unknown;
@@ -6911,7 +11413,7 @@ export interface operations {
                     "application/json": components["schemas"]["ErrorResponse"];
                 };
             };
-            /** @description Authenticated, but lacking the required permission */
+            /** @description `ACCESS_DENIED` — Authenticated, but lacking the permission the endpoint declares. The session is valid; do not sign the operator out. */
             403: {
                 headers: {
                     [name: string]: unknown;
@@ -6920,7 +11422,16 @@ export interface operations {
                     "application/json": components["schemas"]["ErrorResponse"];
                 };
             };
-            /** @description Unhandled failure; the traceId identifies the log line */
+            /** @description `NOT_FOUND` — A referenced entity does not exist, or the URL matches no endpoint. Also returned for a known path called with an unsupported method, as 405. */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description `INTERNAL_ERROR` — An unhandled failure. The message is deliberately generic; `traceId` identifies the server log line that explains it. */
             500: {
                 headers: {
                     [name: string]: unknown;
@@ -6955,7 +11466,7 @@ export interface operations {
                     "*/*": components["schemas"]["VariantResponse"];
                 };
             };
-            /** @description Malformed request, or a field failed validation */
+            /** @description `VALIDATION_FAILED` — The request body could not be read, a field failed validation, a required header was absent, or a domain validation rule rejected an input the caller can correct. */
             400: {
                 headers: {
                     [name: string]: unknown;
@@ -6964,7 +11475,7 @@ export interface operations {
                     "application/json": components["schemas"]["ErrorResponse"];
                 };
             };
-            /** @description No valid session — absent, expired or revoked credential */
+            /** @description `AUTHENTICATION_FAILED` — No valid credential. Either none was presented, or the session behind it is expired, revoked, or belongs to a member who can no longer sign in. This status means the session is dead and nothing else does (D2.23) — a wrong *current* password on change-password is a 400 with a `currentPassword` field error, not this. */
             401: {
                 headers: {
                     [name: string]: unknown;
@@ -6973,7 +11484,7 @@ export interface operations {
                     "application/json": components["schemas"]["ErrorResponse"];
                 };
             };
-            /** @description Authenticated, but lacking the required permission */
+            /** @description `ACCESS_DENIED` — Authenticated, but lacking the permission the endpoint declares. The session is valid; do not sign the operator out. */
             403: {
                 headers: {
                     [name: string]: unknown;
@@ -6982,7 +11493,34 @@ export interface operations {
                     "application/json": components["schemas"]["ErrorResponse"];
                 };
             };
-            /** @description Unhandled failure; the traceId identifies the log line */
+            /** @description `NOT_FOUND` — A referenced entity does not exist, or the URL matches no endpoint. Also returned for a known path called with an unsupported method, as 405. */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description `CONFLICT` — The request collided with current state for a reason other than a version mismatch: a duplicate natural key (a slug, a code, an email), or a database constraint the application did not catch first. */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description `BUSINESS_RULE_VIOLATION` — The request was well-formed and the entities exist, but a domain rule forbids it — publishing a product with no price, archiving a brand products still reference, issuing more stock than a location holds. Distinct from 400: nothing about the request is malformed. */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description `INTERNAL_ERROR` — An unhandled failure. The message is deliberately generic; `traceId` identifies the server log line that explains it. */
             500: {
                 headers: {
                     [name: string]: unknown;
@@ -7018,7 +11556,7 @@ export interface operations {
                     "*/*": components["schemas"]["VariantResponse"];
                 };
             };
-            /** @description Malformed request, or a field failed validation */
+            /** @description `VALIDATION_FAILED` — The request body could not be read, a field failed validation, a required header was absent, or a domain validation rule rejected an input the caller can correct. */
             400: {
                 headers: {
                     [name: string]: unknown;
@@ -7027,7 +11565,7 @@ export interface operations {
                     "application/json": components["schemas"]["ErrorResponse"];
                 };
             };
-            /** @description No valid session — absent, expired or revoked credential */
+            /** @description `AUTHENTICATION_FAILED` — No valid credential. Either none was presented, or the session behind it is expired, revoked, or belongs to a member who can no longer sign in. This status means the session is dead and nothing else does (D2.23) — a wrong *current* password on change-password is a 400 with a `currentPassword` field error, not this. */
             401: {
                 headers: {
                     [name: string]: unknown;
@@ -7036,7 +11574,7 @@ export interface operations {
                     "application/json": components["schemas"]["ErrorResponse"];
                 };
             };
-            /** @description Authenticated, but lacking the required permission */
+            /** @description `ACCESS_DENIED` — Authenticated, but lacking the permission the endpoint declares. The session is valid; do not sign the operator out. */
             403: {
                 headers: {
                     [name: string]: unknown;
@@ -7045,7 +11583,34 @@ export interface operations {
                     "application/json": components["schemas"]["ErrorResponse"];
                 };
             };
-            /** @description Unhandled failure; the traceId identifies the log line */
+            /** @description `NOT_FOUND` — A referenced entity does not exist, or the URL matches no endpoint. Also returned for a known path called with an unsupported method, as 405. */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description `VERSION_CONFLICT` or `CONFLICT` — The `version` sent with an update is not the version stored — the record was changed by someone else since it was read. Nothing was written. Re-read the record, show the operator what changed, and submit again with the new `version`. */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description `BUSINESS_RULE_VIOLATION` — The request was well-formed and the entities exist, but a domain rule forbids it — publishing a product with no price, archiving a brand products still reference, issuing more stock than a location holds. Distinct from 400: nothing about the request is malformed. */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description `INTERNAL_ERROR` — An unhandled failure. The message is deliberately generic; `traceId` identifies the server log line that explains it. */
             500: {
                 headers: {
                     [name: string]: unknown;
@@ -7077,7 +11642,7 @@ export interface operations {
                     "*/*": components["schemas"]["VariantResponse"];
                 };
             };
-            /** @description Malformed request, or a field failed validation */
+            /** @description `VALIDATION_FAILED` — The request body could not be read, a field failed validation, a required header was absent, or a domain validation rule rejected an input the caller can correct. */
             400: {
                 headers: {
                     [name: string]: unknown;
@@ -7086,7 +11651,7 @@ export interface operations {
                     "application/json": components["schemas"]["ErrorResponse"];
                 };
             };
-            /** @description No valid session — absent, expired or revoked credential */
+            /** @description `AUTHENTICATION_FAILED` — No valid credential. Either none was presented, or the session behind it is expired, revoked, or belongs to a member who can no longer sign in. This status means the session is dead and nothing else does (D2.23) — a wrong *current* password on change-password is a 400 with a `currentPassword` field error, not this. */
             401: {
                 headers: {
                     [name: string]: unknown;
@@ -7095,7 +11660,7 @@ export interface operations {
                     "application/json": components["schemas"]["ErrorResponse"];
                 };
             };
-            /** @description Authenticated, but lacking the required permission */
+            /** @description `ACCESS_DENIED` — Authenticated, but lacking the permission the endpoint declares. The session is valid; do not sign the operator out. */
             403: {
                 headers: {
                     [name: string]: unknown;
@@ -7104,7 +11669,34 @@ export interface operations {
                     "application/json": components["schemas"]["ErrorResponse"];
                 };
             };
-            /** @description Unhandled failure; the traceId identifies the log line */
+            /** @description `NOT_FOUND` — A referenced entity does not exist, or the URL matches no endpoint. Also returned for a known path called with an unsupported method, as 405. */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description `CONFLICT` — The request collided with current state for a reason other than a version mismatch: a duplicate natural key (a slug, a code, an email), or a database constraint the application did not catch first. */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description `BUSINESS_RULE_VIOLATION` — The request was well-formed and the entities exist, but a domain rule forbids it — publishing a product with no price, archiving a brand products still reference, issuing more stock than a location holds. Distinct from 400: nothing about the request is malformed. */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description `INTERNAL_ERROR` — An unhandled failure. The message is deliberately generic; `traceId` identifies the server log line that explains it. */
             500: {
                 headers: {
                     [name: string]: unknown;
@@ -7136,7 +11728,7 @@ export interface operations {
                     "*/*": components["schemas"]["VariantResponse"];
                 };
             };
-            /** @description Malformed request, or a field failed validation */
+            /** @description `VALIDATION_FAILED` — The request body could not be read, a field failed validation, a required header was absent, or a domain validation rule rejected an input the caller can correct. */
             400: {
                 headers: {
                     [name: string]: unknown;
@@ -7145,7 +11737,7 @@ export interface operations {
                     "application/json": components["schemas"]["ErrorResponse"];
                 };
             };
-            /** @description No valid session — absent, expired or revoked credential */
+            /** @description `AUTHENTICATION_FAILED` — No valid credential. Either none was presented, or the session behind it is expired, revoked, or belongs to a member who can no longer sign in. This status means the session is dead and nothing else does (D2.23) — a wrong *current* password on change-password is a 400 with a `currentPassword` field error, not this. */
             401: {
                 headers: {
                     [name: string]: unknown;
@@ -7154,7 +11746,7 @@ export interface operations {
                     "application/json": components["schemas"]["ErrorResponse"];
                 };
             };
-            /** @description Authenticated, but lacking the required permission */
+            /** @description `ACCESS_DENIED` — Authenticated, but lacking the permission the endpoint declares. The session is valid; do not sign the operator out. */
             403: {
                 headers: {
                     [name: string]: unknown;
@@ -7163,7 +11755,34 @@ export interface operations {
                     "application/json": components["schemas"]["ErrorResponse"];
                 };
             };
-            /** @description Unhandled failure; the traceId identifies the log line */
+            /** @description `NOT_FOUND` — A referenced entity does not exist, or the URL matches no endpoint. Also returned for a known path called with an unsupported method, as 405. */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description `CONFLICT` — The request collided with current state for a reason other than a version mismatch: a duplicate natural key (a slug, a code, an email), or a database constraint the application did not catch first. */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description `BUSINESS_RULE_VIOLATION` — The request was well-formed and the entities exist, but a domain rule forbids it — publishing a product with no price, archiving a brand products still reference, issuing more stock than a location holds. Distinct from 400: nothing about the request is malformed. */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description `INTERNAL_ERROR` — An unhandled failure. The message is deliberately generic; `traceId` identifies the server log line that explains it. */
             500: {
                 headers: {
                     [name: string]: unknown;
@@ -7195,7 +11814,7 @@ export interface operations {
                     "*/*": components["schemas"]["ResolvedImageResponse"][];
                 };
             };
-            /** @description Malformed request, or a field failed validation */
+            /** @description `VALIDATION_FAILED` — The request body could not be read, a field failed validation, a required header was absent, or a domain validation rule rejected an input the caller can correct. */
             400: {
                 headers: {
                     [name: string]: unknown;
@@ -7204,7 +11823,7 @@ export interface operations {
                     "application/json": components["schemas"]["ErrorResponse"];
                 };
             };
-            /** @description No valid session — absent, expired or revoked credential */
+            /** @description `AUTHENTICATION_FAILED` — No valid credential. Either none was presented, or the session behind it is expired, revoked, or belongs to a member who can no longer sign in. This status means the session is dead and nothing else does (D2.23) — a wrong *current* password on change-password is a 400 with a `currentPassword` field error, not this. */
             401: {
                 headers: {
                     [name: string]: unknown;
@@ -7213,7 +11832,7 @@ export interface operations {
                     "application/json": components["schemas"]["ErrorResponse"];
                 };
             };
-            /** @description Authenticated, but lacking the required permission */
+            /** @description `ACCESS_DENIED` — Authenticated, but lacking the permission the endpoint declares. The session is valid; do not sign the operator out. */
             403: {
                 headers: {
                     [name: string]: unknown;
@@ -7222,7 +11841,16 @@ export interface operations {
                     "application/json": components["schemas"]["ErrorResponse"];
                 };
             };
-            /** @description Unhandled failure; the traceId identifies the log line */
+            /** @description `NOT_FOUND` — A referenced entity does not exist, or the URL matches no endpoint. Also returned for a known path called with an unsupported method, as 405. */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description `INTERNAL_ERROR` — An unhandled failure. The message is deliberately generic; `traceId` identifies the server log line that explains it. */
             500: {
                 headers: {
                     [name: string]: unknown;
@@ -7245,7 +11873,7 @@ export interface operations {
         };
         requestBody: {
             content: {
-                "application/json": components["schemas"]["SaveImageRequest"];
+                "application/json": components["schemas"]["AddImageRequest"];
             };
         };
         responses: {
@@ -7258,7 +11886,7 @@ export interface operations {
                     "*/*": components["schemas"]["ImageResponse"];
                 };
             };
-            /** @description Malformed request, or a field failed validation */
+            /** @description `VALIDATION_FAILED` — The request body could not be read, a field failed validation, a required header was absent, or a domain validation rule rejected an input the caller can correct. */
             400: {
                 headers: {
                     [name: string]: unknown;
@@ -7267,7 +11895,7 @@ export interface operations {
                     "application/json": components["schemas"]["ErrorResponse"];
                 };
             };
-            /** @description No valid session — absent, expired or revoked credential */
+            /** @description `AUTHENTICATION_FAILED` — No valid credential. Either none was presented, or the session behind it is expired, revoked, or belongs to a member who can no longer sign in. This status means the session is dead and nothing else does (D2.23) — a wrong *current* password on change-password is a 400 with a `currentPassword` field error, not this. */
             401: {
                 headers: {
                     [name: string]: unknown;
@@ -7276,7 +11904,7 @@ export interface operations {
                     "application/json": components["schemas"]["ErrorResponse"];
                 };
             };
-            /** @description Authenticated, but lacking the required permission */
+            /** @description `ACCESS_DENIED` — Authenticated, but lacking the permission the endpoint declares. The session is valid; do not sign the operator out. */
             403: {
                 headers: {
                     [name: string]: unknown;
@@ -7285,7 +11913,34 @@ export interface operations {
                     "application/json": components["schemas"]["ErrorResponse"];
                 };
             };
-            /** @description Unhandled failure; the traceId identifies the log line */
+            /** @description `NOT_FOUND` — A referenced entity does not exist, or the URL matches no endpoint. Also returned for a known path called with an unsupported method, as 405. */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description `CONFLICT` — The request collided with current state for a reason other than a version mismatch: a duplicate natural key (a slug, a code, an email), or a database constraint the application did not catch first. */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description `BUSINESS_RULE_VIOLATION` — The request was well-formed and the entities exist, but a domain rule forbids it — publishing a product with no price, archiving a brand products still reference, issuing more stock than a location holds. Distinct from 400: nothing about the request is malformed. */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description `INTERNAL_ERROR` — An unhandled failure. The message is deliberately generic; `traceId` identifies the server log line that explains it. */
             500: {
                 headers: {
                     [name: string]: unknown;
@@ -7309,7 +11964,7 @@ export interface operations {
         };
         requestBody: {
             content: {
-                "application/json": components["schemas"]["SaveImageRequest"];
+                "application/json": components["schemas"]["UpdateImageRequest"];
             };
         };
         responses: {
@@ -7322,7 +11977,7 @@ export interface operations {
                     "*/*": components["schemas"]["ImageResponse"];
                 };
             };
-            /** @description Malformed request, or a field failed validation */
+            /** @description `VALIDATION_FAILED` — The request body could not be read, a field failed validation, a required header was absent, or a domain validation rule rejected an input the caller can correct. */
             400: {
                 headers: {
                     [name: string]: unknown;
@@ -7331,7 +11986,7 @@ export interface operations {
                     "application/json": components["schemas"]["ErrorResponse"];
                 };
             };
-            /** @description No valid session — absent, expired or revoked credential */
+            /** @description `AUTHENTICATION_FAILED` — No valid credential. Either none was presented, or the session behind it is expired, revoked, or belongs to a member who can no longer sign in. This status means the session is dead and nothing else does (D2.23) — a wrong *current* password on change-password is a 400 with a `currentPassword` field error, not this. */
             401: {
                 headers: {
                     [name: string]: unknown;
@@ -7340,7 +11995,7 @@ export interface operations {
                     "application/json": components["schemas"]["ErrorResponse"];
                 };
             };
-            /** @description Authenticated, but lacking the required permission */
+            /** @description `ACCESS_DENIED` — Authenticated, but lacking the permission the endpoint declares. The session is valid; do not sign the operator out. */
             403: {
                 headers: {
                     [name: string]: unknown;
@@ -7349,7 +12004,34 @@ export interface operations {
                     "application/json": components["schemas"]["ErrorResponse"];
                 };
             };
-            /** @description Unhandled failure; the traceId identifies the log line */
+            /** @description `NOT_FOUND` — A referenced entity does not exist, or the URL matches no endpoint. Also returned for a known path called with an unsupported method, as 405. */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description `VERSION_CONFLICT` or `CONFLICT` — The `version` sent with an update is not the version stored — the record was changed by someone else since it was read. Nothing was written. Re-read the record, show the operator what changed, and submit again with the new `version`. */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description `BUSINESS_RULE_VIOLATION` — The request was well-formed and the entities exist, but a domain rule forbids it — publishing a product with no price, archiving a brand products still reference, issuing more stock than a location holds. Distinct from 400: nothing about the request is malformed. */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description `INTERNAL_ERROR` — An unhandled failure. The message is deliberately generic; `traceId` identifies the server log line that explains it. */
             500: {
                 headers: {
                     [name: string]: unknown;
@@ -7380,7 +12062,7 @@ export interface operations {
                 };
                 content?: never;
             };
-            /** @description Malformed request, or a field failed validation */
+            /** @description `VALIDATION_FAILED` — The request body could not be read, a field failed validation, a required header was absent, or a domain validation rule rejected an input the caller can correct. */
             400: {
                 headers: {
                     [name: string]: unknown;
@@ -7389,7 +12071,7 @@ export interface operations {
                     "application/json": components["schemas"]["ErrorResponse"];
                 };
             };
-            /** @description No valid session — absent, expired or revoked credential */
+            /** @description `AUTHENTICATION_FAILED` — No valid credential. Either none was presented, or the session behind it is expired, revoked, or belongs to a member who can no longer sign in. This status means the session is dead and nothing else does (D2.23) — a wrong *current* password on change-password is a 400 with a `currentPassword` field error, not this. */
             401: {
                 headers: {
                     [name: string]: unknown;
@@ -7398,7 +12080,7 @@ export interface operations {
                     "application/json": components["schemas"]["ErrorResponse"];
                 };
             };
-            /** @description Authenticated, but lacking the required permission */
+            /** @description `ACCESS_DENIED` — Authenticated, but lacking the permission the endpoint declares. The session is valid; do not sign the operator out. */
             403: {
                 headers: {
                     [name: string]: unknown;
@@ -7407,7 +12089,34 @@ export interface operations {
                     "application/json": components["schemas"]["ErrorResponse"];
                 };
             };
-            /** @description Unhandled failure; the traceId identifies the log line */
+            /** @description `NOT_FOUND` — A referenced entity does not exist, or the URL matches no endpoint. Also returned for a known path called with an unsupported method, as 405. */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description `CONFLICT` — The request collided with current state for a reason other than a version mismatch: a duplicate natural key (a slug, a code, an email), or a database constraint the application did not catch first. */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description `BUSINESS_RULE_VIOLATION` — The request was well-formed and the entities exist, but a domain rule forbids it — publishing a product with no price, archiving a brand products still reference, issuing more stock than a location holds. Distinct from 400: nothing about the request is malformed. */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description `INTERNAL_ERROR` — An unhandled failure. The message is deliberately generic; `traceId` identifies the server log line that explains it. */
             500: {
                 headers: {
                     [name: string]: unknown;
@@ -7443,7 +12152,7 @@ export interface operations {
                     "*/*": components["schemas"]["ImageResponse"][];
                 };
             };
-            /** @description Malformed request, or a field failed validation */
+            /** @description `VALIDATION_FAILED` — The request body could not be read, a field failed validation, a required header was absent, or a domain validation rule rejected an input the caller can correct. */
             400: {
                 headers: {
                     [name: string]: unknown;
@@ -7452,7 +12161,7 @@ export interface operations {
                     "application/json": components["schemas"]["ErrorResponse"];
                 };
             };
-            /** @description No valid session — absent, expired or revoked credential */
+            /** @description `AUTHENTICATION_FAILED` — No valid credential. Either none was presented, or the session behind it is expired, revoked, or belongs to a member who can no longer sign in. This status means the session is dead and nothing else does (D2.23) — a wrong *current* password on change-password is a 400 with a `currentPassword` field error, not this. */
             401: {
                 headers: {
                     [name: string]: unknown;
@@ -7461,7 +12170,7 @@ export interface operations {
                     "application/json": components["schemas"]["ErrorResponse"];
                 };
             };
-            /** @description Authenticated, but lacking the required permission */
+            /** @description `ACCESS_DENIED` — Authenticated, but lacking the permission the endpoint declares. The session is valid; do not sign the operator out. */
             403: {
                 headers: {
                     [name: string]: unknown;
@@ -7470,7 +12179,34 @@ export interface operations {
                     "application/json": components["schemas"]["ErrorResponse"];
                 };
             };
-            /** @description Unhandled failure; the traceId identifies the log line */
+            /** @description `NOT_FOUND` — A referenced entity does not exist, or the URL matches no endpoint. Also returned for a known path called with an unsupported method, as 405. */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description `CONFLICT` — The request collided with current state for a reason other than a version mismatch: a duplicate natural key (a slug, a code, an email), or a database constraint the application did not catch first. */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description `BUSINESS_RULE_VIOLATION` — The request was well-formed and the entities exist, but a domain rule forbids it — publishing a product with no price, archiving a brand products still reference, issuing more stock than a location holds. Distinct from 400: nothing about the request is malformed. */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description `INTERNAL_ERROR` — An unhandled failure. The message is deliberately generic; `traceId` identifies the server log line that explains it. */
             500: {
                 headers: {
                     [name: string]: unknown;
@@ -7502,7 +12238,7 @@ export interface operations {
                     "*/*": components["schemas"]["VariantResponse"];
                 };
             };
-            /** @description Malformed request, or a field failed validation */
+            /** @description `VALIDATION_FAILED` — The request body could not be read, a field failed validation, a required header was absent, or a domain validation rule rejected an input the caller can correct. */
             400: {
                 headers: {
                     [name: string]: unknown;
@@ -7511,7 +12247,7 @@ export interface operations {
                     "application/json": components["schemas"]["ErrorResponse"];
                 };
             };
-            /** @description No valid session — absent, expired or revoked credential */
+            /** @description `AUTHENTICATION_FAILED` — No valid credential. Either none was presented, or the session behind it is expired, revoked, or belongs to a member who can no longer sign in. This status means the session is dead and nothing else does (D2.23) — a wrong *current* password on change-password is a 400 with a `currentPassword` field error, not this. */
             401: {
                 headers: {
                     [name: string]: unknown;
@@ -7520,7 +12256,7 @@ export interface operations {
                     "application/json": components["schemas"]["ErrorResponse"];
                 };
             };
-            /** @description Authenticated, but lacking the required permission */
+            /** @description `ACCESS_DENIED` — Authenticated, but lacking the permission the endpoint declares. The session is valid; do not sign the operator out. */
             403: {
                 headers: {
                     [name: string]: unknown;
@@ -7529,7 +12265,34 @@ export interface operations {
                     "application/json": components["schemas"]["ErrorResponse"];
                 };
             };
-            /** @description Unhandled failure; the traceId identifies the log line */
+            /** @description `NOT_FOUND` — A referenced entity does not exist, or the URL matches no endpoint. Also returned for a known path called with an unsupported method, as 405. */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description `CONFLICT` — The request collided with current state for a reason other than a version mismatch: a duplicate natural key (a slug, a code, an email), or a database constraint the application did not catch first. */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description `BUSINESS_RULE_VIOLATION` — The request was well-formed and the entities exist, but a domain rule forbids it — publishing a product with no price, archiving a brand products still reference, issuing more stock than a location holds. Distinct from 400: nothing about the request is malformed. */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description `INTERNAL_ERROR` — An unhandled failure. The message is deliberately generic; `traceId` identifies the server log line that explains it. */
             500: {
                 headers: {
                     [name: string]: unknown;
@@ -7561,7 +12324,7 @@ export interface operations {
                     "*/*": components["schemas"]["SpecValueResponse"][];
                 };
             };
-            /** @description Malformed request, or a field failed validation */
+            /** @description `VALIDATION_FAILED` — The request body could not be read, a field failed validation, a required header was absent, or a domain validation rule rejected an input the caller can correct. */
             400: {
                 headers: {
                     [name: string]: unknown;
@@ -7570,7 +12333,7 @@ export interface operations {
                     "application/json": components["schemas"]["ErrorResponse"];
                 };
             };
-            /** @description No valid session — absent, expired or revoked credential */
+            /** @description `AUTHENTICATION_FAILED` — No valid credential. Either none was presented, or the session behind it is expired, revoked, or belongs to a member who can no longer sign in. This status means the session is dead and nothing else does (D2.23) — a wrong *current* password on change-password is a 400 with a `currentPassword` field error, not this. */
             401: {
                 headers: {
                     [name: string]: unknown;
@@ -7579,7 +12342,7 @@ export interface operations {
                     "application/json": components["schemas"]["ErrorResponse"];
                 };
             };
-            /** @description Authenticated, but lacking the required permission */
+            /** @description `ACCESS_DENIED` — Authenticated, but lacking the permission the endpoint declares. The session is valid; do not sign the operator out. */
             403: {
                 headers: {
                     [name: string]: unknown;
@@ -7588,7 +12351,16 @@ export interface operations {
                     "application/json": components["schemas"]["ErrorResponse"];
                 };
             };
-            /** @description Unhandled failure; the traceId identifies the log line */
+            /** @description `NOT_FOUND` — A referenced entity does not exist, or the URL matches no endpoint. Also returned for a known path called with an unsupported method, as 405. */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description `INTERNAL_ERROR` — An unhandled failure. The message is deliberately generic; `traceId` identifies the server log line that explains it. */
             500: {
                 headers: {
                     [name: string]: unknown;
@@ -7624,7 +12396,7 @@ export interface operations {
                     "*/*": components["schemas"]["SpecValueResponse"];
                 };
             };
-            /** @description Malformed request, or a field failed validation */
+            /** @description `VALIDATION_FAILED` — The request body could not be read, a field failed validation, a required header was absent, or a domain validation rule rejected an input the caller can correct. */
             400: {
                 headers: {
                     [name: string]: unknown;
@@ -7633,7 +12405,7 @@ export interface operations {
                     "application/json": components["schemas"]["ErrorResponse"];
                 };
             };
-            /** @description No valid session — absent, expired or revoked credential */
+            /** @description `AUTHENTICATION_FAILED` — No valid credential. Either none was presented, or the session behind it is expired, revoked, or belongs to a member who can no longer sign in. This status means the session is dead and nothing else does (D2.23) — a wrong *current* password on change-password is a 400 with a `currentPassword` field error, not this. */
             401: {
                 headers: {
                     [name: string]: unknown;
@@ -7642,7 +12414,7 @@ export interface operations {
                     "application/json": components["schemas"]["ErrorResponse"];
                 };
             };
-            /** @description Authenticated, but lacking the required permission */
+            /** @description `ACCESS_DENIED` — Authenticated, but lacking the permission the endpoint declares. The session is valid; do not sign the operator out. */
             403: {
                 headers: {
                     [name: string]: unknown;
@@ -7651,7 +12423,34 @@ export interface operations {
                     "application/json": components["schemas"]["ErrorResponse"];
                 };
             };
-            /** @description Unhandled failure; the traceId identifies the log line */
+            /** @description `NOT_FOUND` — A referenced entity does not exist, or the URL matches no endpoint. Also returned for a known path called with an unsupported method, as 405. */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description `CONFLICT` — The request collided with current state for a reason other than a version mismatch: a duplicate natural key (a slug, a code, an email), or a database constraint the application did not catch first. */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description `BUSINESS_RULE_VIOLATION` — The request was well-formed and the entities exist, but a domain rule forbids it — publishing a product with no price, archiving a brand products still reference, issuing more stock than a location holds. Distinct from 400: nothing about the request is malformed. */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description `INTERNAL_ERROR` — An unhandled failure. The message is deliberately generic; `traceId` identifies the server log line that explains it. */
             500: {
                 headers: {
                     [name: string]: unknown;
@@ -7682,7 +12481,7 @@ export interface operations {
                 };
                 content?: never;
             };
-            /** @description Malformed request, or a field failed validation */
+            /** @description `VALIDATION_FAILED` — The request body could not be read, a field failed validation, a required header was absent, or a domain validation rule rejected an input the caller can correct. */
             400: {
                 headers: {
                     [name: string]: unknown;
@@ -7691,7 +12490,7 @@ export interface operations {
                     "application/json": components["schemas"]["ErrorResponse"];
                 };
             };
-            /** @description No valid session — absent, expired or revoked credential */
+            /** @description `AUTHENTICATION_FAILED` — No valid credential. Either none was presented, or the session behind it is expired, revoked, or belongs to a member who can no longer sign in. This status means the session is dead and nothing else does (D2.23) — a wrong *current* password on change-password is a 400 with a `currentPassword` field error, not this. */
             401: {
                 headers: {
                     [name: string]: unknown;
@@ -7700,7 +12499,7 @@ export interface operations {
                     "application/json": components["schemas"]["ErrorResponse"];
                 };
             };
-            /** @description Authenticated, but lacking the required permission */
+            /** @description `ACCESS_DENIED` — Authenticated, but lacking the permission the endpoint declares. The session is valid; do not sign the operator out. */
             403: {
                 headers: {
                     [name: string]: unknown;
@@ -7709,7 +12508,34 @@ export interface operations {
                     "application/json": components["schemas"]["ErrorResponse"];
                 };
             };
-            /** @description Unhandled failure; the traceId identifies the log line */
+            /** @description `NOT_FOUND` — A referenced entity does not exist, or the URL matches no endpoint. Also returned for a known path called with an unsupported method, as 405. */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description `CONFLICT` — The request collided with current state for a reason other than a version mismatch: a duplicate natural key (a slug, a code, an email), or a database constraint the application did not catch first. */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description `BUSINESS_RULE_VIOLATION` — The request was well-formed and the entities exist, but a domain rule forbids it — publishing a product with no price, archiving a brand products still reference, issuing more stock than a location holds. Distinct from 400: nothing about the request is malformed. */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description `INTERNAL_ERROR` — An unhandled failure. The message is deliberately generic; `traceId` identifies the server log line that explains it. */
             500: {
                 headers: {
                     [name: string]: unknown;
@@ -7744,7 +12570,7 @@ export interface operations {
                     "*/*": components["schemas"]["VariantResponse"][];
                 };
             };
-            /** @description Malformed request, or a field failed validation */
+            /** @description `VALIDATION_FAILED` — The request body could not be read, a field failed validation, a required header was absent, or a domain validation rule rejected an input the caller can correct. */
             400: {
                 headers: {
                     [name: string]: unknown;
@@ -7753,7 +12579,7 @@ export interface operations {
                     "application/json": components["schemas"]["ErrorResponse"];
                 };
             };
-            /** @description No valid session — absent, expired or revoked credential */
+            /** @description `AUTHENTICATION_FAILED` — No valid credential. Either none was presented, or the session behind it is expired, revoked, or belongs to a member who can no longer sign in. This status means the session is dead and nothing else does (D2.23) — a wrong *current* password on change-password is a 400 with a `currentPassword` field error, not this. */
             401: {
                 headers: {
                     [name: string]: unknown;
@@ -7762,7 +12588,7 @@ export interface operations {
                     "application/json": components["schemas"]["ErrorResponse"];
                 };
             };
-            /** @description Authenticated, but lacking the required permission */
+            /** @description `ACCESS_DENIED` — Authenticated, but lacking the permission the endpoint declares. The session is valid; do not sign the operator out. */
             403: {
                 headers: {
                     [name: string]: unknown;
@@ -7771,7 +12597,34 @@ export interface operations {
                     "application/json": components["schemas"]["ErrorResponse"];
                 };
             };
-            /** @description Unhandled failure; the traceId identifies the log line */
+            /** @description `NOT_FOUND` — A referenced entity does not exist, or the URL matches no endpoint. Also returned for a known path called with an unsupported method, as 405. */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description `CONFLICT` — The request collided with current state for a reason other than a version mismatch: a duplicate natural key (a slug, a code, an email), or a database constraint the application did not catch first. */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description `BUSINESS_RULE_VIOLATION` — The request was well-formed and the entities exist, but a domain rule forbids it — publishing a product with no price, archiving a brand products still reference, issuing more stock than a location holds. Distinct from 400: nothing about the request is malformed. */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description `INTERNAL_ERROR` — An unhandled failure. The message is deliberately generic; `traceId` identifies the server log line that explains it. */
             500: {
                 headers: {
                     [name: string]: unknown;
@@ -7782,7 +12635,7 @@ export interface operations {
             };
         };
     };
-    get_3: {
+    get_6: {
         parameters: {
             query?: never;
             header?: never;
@@ -7800,7 +12653,7 @@ export interface operations {
                     "*/*": components["schemas"]["ProfileResponse"];
                 };
             };
-            /** @description Malformed request, or a field failed validation */
+            /** @description `VALIDATION_FAILED` — The request body could not be read, a field failed validation, a required header was absent, or a domain validation rule rejected an input the caller can correct. */
             400: {
                 headers: {
                     [name: string]: unknown;
@@ -7809,7 +12662,7 @@ export interface operations {
                     "application/json": components["schemas"]["ErrorResponse"];
                 };
             };
-            /** @description No valid session — absent, expired or revoked credential */
+            /** @description `AUTHENTICATION_FAILED` — No valid credential. Either none was presented, or the session behind it is expired, revoked, or belongs to a member who can no longer sign in. This status means the session is dead and nothing else does (D2.23) — a wrong *current* password on change-password is a 400 with a `currentPassword` field error, not this. */
             401: {
                 headers: {
                     [name: string]: unknown;
@@ -7818,7 +12671,7 @@ export interface operations {
                     "application/json": components["schemas"]["ErrorResponse"];
                 };
             };
-            /** @description Authenticated, but lacking the required permission */
+            /** @description `ACCESS_DENIED` — Authenticated, but lacking the permission the endpoint declares. The session is valid; do not sign the operator out. */
             403: {
                 headers: {
                     [name: string]: unknown;
@@ -7827,7 +12680,7 @@ export interface operations {
                     "application/json": components["schemas"]["ErrorResponse"];
                 };
             };
-            /** @description Unhandled failure; the traceId identifies the log line */
+            /** @description `INTERNAL_ERROR` — An unhandled failure. The message is deliberately generic; `traceId` identifies the server log line that explains it. */
             500: {
                 headers: {
                     [name: string]: unknown;
@@ -7838,7 +12691,7 @@ export interface operations {
             };
         };
     };
-    update_3: {
+    update_6: {
         parameters: {
             query?: never;
             header?: never;
@@ -7860,7 +12713,7 @@ export interface operations {
                     "*/*": components["schemas"]["ProfileResponse"];
                 };
             };
-            /** @description Malformed request, or a field failed validation */
+            /** @description `VALIDATION_FAILED` — The request body could not be read, a field failed validation, a required header was absent, or a domain validation rule rejected an input the caller can correct. */
             400: {
                 headers: {
                     [name: string]: unknown;
@@ -7869,7 +12722,7 @@ export interface operations {
                     "application/json": components["schemas"]["ErrorResponse"];
                 };
             };
-            /** @description No valid session — absent, expired or revoked credential */
+            /** @description `AUTHENTICATION_FAILED` — No valid credential. Either none was presented, or the session behind it is expired, revoked, or belongs to a member who can no longer sign in. This status means the session is dead and nothing else does (D2.23) — a wrong *current* password on change-password is a 400 with a `currentPassword` field error, not this. */
             401: {
                 headers: {
                     [name: string]: unknown;
@@ -7878,7 +12731,7 @@ export interface operations {
                     "application/json": components["schemas"]["ErrorResponse"];
                 };
             };
-            /** @description Authenticated, but lacking the required permission */
+            /** @description `ACCESS_DENIED` — Authenticated, but lacking the permission the endpoint declares. The session is valid; do not sign the operator out. */
             403: {
                 headers: {
                     [name: string]: unknown;
@@ -7887,7 +12740,25 @@ export interface operations {
                     "application/json": components["schemas"]["ErrorResponse"];
                 };
             };
-            /** @description Unhandled failure; the traceId identifies the log line */
+            /** @description `VERSION_CONFLICT` or `CONFLICT` — The `version` sent with an update is not the version stored — the record was changed by someone else since it was read. Nothing was written. Re-read the record, show the operator what changed, and submit again with the new `version`. */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description `BUSINESS_RULE_VIOLATION` — The request was well-formed and the entities exist, but a domain rule forbids it — publishing a product with no price, archiving a brand products still reference, issuing more stock than a location holds. Distinct from 400: nothing about the request is malformed. */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description `INTERNAL_ERROR` — An unhandled failure. The message is deliberately generic; `traceId` identifies the server log line that explains it. */
             500: {
                 headers: {
                     [name: string]: unknown;
@@ -7920,7 +12791,7 @@ export interface operations {
                     "*/*": components["schemas"]["ChangePasswordResponse"];
                 };
             };
-            /** @description Malformed request, or a field failed validation */
+            /** @description `VALIDATION_FAILED` — The request body could not be read, a field failed validation, a required header was absent, or a domain validation rule rejected an input the caller can correct. */
             400: {
                 headers: {
                     [name: string]: unknown;
@@ -7929,7 +12800,7 @@ export interface operations {
                     "application/json": components["schemas"]["ErrorResponse"];
                 };
             };
-            /** @description No valid session — absent, expired or revoked credential */
+            /** @description `AUTHENTICATION_FAILED` — No valid credential. Either none was presented, or the session behind it is expired, revoked, or belongs to a member who can no longer sign in. This status means the session is dead and nothing else does (D2.23) — a wrong *current* password on change-password is a 400 with a `currentPassword` field error, not this. */
             401: {
                 headers: {
                     [name: string]: unknown;
@@ -7938,7 +12809,7 @@ export interface operations {
                     "application/json": components["schemas"]["ErrorResponse"];
                 };
             };
-            /** @description Authenticated, but lacking the required permission */
+            /** @description `ACCESS_DENIED` — Authenticated, but lacking the permission the endpoint declares. The session is valid; do not sign the operator out. */
             403: {
                 headers: {
                     [name: string]: unknown;
@@ -7947,7 +12818,25 @@ export interface operations {
                     "application/json": components["schemas"]["ErrorResponse"];
                 };
             };
-            /** @description Unhandled failure; the traceId identifies the log line */
+            /** @description `CONFLICT` — The request collided with current state for a reason other than a version mismatch: a duplicate natural key (a slug, a code, an email), or a database constraint the application did not catch first. */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description `BUSINESS_RULE_VIOLATION` — The request was well-formed and the entities exist, but a domain rule forbids it — publishing a product with no price, archiving a brand products still reference, issuing more stock than a location holds. Distinct from 400: nothing about the request is malformed. */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description `INTERNAL_ERROR` — An unhandled failure. The message is deliberately generic; `traceId` identifies the server log line that explains it. */
             500: {
                 headers: {
                     [name: string]: unknown;
@@ -7958,7 +12847,606 @@ export interface operations {
             };
         };
     };
-    list_2: {
+    list_5: {
+        parameters: {
+            query: {
+                expectedFrom?: string;
+                expectedTo?: string;
+                pageable: components["schemas"]["Pageable"];
+                search?: string;
+                status?: "DRAFT" | "APPROVED" | "PARTIALLY_RECEIVED" | "RECEIVED" | "CANCELLED";
+                supplierId?: string;
+                warehouseId?: string;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "*/*": components["schemas"]["PageResponsePurchaseOrderResponse"];
+                };
+            };
+            /** @description `VALIDATION_FAILED` — The request body could not be read, a field failed validation, a required header was absent, or a domain validation rule rejected an input the caller can correct. */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description `AUTHENTICATION_FAILED` — No valid credential. Either none was presented, or the session behind it is expired, revoked, or belongs to a member who can no longer sign in. This status means the session is dead and nothing else does (D2.23) — a wrong *current* password on change-password is a 400 with a `currentPassword` field error, not this. */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description `ACCESS_DENIED` — Authenticated, but lacking the permission the endpoint declares. The session is valid; do not sign the operator out. */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description `INTERNAL_ERROR` — An unhandled failure. The message is deliberately generic; `traceId` identifies the server log line that explains it. */
+            500: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+        };
+    };
+    create_5: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["CreatePurchaseOrderRequest"];
+            };
+        };
+        responses: {
+            /** @description Created */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "*/*": components["schemas"]["PurchaseOrderResponse"];
+                };
+            };
+            /** @description `VALIDATION_FAILED` — The request body could not be read, a field failed validation, a required header was absent, or a domain validation rule rejected an input the caller can correct. */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description `AUTHENTICATION_FAILED` — No valid credential. Either none was presented, or the session behind it is expired, revoked, or belongs to a member who can no longer sign in. This status means the session is dead and nothing else does (D2.23) — a wrong *current* password on change-password is a 400 with a `currentPassword` field error, not this. */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description `ACCESS_DENIED` — Authenticated, but lacking the permission the endpoint declares. The session is valid; do not sign the operator out. */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description `CONFLICT` — The request collided with current state for a reason other than a version mismatch: a duplicate natural key (a slug, a code, an email), or a database constraint the application did not catch first. */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description `BUSINESS_RULE_VIOLATION` — The request was well-formed and the entities exist, but a domain rule forbids it — publishing a product with no price, archiving a brand products still reference, issuing more stock than a location holds. Distinct from 400: nothing about the request is malformed. */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description `INTERNAL_ERROR` — An unhandled failure. The message is deliberately generic; `traceId` identifies the server log line that explains it. */
+            500: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+        };
+    };
+    get_5: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "*/*": components["schemas"]["PurchaseOrderResponse"];
+                };
+            };
+            /** @description `VALIDATION_FAILED` — The request body could not be read, a field failed validation, a required header was absent, or a domain validation rule rejected an input the caller can correct. */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description `AUTHENTICATION_FAILED` — No valid credential. Either none was presented, or the session behind it is expired, revoked, or belongs to a member who can no longer sign in. This status means the session is dead and nothing else does (D2.23) — a wrong *current* password on change-password is a 400 with a `currentPassword` field error, not this. */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description `ACCESS_DENIED` — Authenticated, but lacking the permission the endpoint declares. The session is valid; do not sign the operator out. */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description `NOT_FOUND` — A referenced entity does not exist, or the URL matches no endpoint. Also returned for a known path called with an unsupported method, as 405. */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description `INTERNAL_ERROR` — An unhandled failure. The message is deliberately generic; `traceId` identifies the server log line that explains it. */
+            500: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+        };
+    };
+    update_5: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["UpdatePurchaseOrderRequest"];
+            };
+        };
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "*/*": components["schemas"]["PurchaseOrderResponse"];
+                };
+            };
+            /** @description `VALIDATION_FAILED` — The request body could not be read, a field failed validation, a required header was absent, or a domain validation rule rejected an input the caller can correct. */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description `AUTHENTICATION_FAILED` — No valid credential. Either none was presented, or the session behind it is expired, revoked, or belongs to a member who can no longer sign in. This status means the session is dead and nothing else does (D2.23) — a wrong *current* password on change-password is a 400 with a `currentPassword` field error, not this. */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description `ACCESS_DENIED` — Authenticated, but lacking the permission the endpoint declares. The session is valid; do not sign the operator out. */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description `NOT_FOUND` — A referenced entity does not exist, or the URL matches no endpoint. Also returned for a known path called with an unsupported method, as 405. */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description `VERSION_CONFLICT` or `CONFLICT` — The `version` sent with an update is not the version stored — the record was changed by someone else since it was read. Nothing was written. Re-read the record, show the operator what changed, and submit again with the new `version`. */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description `BUSINESS_RULE_VIOLATION` — The request was well-formed and the entities exist, but a domain rule forbids it — publishing a product with no price, archiving a brand products still reference, issuing more stock than a location holds. Distinct from 400: nothing about the request is malformed. */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description `INTERNAL_ERROR` — An unhandled failure. The message is deliberately generic; `traceId` identifies the server log line that explains it. */
+            500: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+        };
+    };
+    approve: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "*/*": components["schemas"]["PurchaseOrderResponse"];
+                };
+            };
+            /** @description `VALIDATION_FAILED` — The request body could not be read, a field failed validation, a required header was absent, or a domain validation rule rejected an input the caller can correct. */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description `AUTHENTICATION_FAILED` — No valid credential. Either none was presented, or the session behind it is expired, revoked, or belongs to a member who can no longer sign in. This status means the session is dead and nothing else does (D2.23) — a wrong *current* password on change-password is a 400 with a `currentPassword` field error, not this. */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description `ACCESS_DENIED` — Authenticated, but lacking the permission the endpoint declares. The session is valid; do not sign the operator out. */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description `NOT_FOUND` — A referenced entity does not exist, or the URL matches no endpoint. Also returned for a known path called with an unsupported method, as 405. */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description `CONFLICT` — The request collided with current state for a reason other than a version mismatch: a duplicate natural key (a slug, a code, an email), or a database constraint the application did not catch first. */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description `BUSINESS_RULE_VIOLATION` — The request was well-formed and the entities exist, but a domain rule forbids it — publishing a product with no price, archiving a brand products still reference, issuing more stock than a location holds. Distinct from 400: nothing about the request is malformed. */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description `INTERNAL_ERROR` — An unhandled failure. The message is deliberately generic; `traceId` identifies the server log line that explains it. */
+            500: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+        };
+    };
+    cancel: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: {
+            content: {
+                "application/json": components["schemas"]["CancelPurchaseOrderRequest"];
+            };
+        };
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "*/*": components["schemas"]["PurchaseOrderResponse"];
+                };
+            };
+            /** @description `VALIDATION_FAILED` — The request body could not be read, a field failed validation, a required header was absent, or a domain validation rule rejected an input the caller can correct. */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description `AUTHENTICATION_FAILED` — No valid credential. Either none was presented, or the session behind it is expired, revoked, or belongs to a member who can no longer sign in. This status means the session is dead and nothing else does (D2.23) — a wrong *current* password on change-password is a 400 with a `currentPassword` field error, not this. */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description `ACCESS_DENIED` — Authenticated, but lacking the permission the endpoint declares. The session is valid; do not sign the operator out. */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description `NOT_FOUND` — A referenced entity does not exist, or the URL matches no endpoint. Also returned for a known path called with an unsupported method, as 405. */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description `CONFLICT` — The request collided with current state for a reason other than a version mismatch: a duplicate natural key (a slug, a code, an email), or a database constraint the application did not catch first. */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description `BUSINESS_RULE_VIOLATION` — The request was well-formed and the entities exist, but a domain rule forbids it — publishing a product with no price, archiving a brand products still reference, issuing more stock than a location holds. Distinct from 400: nothing about the request is malformed. */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description `INTERNAL_ERROR` — An unhandled failure. The message is deliberately generic; `traceId` identifies the server log line that explains it. */
+            500: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+        };
+    };
+    receipts: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "*/*": components["schemas"]["GoodsReceiptResponse"][];
+                };
+            };
+            /** @description `VALIDATION_FAILED` — The request body could not be read, a field failed validation, a required header was absent, or a domain validation rule rejected an input the caller can correct. */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description `AUTHENTICATION_FAILED` — No valid credential. Either none was presented, or the session behind it is expired, revoked, or belongs to a member who can no longer sign in. This status means the session is dead and nothing else does (D2.23) — a wrong *current* password on change-password is a 400 with a `currentPassword` field error, not this. */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description `ACCESS_DENIED` — Authenticated, but lacking the permission the endpoint declares. The session is valid; do not sign the operator out. */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description `NOT_FOUND` — A referenced entity does not exist, or the URL matches no endpoint. Also returned for a known path called with an unsupported method, as 405. */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description `INTERNAL_ERROR` — An unhandled failure. The message is deliberately generic; `traceId` identifies the server log line that explains it. */
+            500: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+        };
+    };
+    open: {
+        parameters: {
+            query: {
+                pageable: components["schemas"]["Pageable"];
+                supplierId?: string;
+                warehouseId?: string;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "*/*": components["schemas"]["PageResponsePurchaseOrderResponse"];
+                };
+            };
+            /** @description `VALIDATION_FAILED` — The request body could not be read, a field failed validation, a required header was absent, or a domain validation rule rejected an input the caller can correct. */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description `AUTHENTICATION_FAILED` — No valid credential. Either none was presented, or the session behind it is expired, revoked, or belongs to a member who can no longer sign in. This status means the session is dead and nothing else does (D2.23) — a wrong *current* password on change-password is a 400 with a `currentPassword` field error, not this. */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description `ACCESS_DENIED` — Authenticated, but lacking the permission the endpoint declares. The session is valid; do not sign the operator out. */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description `INTERNAL_ERROR` — An unhandled failure. The message is deliberately generic; `traceId` identifies the server log line that explains it. */
+            500: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+        };
+    };
+    list_4: {
         parameters: {
             query?: never;
             header?: never;
@@ -7976,7 +13464,7 @@ export interface operations {
                     "*/*": components["schemas"]["RoleResponse"][];
                 };
             };
-            /** @description Malformed request, or a field failed validation */
+            /** @description `VALIDATION_FAILED` — The request body could not be read, a field failed validation, a required header was absent, or a domain validation rule rejected an input the caller can correct. */
             400: {
                 headers: {
                     [name: string]: unknown;
@@ -7985,7 +13473,7 @@ export interface operations {
                     "application/json": components["schemas"]["ErrorResponse"];
                 };
             };
-            /** @description No valid session — absent, expired or revoked credential */
+            /** @description `AUTHENTICATION_FAILED` — No valid credential. Either none was presented, or the session behind it is expired, revoked, or belongs to a member who can no longer sign in. This status means the session is dead and nothing else does (D2.23) — a wrong *current* password on change-password is a 400 with a `currentPassword` field error, not this. */
             401: {
                 headers: {
                     [name: string]: unknown;
@@ -7994,7 +13482,7 @@ export interface operations {
                     "application/json": components["schemas"]["ErrorResponse"];
                 };
             };
-            /** @description Authenticated, but lacking the required permission */
+            /** @description `ACCESS_DENIED` — Authenticated, but lacking the permission the endpoint declares. The session is valid; do not sign the operator out. */
             403: {
                 headers: {
                     [name: string]: unknown;
@@ -8003,7 +13491,7 @@ export interface operations {
                     "application/json": components["schemas"]["ErrorResponse"];
                 };
             };
-            /** @description Unhandled failure; the traceId identifies the log line */
+            /** @description `INTERNAL_ERROR` — An unhandled failure. The message is deliberately generic; `traceId` identifies the server log line that explains it. */
             500: {
                 headers: {
                     [name: string]: unknown;
@@ -8014,7 +13502,7 @@ export interface operations {
             };
         };
     };
-    create_2: {
+    create_4: {
         parameters: {
             query?: never;
             header?: never;
@@ -8023,7 +13511,7 @@ export interface operations {
         };
         requestBody: {
             content: {
-                "application/json": components["schemas"]["SaveRoleRequest"];
+                "application/json": components["schemas"]["CreateRoleRequest"];
             };
         };
         responses: {
@@ -8036,7 +13524,7 @@ export interface operations {
                     "*/*": components["schemas"]["RoleResponse"];
                 };
             };
-            /** @description Malformed request, or a field failed validation */
+            /** @description `VALIDATION_FAILED` — The request body could not be read, a field failed validation, a required header was absent, or a domain validation rule rejected an input the caller can correct. */
             400: {
                 headers: {
                     [name: string]: unknown;
@@ -8045,7 +13533,7 @@ export interface operations {
                     "application/json": components["schemas"]["ErrorResponse"];
                 };
             };
-            /** @description No valid session — absent, expired or revoked credential */
+            /** @description `AUTHENTICATION_FAILED` — No valid credential. Either none was presented, or the session behind it is expired, revoked, or belongs to a member who can no longer sign in. This status means the session is dead and nothing else does (D2.23) — a wrong *current* password on change-password is a 400 with a `currentPassword` field error, not this. */
             401: {
                 headers: {
                     [name: string]: unknown;
@@ -8054,7 +13542,7 @@ export interface operations {
                     "application/json": components["schemas"]["ErrorResponse"];
                 };
             };
-            /** @description Authenticated, but lacking the required permission */
+            /** @description `ACCESS_DENIED` — Authenticated, but lacking the permission the endpoint declares. The session is valid; do not sign the operator out. */
             403: {
                 headers: {
                     [name: string]: unknown;
@@ -8063,7 +13551,25 @@ export interface operations {
                     "application/json": components["schemas"]["ErrorResponse"];
                 };
             };
-            /** @description Unhandled failure; the traceId identifies the log line */
+            /** @description `CONFLICT` — The request collided with current state for a reason other than a version mismatch: a duplicate natural key (a slug, a code, an email), or a database constraint the application did not catch first. */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description `BUSINESS_RULE_VIOLATION` — The request was well-formed and the entities exist, but a domain rule forbids it — publishing a product with no price, archiving a brand products still reference, issuing more stock than a location holds. Distinct from 400: nothing about the request is malformed. */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description `INTERNAL_ERROR` — An unhandled failure. The message is deliberately generic; `traceId` identifies the server log line that explains it. */
             500: {
                 headers: {
                     [name: string]: unknown;
@@ -8074,7 +13580,7 @@ export interface operations {
             };
         };
     };
-    get_2: {
+    get_4: {
         parameters: {
             query?: never;
             header?: never;
@@ -8094,7 +13600,7 @@ export interface operations {
                     "*/*": components["schemas"]["RoleResponse"];
                 };
             };
-            /** @description Malformed request, or a field failed validation */
+            /** @description `VALIDATION_FAILED` — The request body could not be read, a field failed validation, a required header was absent, or a domain validation rule rejected an input the caller can correct. */
             400: {
                 headers: {
                     [name: string]: unknown;
@@ -8103,7 +13609,7 @@ export interface operations {
                     "application/json": components["schemas"]["ErrorResponse"];
                 };
             };
-            /** @description No valid session — absent, expired or revoked credential */
+            /** @description `AUTHENTICATION_FAILED` — No valid credential. Either none was presented, or the session behind it is expired, revoked, or belongs to a member who can no longer sign in. This status means the session is dead and nothing else does (D2.23) — a wrong *current* password on change-password is a 400 with a `currentPassword` field error, not this. */
             401: {
                 headers: {
                     [name: string]: unknown;
@@ -8112,7 +13618,7 @@ export interface operations {
                     "application/json": components["schemas"]["ErrorResponse"];
                 };
             };
-            /** @description Authenticated, but lacking the required permission */
+            /** @description `ACCESS_DENIED` — Authenticated, but lacking the permission the endpoint declares. The session is valid; do not sign the operator out. */
             403: {
                 headers: {
                     [name: string]: unknown;
@@ -8121,7 +13627,16 @@ export interface operations {
                     "application/json": components["schemas"]["ErrorResponse"];
                 };
             };
-            /** @description Unhandled failure; the traceId identifies the log line */
+            /** @description `NOT_FOUND` — A referenced entity does not exist, or the URL matches no endpoint. Also returned for a known path called with an unsupported method, as 405. */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description `INTERNAL_ERROR` — An unhandled failure. The message is deliberately generic; `traceId` identifies the server log line that explains it. */
             500: {
                 headers: {
                     [name: string]: unknown;
@@ -8132,7 +13647,7 @@ export interface operations {
             };
         };
     };
-    update_2: {
+    update_4: {
         parameters: {
             query?: never;
             header?: never;
@@ -8143,7 +13658,7 @@ export interface operations {
         };
         requestBody: {
             content: {
-                "application/json": components["schemas"]["SaveRoleRequest"];
+                "application/json": components["schemas"]["UpdateRoleRequest"];
             };
         };
         responses: {
@@ -8156,7 +13671,7 @@ export interface operations {
                     "*/*": components["schemas"]["RoleResponse"];
                 };
             };
-            /** @description Malformed request, or a field failed validation */
+            /** @description `VALIDATION_FAILED` — The request body could not be read, a field failed validation, a required header was absent, or a domain validation rule rejected an input the caller can correct. */
             400: {
                 headers: {
                     [name: string]: unknown;
@@ -8165,7 +13680,7 @@ export interface operations {
                     "application/json": components["schemas"]["ErrorResponse"];
                 };
             };
-            /** @description No valid session — absent, expired or revoked credential */
+            /** @description `AUTHENTICATION_FAILED` — No valid credential. Either none was presented, or the session behind it is expired, revoked, or belongs to a member who can no longer sign in. This status means the session is dead and nothing else does (D2.23) — a wrong *current* password on change-password is a 400 with a `currentPassword` field error, not this. */
             401: {
                 headers: {
                     [name: string]: unknown;
@@ -8174,7 +13689,7 @@ export interface operations {
                     "application/json": components["schemas"]["ErrorResponse"];
                 };
             };
-            /** @description Authenticated, but lacking the required permission */
+            /** @description `ACCESS_DENIED` — Authenticated, but lacking the permission the endpoint declares. The session is valid; do not sign the operator out. */
             403: {
                 headers: {
                     [name: string]: unknown;
@@ -8183,7 +13698,34 @@ export interface operations {
                     "application/json": components["schemas"]["ErrorResponse"];
                 };
             };
-            /** @description Unhandled failure; the traceId identifies the log line */
+            /** @description `NOT_FOUND` — A referenced entity does not exist, or the URL matches no endpoint. Also returned for a known path called with an unsupported method, as 405. */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description `VERSION_CONFLICT` or `CONFLICT` — The `version` sent with an update is not the version stored — the record was changed by someone else since it was read. Nothing was written. Re-read the record, show the operator what changed, and submit again with the new `version`. */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description `BUSINESS_RULE_VIOLATION` — The request was well-formed and the entities exist, but a domain rule forbids it — publishing a product with no price, archiving a brand products still reference, issuing more stock than a location holds. Distinct from 400: nothing about the request is malformed. */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description `INTERNAL_ERROR` — An unhandled failure. The message is deliberately generic; `traceId` identifies the server log line that explains it. */
             500: {
                 headers: {
                     [name: string]: unknown;
@@ -8212,7 +13754,7 @@ export interface operations {
                 };
                 content?: never;
             };
-            /** @description Malformed request, or a field failed validation */
+            /** @description `VALIDATION_FAILED` — The request body could not be read, a field failed validation, a required header was absent, or a domain validation rule rejected an input the caller can correct. */
             400: {
                 headers: {
                     [name: string]: unknown;
@@ -8221,7 +13763,7 @@ export interface operations {
                     "application/json": components["schemas"]["ErrorResponse"];
                 };
             };
-            /** @description No valid session — absent, expired or revoked credential */
+            /** @description `AUTHENTICATION_FAILED` — No valid credential. Either none was presented, or the session behind it is expired, revoked, or belongs to a member who can no longer sign in. This status means the session is dead and nothing else does (D2.23) — a wrong *current* password on change-password is a 400 with a `currentPassword` field error, not this. */
             401: {
                 headers: {
                     [name: string]: unknown;
@@ -8230,7 +13772,7 @@ export interface operations {
                     "application/json": components["schemas"]["ErrorResponse"];
                 };
             };
-            /** @description Authenticated, but lacking the required permission */
+            /** @description `ACCESS_DENIED` — Authenticated, but lacking the permission the endpoint declares. The session is valid; do not sign the operator out. */
             403: {
                 headers: {
                     [name: string]: unknown;
@@ -8239,7 +13781,34 @@ export interface operations {
                     "application/json": components["schemas"]["ErrorResponse"];
                 };
             };
-            /** @description Unhandled failure; the traceId identifies the log line */
+            /** @description `NOT_FOUND` — A referenced entity does not exist, or the URL matches no endpoint. Also returned for a known path called with an unsupported method, as 405. */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description `CONFLICT` — The request collided with current state for a reason other than a version mismatch: a duplicate natural key (a slug, a code, an email), or a database constraint the application did not catch first. */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description `BUSINESS_RULE_VIOLATION` — The request was well-formed and the entities exist, but a domain rule forbids it — publishing a product with no price, archiving a brand products still reference, issuing more stock than a location holds. Distinct from 400: nothing about the request is malformed. */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description `INTERNAL_ERROR` — An unhandled failure. The message is deliberately generic; `traceId` identifies the server log line that explains it. */
             500: {
                 headers: {
                     [name: string]: unknown;
@@ -8274,7 +13843,7 @@ export interface operations {
                     "*/*": components["schemas"]["StockMovementResponse"];
                 };
             };
-            /** @description Malformed request, or a field failed validation */
+            /** @description `VALIDATION_FAILED` — The request body could not be read, a field failed validation, a required header was absent, or a domain validation rule rejected an input the caller can correct. */
             400: {
                 headers: {
                     [name: string]: unknown;
@@ -8283,7 +13852,7 @@ export interface operations {
                     "application/json": components["schemas"]["ErrorResponse"];
                 };
             };
-            /** @description No valid session — absent, expired or revoked credential */
+            /** @description `AUTHENTICATION_FAILED` — No valid credential. Either none was presented, or the session behind it is expired, revoked, or belongs to a member who can no longer sign in. This status means the session is dead and nothing else does (D2.23) — a wrong *current* password on change-password is a 400 with a `currentPassword` field error, not this. */
             401: {
                 headers: {
                     [name: string]: unknown;
@@ -8292,7 +13861,7 @@ export interface operations {
                     "application/json": components["schemas"]["ErrorResponse"];
                 };
             };
-            /** @description Authenticated, but lacking the required permission */
+            /** @description `ACCESS_DENIED` — Authenticated, but lacking the permission the endpoint declares. The session is valid; do not sign the operator out. */
             403: {
                 headers: {
                     [name: string]: unknown;
@@ -8301,7 +13870,25 @@ export interface operations {
                     "application/json": components["schemas"]["ErrorResponse"];
                 };
             };
-            /** @description Unhandled failure; the traceId identifies the log line */
+            /** @description `CONFLICT` — The request collided with current state for a reason other than a version mismatch: a duplicate natural key (a slug, a code, an email), or a database constraint the application did not catch first. */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description `BUSINESS_RULE_VIOLATION` — The request was well-formed and the entities exist, but a domain rule forbids it — publishing a product with no price, archiving a brand products still reference, issuing more stock than a location holds. Distinct from 400: nothing about the request is malformed. */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description `INTERNAL_ERROR` — An unhandled failure. The message is deliberately generic; `traceId` identifies the server log line that explains it. */
             500: {
                 headers: {
                     [name: string]: unknown;
@@ -8334,7 +13921,7 @@ export interface operations {
                     "*/*": components["schemas"]["PageResponseExpiringStockResponse"];
                 };
             };
-            /** @description Malformed request, or a field failed validation */
+            /** @description `VALIDATION_FAILED` — The request body could not be read, a field failed validation, a required header was absent, or a domain validation rule rejected an input the caller can correct. */
             400: {
                 headers: {
                     [name: string]: unknown;
@@ -8343,7 +13930,7 @@ export interface operations {
                     "application/json": components["schemas"]["ErrorResponse"];
                 };
             };
-            /** @description No valid session — absent, expired or revoked credential */
+            /** @description `AUTHENTICATION_FAILED` — No valid credential. Either none was presented, or the session behind it is expired, revoked, or belongs to a member who can no longer sign in. This status means the session is dead and nothing else does (D2.23) — a wrong *current* password on change-password is a 400 with a `currentPassword` field error, not this. */
             401: {
                 headers: {
                     [name: string]: unknown;
@@ -8352,7 +13939,7 @@ export interface operations {
                     "application/json": components["schemas"]["ErrorResponse"];
                 };
             };
-            /** @description Authenticated, but lacking the required permission */
+            /** @description `ACCESS_DENIED` — Authenticated, but lacking the permission the endpoint declares. The session is valid; do not sign the operator out. */
             403: {
                 headers: {
                     [name: string]: unknown;
@@ -8361,7 +13948,7 @@ export interface operations {
                     "application/json": components["schemas"]["ErrorResponse"];
                 };
             };
-            /** @description Unhandled failure; the traceId identifies the log line */
+            /** @description `INTERNAL_ERROR` — An unhandled failure. The message is deliberately generic; `traceId` identifies the server log line that explains it. */
             500: {
                 headers: {
                     [name: string]: unknown;
@@ -8396,7 +13983,7 @@ export interface operations {
                     "*/*": components["schemas"]["PageResponseStockLevelResponse"];
                 };
             };
-            /** @description Malformed request, or a field failed validation */
+            /** @description `VALIDATION_FAILED` — The request body could not be read, a field failed validation, a required header was absent, or a domain validation rule rejected an input the caller can correct. */
             400: {
                 headers: {
                     [name: string]: unknown;
@@ -8405,7 +13992,7 @@ export interface operations {
                     "application/json": components["schemas"]["ErrorResponse"];
                 };
             };
-            /** @description No valid session — absent, expired or revoked credential */
+            /** @description `AUTHENTICATION_FAILED` — No valid credential. Either none was presented, or the session behind it is expired, revoked, or belongs to a member who can no longer sign in. This status means the session is dead and nothing else does (D2.23) — a wrong *current* password on change-password is a 400 with a `currentPassword` field error, not this. */
             401: {
                 headers: {
                     [name: string]: unknown;
@@ -8414,7 +14001,7 @@ export interface operations {
                     "application/json": components["schemas"]["ErrorResponse"];
                 };
             };
-            /** @description Authenticated, but lacking the required permission */
+            /** @description `ACCESS_DENIED` — Authenticated, but lacking the permission the endpoint declares. The session is valid; do not sign the operator out. */
             403: {
                 headers: {
                     [name: string]: unknown;
@@ -8423,7 +14010,7 @@ export interface operations {
                     "application/json": components["schemas"]["ErrorResponse"];
                 };
             };
-            /** @description Unhandled failure; the traceId identifies the log line */
+            /** @description `INTERNAL_ERROR` — An unhandled failure. The message is deliberately generic; `traceId` identifies the server log line that explains it. */
             500: {
                 headers: {
                     [name: string]: unknown;
@@ -8456,7 +14043,7 @@ export interface operations {
                     "*/*": components["schemas"]["PageResponseStockLevelResponse"];
                 };
             };
-            /** @description Malformed request, or a field failed validation */
+            /** @description `VALIDATION_FAILED` — The request body could not be read, a field failed validation, a required header was absent, or a domain validation rule rejected an input the caller can correct. */
             400: {
                 headers: {
                     [name: string]: unknown;
@@ -8465,7 +14052,7 @@ export interface operations {
                     "application/json": components["schemas"]["ErrorResponse"];
                 };
             };
-            /** @description No valid session — absent, expired or revoked credential */
+            /** @description `AUTHENTICATION_FAILED` — No valid credential. Either none was presented, or the session behind it is expired, revoked, or belongs to a member who can no longer sign in. This status means the session is dead and nothing else does (D2.23) — a wrong *current* password on change-password is a 400 with a `currentPassword` field error, not this. */
             401: {
                 headers: {
                     [name: string]: unknown;
@@ -8474,7 +14061,7 @@ export interface operations {
                     "application/json": components["schemas"]["ErrorResponse"];
                 };
             };
-            /** @description Authenticated, but lacking the required permission */
+            /** @description `ACCESS_DENIED` — Authenticated, but lacking the permission the endpoint declares. The session is valid; do not sign the operator out. */
             403: {
                 headers: {
                     [name: string]: unknown;
@@ -8483,7 +14070,7 @@ export interface operations {
                     "application/json": components["schemas"]["ErrorResponse"];
                 };
             };
-            /** @description Unhandled failure; the traceId identifies the log line */
+            /** @description `INTERNAL_ERROR` — An unhandled failure. The message is deliberately generic; `traceId` identifies the server log line that explains it. */
             500: {
                 headers: {
                     [name: string]: unknown;
@@ -8520,7 +14107,7 @@ export interface operations {
                     "*/*": components["schemas"]["PageResponseStockMovementResponse"];
                 };
             };
-            /** @description Malformed request, or a field failed validation */
+            /** @description `VALIDATION_FAILED` — The request body could not be read, a field failed validation, a required header was absent, or a domain validation rule rejected an input the caller can correct. */
             400: {
                 headers: {
                     [name: string]: unknown;
@@ -8529,7 +14116,7 @@ export interface operations {
                     "application/json": components["schemas"]["ErrorResponse"];
                 };
             };
-            /** @description No valid session — absent, expired or revoked credential */
+            /** @description `AUTHENTICATION_FAILED` — No valid credential. Either none was presented, or the session behind it is expired, revoked, or belongs to a member who can no longer sign in. This status means the session is dead and nothing else does (D2.23) — a wrong *current* password on change-password is a 400 with a `currentPassword` field error, not this. */
             401: {
                 headers: {
                     [name: string]: unknown;
@@ -8538,7 +14125,7 @@ export interface operations {
                     "application/json": components["schemas"]["ErrorResponse"];
                 };
             };
-            /** @description Authenticated, but lacking the required permission */
+            /** @description `ACCESS_DENIED` — Authenticated, but lacking the permission the endpoint declares. The session is valid; do not sign the operator out. */
             403: {
                 headers: {
                     [name: string]: unknown;
@@ -8547,7 +14134,7 @@ export interface operations {
                     "application/json": components["schemas"]["ErrorResponse"];
                 };
             };
-            /** @description Unhandled failure; the traceId identifies the log line */
+            /** @description `INTERNAL_ERROR` — An unhandled failure. The message is deliberately generic; `traceId` identifies the server log line that explains it. */
             500: {
                 headers: {
                     [name: string]: unknown;
@@ -8576,7 +14163,7 @@ export interface operations {
                     "*/*": components["schemas"]["RebuildResponse"];
                 };
             };
-            /** @description Malformed request, or a field failed validation */
+            /** @description `VALIDATION_FAILED` — The request body could not be read, a field failed validation, a required header was absent, or a domain validation rule rejected an input the caller can correct. */
             400: {
                 headers: {
                     [name: string]: unknown;
@@ -8585,7 +14172,7 @@ export interface operations {
                     "application/json": components["schemas"]["ErrorResponse"];
                 };
             };
-            /** @description No valid session — absent, expired or revoked credential */
+            /** @description `AUTHENTICATION_FAILED` — No valid credential. Either none was presented, or the session behind it is expired, revoked, or belongs to a member who can no longer sign in. This status means the session is dead and nothing else does (D2.23) — a wrong *current* password on change-password is a 400 with a `currentPassword` field error, not this. */
             401: {
                 headers: {
                     [name: string]: unknown;
@@ -8594,7 +14181,7 @@ export interface operations {
                     "application/json": components["schemas"]["ErrorResponse"];
                 };
             };
-            /** @description Authenticated, but lacking the required permission */
+            /** @description `ACCESS_DENIED` — Authenticated, but lacking the permission the endpoint declares. The session is valid; do not sign the operator out. */
             403: {
                 headers: {
                     [name: string]: unknown;
@@ -8603,7 +14190,25 @@ export interface operations {
                     "application/json": components["schemas"]["ErrorResponse"];
                 };
             };
-            /** @description Unhandled failure; the traceId identifies the log line */
+            /** @description `CONFLICT` — The request collided with current state for a reason other than a version mismatch: a duplicate natural key (a slug, a code, an email), or a database constraint the application did not catch first. */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description `BUSINESS_RULE_VIOLATION` — The request was well-formed and the entities exist, but a domain rule forbids it — publishing a product with no price, archiving a brand products still reference, issuing more stock than a location holds. Distinct from 400: nothing about the request is malformed. */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description `INTERNAL_ERROR` — An unhandled failure. The message is deliberately generic; `traceId` identifies the server log line that explains it. */
             500: {
                 headers: {
                     [name: string]: unknown;
@@ -8632,7 +14237,7 @@ export interface operations {
                     "*/*": components["schemas"]["ReconcileResponse"];
                 };
             };
-            /** @description Malformed request, or a field failed validation */
+            /** @description `VALIDATION_FAILED` — The request body could not be read, a field failed validation, a required header was absent, or a domain validation rule rejected an input the caller can correct. */
             400: {
                 headers: {
                     [name: string]: unknown;
@@ -8641,7 +14246,7 @@ export interface operations {
                     "application/json": components["schemas"]["ErrorResponse"];
                 };
             };
-            /** @description No valid session — absent, expired or revoked credential */
+            /** @description `AUTHENTICATION_FAILED` — No valid credential. Either none was presented, or the session behind it is expired, revoked, or belongs to a member who can no longer sign in. This status means the session is dead and nothing else does (D2.23) — a wrong *current* password on change-password is a 400 with a `currentPassword` field error, not this. */
             401: {
                 headers: {
                     [name: string]: unknown;
@@ -8650,7 +14255,7 @@ export interface operations {
                     "application/json": components["schemas"]["ErrorResponse"];
                 };
             };
-            /** @description Authenticated, but lacking the required permission */
+            /** @description `ACCESS_DENIED` — Authenticated, but lacking the permission the endpoint declares. The session is valid; do not sign the operator out. */
             403: {
                 headers: {
                     [name: string]: unknown;
@@ -8659,7 +14264,7 @@ export interface operations {
                     "application/json": components["schemas"]["ErrorResponse"];
                 };
             };
-            /** @description Unhandled failure; the traceId identifies the log line */
+            /** @description `INTERNAL_ERROR` — An unhandled failure. The message is deliberately generic; `traceId` identifies the server log line that explains it. */
             500: {
                 headers: {
                     [name: string]: unknown;
@@ -8691,7 +14296,7 @@ export interface operations {
                     "*/*": components["schemas"]["PageResponseStockTotalResponse"];
                 };
             };
-            /** @description Malformed request, or a field failed validation */
+            /** @description `VALIDATION_FAILED` — The request body could not be read, a field failed validation, a required header was absent, or a domain validation rule rejected an input the caller can correct. */
             400: {
                 headers: {
                     [name: string]: unknown;
@@ -8700,7 +14305,7 @@ export interface operations {
                     "application/json": components["schemas"]["ErrorResponse"];
                 };
             };
-            /** @description No valid session — absent, expired or revoked credential */
+            /** @description `AUTHENTICATION_FAILED` — No valid credential. Either none was presented, or the session behind it is expired, revoked, or belongs to a member who can no longer sign in. This status means the session is dead and nothing else does (D2.23) — a wrong *current* password on change-password is a 400 with a `currentPassword` field error, not this. */
             401: {
                 headers: {
                     [name: string]: unknown;
@@ -8709,7 +14314,7 @@ export interface operations {
                     "application/json": components["schemas"]["ErrorResponse"];
                 };
             };
-            /** @description Authenticated, but lacking the required permission */
+            /** @description `ACCESS_DENIED` — Authenticated, but lacking the permission the endpoint declares. The session is valid; do not sign the operator out. */
             403: {
                 headers: {
                     [name: string]: unknown;
@@ -8718,7 +14323,7 @@ export interface operations {
                     "application/json": components["schemas"]["ErrorResponse"];
                 };
             };
-            /** @description Unhandled failure; the traceId identifies the log line */
+            /** @description `INTERNAL_ERROR` — An unhandled failure. The message is deliberately generic; `traceId` identifies the server log line that explains it. */
             500: {
                 headers: {
                     [name: string]: unknown;
@@ -8753,7 +14358,7 @@ export interface operations {
                     "*/*": components["schemas"]["TransferResponse"];
                 };
             };
-            /** @description Malformed request, or a field failed validation */
+            /** @description `VALIDATION_FAILED` — The request body could not be read, a field failed validation, a required header was absent, or a domain validation rule rejected an input the caller can correct. */
             400: {
                 headers: {
                     [name: string]: unknown;
@@ -8762,7 +14367,7 @@ export interface operations {
                     "application/json": components["schemas"]["ErrorResponse"];
                 };
             };
-            /** @description No valid session — absent, expired or revoked credential */
+            /** @description `AUTHENTICATION_FAILED` — No valid credential. Either none was presented, or the session behind it is expired, revoked, or belongs to a member who can no longer sign in. This status means the session is dead and nothing else does (D2.23) — a wrong *current* password on change-password is a 400 with a `currentPassword` field error, not this. */
             401: {
                 headers: {
                     [name: string]: unknown;
@@ -8771,7 +14376,7 @@ export interface operations {
                     "application/json": components["schemas"]["ErrorResponse"];
                 };
             };
-            /** @description Authenticated, but lacking the required permission */
+            /** @description `ACCESS_DENIED` — Authenticated, but lacking the permission the endpoint declares. The session is valid; do not sign the operator out. */
             403: {
                 headers: {
                     [name: string]: unknown;
@@ -8780,7 +14385,25 @@ export interface operations {
                     "application/json": components["schemas"]["ErrorResponse"];
                 };
             };
-            /** @description Unhandled failure; the traceId identifies the log line */
+            /** @description `CONFLICT` — The request collided with current state for a reason other than a version mismatch: a duplicate natural key (a slug, a code, an email), or a database constraint the application did not catch first. */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description `BUSINESS_RULE_VIOLATION` — The request was well-formed and the entities exist, but a domain rule forbids it — publishing a product with no price, archiving a brand products still reference, issuing more stock than a location holds. Distinct from 400: nothing about the request is malformed. */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description `INTERNAL_ERROR` — An unhandled failure. The message is deliberately generic; `traceId` identifies the server log line that explains it. */
             500: {
                 headers: {
                     [name: string]: unknown;
@@ -8811,7 +14434,7 @@ export interface operations {
                     "*/*": components["schemas"]["TransferResponse"];
                 };
             };
-            /** @description Malformed request, or a field failed validation */
+            /** @description `VALIDATION_FAILED` — The request body could not be read, a field failed validation, a required header was absent, or a domain validation rule rejected an input the caller can correct. */
             400: {
                 headers: {
                     [name: string]: unknown;
@@ -8820,7 +14443,7 @@ export interface operations {
                     "application/json": components["schemas"]["ErrorResponse"];
                 };
             };
-            /** @description No valid session — absent, expired or revoked credential */
+            /** @description `AUTHENTICATION_FAILED` — No valid credential. Either none was presented, or the session behind it is expired, revoked, or belongs to a member who can no longer sign in. This status means the session is dead and nothing else does (D2.23) — a wrong *current* password on change-password is a 400 with a `currentPassword` field error, not this. */
             401: {
                 headers: {
                     [name: string]: unknown;
@@ -8829,7 +14452,7 @@ export interface operations {
                     "application/json": components["schemas"]["ErrorResponse"];
                 };
             };
-            /** @description Authenticated, but lacking the required permission */
+            /** @description `ACCESS_DENIED` — Authenticated, but lacking the permission the endpoint declares. The session is valid; do not sign the operator out. */
             403: {
                 headers: {
                     [name: string]: unknown;
@@ -8838,7 +14461,16 @@ export interface operations {
                     "application/json": components["schemas"]["ErrorResponse"];
                 };
             };
-            /** @description Unhandled failure; the traceId identifies the log line */
+            /** @description `NOT_FOUND` — A referenced entity does not exist, or the URL matches no endpoint. Also returned for a known path called with an unsupported method, as 405. */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description `INTERNAL_ERROR` — An unhandled failure. The message is deliberately generic; `traceId` identifies the server log line that explains it. */
             500: {
                 headers: {
                     [name: string]: unknown;
@@ -8849,7 +14481,471 @@ export interface operations {
             };
         };
     };
-    list_1: {
+    list_3: {
+        parameters: {
+            query: {
+                active?: boolean;
+                pageable: components["schemas"]["Pageable"];
+                search?: string;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "*/*": components["schemas"]["PageResponseSupplierResponse"];
+                };
+            };
+            /** @description `VALIDATION_FAILED` — The request body could not be read, a field failed validation, a required header was absent, or a domain validation rule rejected an input the caller can correct. */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description `AUTHENTICATION_FAILED` — No valid credential. Either none was presented, or the session behind it is expired, revoked, or belongs to a member who can no longer sign in. This status means the session is dead and nothing else does (D2.23) — a wrong *current* password on change-password is a 400 with a `currentPassword` field error, not this. */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description `ACCESS_DENIED` — Authenticated, but lacking the permission the endpoint declares. The session is valid; do not sign the operator out. */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description `INTERNAL_ERROR` — An unhandled failure. The message is deliberately generic; `traceId` identifies the server log line that explains it. */
+            500: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+        };
+    };
+    create_3: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["CreateSupplierRequest"];
+            };
+        };
+        responses: {
+            /** @description Created */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "*/*": components["schemas"]["SupplierResponse"];
+                };
+            };
+            /** @description `VALIDATION_FAILED` — The request body could not be read, a field failed validation, a required header was absent, or a domain validation rule rejected an input the caller can correct. */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description `AUTHENTICATION_FAILED` — No valid credential. Either none was presented, or the session behind it is expired, revoked, or belongs to a member who can no longer sign in. This status means the session is dead and nothing else does (D2.23) — a wrong *current* password on change-password is a 400 with a `currentPassword` field error, not this. */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description `ACCESS_DENIED` — Authenticated, but lacking the permission the endpoint declares. The session is valid; do not sign the operator out. */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description `CONFLICT` — The request collided with current state for a reason other than a version mismatch: a duplicate natural key (a slug, a code, an email), or a database constraint the application did not catch first. */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description `BUSINESS_RULE_VIOLATION` — The request was well-formed and the entities exist, but a domain rule forbids it — publishing a product with no price, archiving a brand products still reference, issuing more stock than a location holds. Distinct from 400: nothing about the request is malformed. */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description `INTERNAL_ERROR` — An unhandled failure. The message is deliberately generic; `traceId` identifies the server log line that explains it. */
+            500: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+        };
+    };
+    get_3: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "*/*": components["schemas"]["SupplierResponse"];
+                };
+            };
+            /** @description `VALIDATION_FAILED` — The request body could not be read, a field failed validation, a required header was absent, or a domain validation rule rejected an input the caller can correct. */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description `AUTHENTICATION_FAILED` — No valid credential. Either none was presented, or the session behind it is expired, revoked, or belongs to a member who can no longer sign in. This status means the session is dead and nothing else does (D2.23) — a wrong *current* password on change-password is a 400 with a `currentPassword` field error, not this. */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description `ACCESS_DENIED` — Authenticated, but lacking the permission the endpoint declares. The session is valid; do not sign the operator out. */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description `NOT_FOUND` — A referenced entity does not exist, or the URL matches no endpoint. Also returned for a known path called with an unsupported method, as 405. */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description `INTERNAL_ERROR` — An unhandled failure. The message is deliberately generic; `traceId` identifies the server log line that explains it. */
+            500: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+        };
+    };
+    update_3: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["UpdateSupplierRequest"];
+            };
+        };
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "*/*": components["schemas"]["SupplierResponse"];
+                };
+            };
+            /** @description `VALIDATION_FAILED` — The request body could not be read, a field failed validation, a required header was absent, or a domain validation rule rejected an input the caller can correct. */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description `AUTHENTICATION_FAILED` — No valid credential. Either none was presented, or the session behind it is expired, revoked, or belongs to a member who can no longer sign in. This status means the session is dead and nothing else does (D2.23) — a wrong *current* password on change-password is a 400 with a `currentPassword` field error, not this. */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description `ACCESS_DENIED` — Authenticated, but lacking the permission the endpoint declares. The session is valid; do not sign the operator out. */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description `NOT_FOUND` — A referenced entity does not exist, or the URL matches no endpoint. Also returned for a known path called with an unsupported method, as 405. */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description `VERSION_CONFLICT` or `CONFLICT` — The `version` sent with an update is not the version stored — the record was changed by someone else since it was read. Nothing was written. Re-read the record, show the operator what changed, and submit again with the new `version`. */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description `BUSINESS_RULE_VIOLATION` — The request was well-formed and the entities exist, but a domain rule forbids it — publishing a product with no price, archiving a brand products still reference, issuing more stock than a location holds. Distinct from 400: nothing about the request is malformed. */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description `INTERNAL_ERROR` — An unhandled failure. The message is deliberately generic; `traceId` identifies the server log line that explains it. */
+            500: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+        };
+    };
+    deactivate_2: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "*/*": components["schemas"]["SupplierResponse"];
+                };
+            };
+            /** @description `VALIDATION_FAILED` — The request body could not be read, a field failed validation, a required header was absent, or a domain validation rule rejected an input the caller can correct. */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description `AUTHENTICATION_FAILED` — No valid credential. Either none was presented, or the session behind it is expired, revoked, or belongs to a member who can no longer sign in. This status means the session is dead and nothing else does (D2.23) — a wrong *current* password on change-password is a 400 with a `currentPassword` field error, not this. */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description `ACCESS_DENIED` — Authenticated, but lacking the permission the endpoint declares. The session is valid; do not sign the operator out. */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description `NOT_FOUND` — A referenced entity does not exist, or the URL matches no endpoint. Also returned for a known path called with an unsupported method, as 405. */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description `CONFLICT` — The request collided with current state for a reason other than a version mismatch: a duplicate natural key (a slug, a code, an email), or a database constraint the application did not catch first. */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description `BUSINESS_RULE_VIOLATION` — The request was well-formed and the entities exist, but a domain rule forbids it — publishing a product with no price, archiving a brand products still reference, issuing more stock than a location holds. Distinct from 400: nothing about the request is malformed. */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description `INTERNAL_ERROR` — An unhandled failure. The message is deliberately generic; `traceId` identifies the server log line that explains it. */
+            500: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+        };
+    };
+    reactivate_1: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "*/*": components["schemas"]["SupplierResponse"];
+                };
+            };
+            /** @description `VALIDATION_FAILED` — The request body could not be read, a field failed validation, a required header was absent, or a domain validation rule rejected an input the caller can correct. */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description `AUTHENTICATION_FAILED` — No valid credential. Either none was presented, or the session behind it is expired, revoked, or belongs to a member who can no longer sign in. This status means the session is dead and nothing else does (D2.23) — a wrong *current* password on change-password is a 400 with a `currentPassword` field error, not this. */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description `ACCESS_DENIED` — Authenticated, but lacking the permission the endpoint declares. The session is valid; do not sign the operator out. */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description `NOT_FOUND` — A referenced entity does not exist, or the URL matches no endpoint. Also returned for a known path called with an unsupported method, as 405. */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description `CONFLICT` — The request collided with current state for a reason other than a version mismatch: a duplicate natural key (a slug, a code, an email), or a database constraint the application did not catch first. */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description `BUSINESS_RULE_VIOLATION` — The request was well-formed and the entities exist, but a domain rule forbids it — publishing a product with no price, archiving a brand products still reference, issuing more stock than a location holds. Distinct from 400: nothing about the request is malformed. */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description `INTERNAL_ERROR` — An unhandled failure. The message is deliberately generic; `traceId` identifies the server log line that explains it. */
+            500: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+        };
+    };
+    list_2: {
         parameters: {
             query: {
                 pageable: components["schemas"]["Pageable"];
@@ -8870,7 +14966,7 @@ export interface operations {
                     "*/*": components["schemas"]["PageResponseTeamMemberResponse"];
                 };
             };
-            /** @description Malformed request, or a field failed validation */
+            /** @description `VALIDATION_FAILED` — The request body could not be read, a field failed validation, a required header was absent, or a domain validation rule rejected an input the caller can correct. */
             400: {
                 headers: {
                     [name: string]: unknown;
@@ -8879,7 +14975,7 @@ export interface operations {
                     "application/json": components["schemas"]["ErrorResponse"];
                 };
             };
-            /** @description No valid session — absent, expired or revoked credential */
+            /** @description `AUTHENTICATION_FAILED` — No valid credential. Either none was presented, or the session behind it is expired, revoked, or belongs to a member who can no longer sign in. This status means the session is dead and nothing else does (D2.23) — a wrong *current* password on change-password is a 400 with a `currentPassword` field error, not this. */
             401: {
                 headers: {
                     [name: string]: unknown;
@@ -8888,7 +14984,7 @@ export interface operations {
                     "application/json": components["schemas"]["ErrorResponse"];
                 };
             };
-            /** @description Authenticated, but lacking the required permission */
+            /** @description `ACCESS_DENIED` — Authenticated, but lacking the permission the endpoint declares. The session is valid; do not sign the operator out. */
             403: {
                 headers: {
                     [name: string]: unknown;
@@ -8897,7 +14993,7 @@ export interface operations {
                     "application/json": components["schemas"]["ErrorResponse"];
                 };
             };
-            /** @description Unhandled failure; the traceId identifies the log line */
+            /** @description `INTERNAL_ERROR` — An unhandled failure. The message is deliberately generic; `traceId` identifies the server log line that explains it. */
             500: {
                 headers: {
                     [name: string]: unknown;
@@ -8908,7 +15004,7 @@ export interface operations {
             };
         };
     };
-    create_1: {
+    create_2: {
         parameters: {
             query?: never;
             header?: never;
@@ -8930,7 +15026,7 @@ export interface operations {
                     "*/*": components["schemas"]["InvitedTeamMemberResponse"];
                 };
             };
-            /** @description Malformed request, or a field failed validation */
+            /** @description `VALIDATION_FAILED` — The request body could not be read, a field failed validation, a required header was absent, or a domain validation rule rejected an input the caller can correct. */
             400: {
                 headers: {
                     [name: string]: unknown;
@@ -8939,7 +15035,7 @@ export interface operations {
                     "application/json": components["schemas"]["ErrorResponse"];
                 };
             };
-            /** @description No valid session — absent, expired or revoked credential */
+            /** @description `AUTHENTICATION_FAILED` — No valid credential. Either none was presented, or the session behind it is expired, revoked, or belongs to a member who can no longer sign in. This status means the session is dead and nothing else does (D2.23) — a wrong *current* password on change-password is a 400 with a `currentPassword` field error, not this. */
             401: {
                 headers: {
                     [name: string]: unknown;
@@ -8948,7 +15044,7 @@ export interface operations {
                     "application/json": components["schemas"]["ErrorResponse"];
                 };
             };
-            /** @description Authenticated, but lacking the required permission */
+            /** @description `ACCESS_DENIED` — Authenticated, but lacking the permission the endpoint declares. The session is valid; do not sign the operator out. */
             403: {
                 headers: {
                     [name: string]: unknown;
@@ -8957,7 +15053,25 @@ export interface operations {
                     "application/json": components["schemas"]["ErrorResponse"];
                 };
             };
-            /** @description Unhandled failure; the traceId identifies the log line */
+            /** @description `CONFLICT` — The request collided with current state for a reason other than a version mismatch: a duplicate natural key (a slug, a code, an email), or a database constraint the application did not catch first. */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description `BUSINESS_RULE_VIOLATION` — The request was well-formed and the entities exist, but a domain rule forbids it — publishing a product with no price, archiving a brand products still reference, issuing more stock than a location holds. Distinct from 400: nothing about the request is malformed. */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description `INTERNAL_ERROR` — An unhandled failure. The message is deliberately generic; `traceId` identifies the server log line that explains it. */
             500: {
                 headers: {
                     [name: string]: unknown;
@@ -8968,7 +15082,7 @@ export interface operations {
             };
         };
     };
-    get_1: {
+    get_2: {
         parameters: {
             query?: never;
             header?: never;
@@ -8988,7 +15102,7 @@ export interface operations {
                     "*/*": components["schemas"]["TeamMemberResponse"];
                 };
             };
-            /** @description Malformed request, or a field failed validation */
+            /** @description `VALIDATION_FAILED` — The request body could not be read, a field failed validation, a required header was absent, or a domain validation rule rejected an input the caller can correct. */
             400: {
                 headers: {
                     [name: string]: unknown;
@@ -8997,7 +15111,7 @@ export interface operations {
                     "application/json": components["schemas"]["ErrorResponse"];
                 };
             };
-            /** @description No valid session — absent, expired or revoked credential */
+            /** @description `AUTHENTICATION_FAILED` — No valid credential. Either none was presented, or the session behind it is expired, revoked, or belongs to a member who can no longer sign in. This status means the session is dead and nothing else does (D2.23) — a wrong *current* password on change-password is a 400 with a `currentPassword` field error, not this. */
             401: {
                 headers: {
                     [name: string]: unknown;
@@ -9006,7 +15120,7 @@ export interface operations {
                     "application/json": components["schemas"]["ErrorResponse"];
                 };
             };
-            /** @description Authenticated, but lacking the required permission */
+            /** @description `ACCESS_DENIED` — Authenticated, but lacking the permission the endpoint declares. The session is valid; do not sign the operator out. */
             403: {
                 headers: {
                     [name: string]: unknown;
@@ -9015,7 +15129,16 @@ export interface operations {
                     "application/json": components["schemas"]["ErrorResponse"];
                 };
             };
-            /** @description Unhandled failure; the traceId identifies the log line */
+            /** @description `NOT_FOUND` — A referenced entity does not exist, or the URL matches no endpoint. Also returned for a known path called with an unsupported method, as 405. */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description `INTERNAL_ERROR` — An unhandled failure. The message is deliberately generic; `traceId` identifies the server log line that explains it. */
             500: {
                 headers: {
                     [name: string]: unknown;
@@ -9026,7 +15149,7 @@ export interface operations {
             };
         };
     };
-    update_1: {
+    update_2: {
         parameters: {
             query?: never;
             header?: never;
@@ -9050,7 +15173,7 @@ export interface operations {
                     "*/*": components["schemas"]["TeamMemberResponse"];
                 };
             };
-            /** @description Malformed request, or a field failed validation */
+            /** @description `VALIDATION_FAILED` — The request body could not be read, a field failed validation, a required header was absent, or a domain validation rule rejected an input the caller can correct. */
             400: {
                 headers: {
                     [name: string]: unknown;
@@ -9059,7 +15182,7 @@ export interface operations {
                     "application/json": components["schemas"]["ErrorResponse"];
                 };
             };
-            /** @description No valid session — absent, expired or revoked credential */
+            /** @description `AUTHENTICATION_FAILED` — No valid credential. Either none was presented, or the session behind it is expired, revoked, or belongs to a member who can no longer sign in. This status means the session is dead and nothing else does (D2.23) — a wrong *current* password on change-password is a 400 with a `currentPassword` field error, not this. */
             401: {
                 headers: {
                     [name: string]: unknown;
@@ -9068,7 +15191,7 @@ export interface operations {
                     "application/json": components["schemas"]["ErrorResponse"];
                 };
             };
-            /** @description Authenticated, but lacking the required permission */
+            /** @description `ACCESS_DENIED` — Authenticated, but lacking the permission the endpoint declares. The session is valid; do not sign the operator out. */
             403: {
                 headers: {
                     [name: string]: unknown;
@@ -9077,7 +15200,34 @@ export interface operations {
                     "application/json": components["schemas"]["ErrorResponse"];
                 };
             };
-            /** @description Unhandled failure; the traceId identifies the log line */
+            /** @description `NOT_FOUND` — A referenced entity does not exist, or the URL matches no endpoint. Also returned for a known path called with an unsupported method, as 405. */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description `VERSION_CONFLICT` or `CONFLICT` — The `version` sent with an update is not the version stored — the record was changed by someone else since it was read. Nothing was written. Re-read the record, show the operator what changed, and submit again with the new `version`. */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description `BUSINESS_RULE_VIOLATION` — The request was well-formed and the entities exist, but a domain rule forbids it — publishing a product with no price, archiving a brand products still reference, issuing more stock than a location holds. Distinct from 400: nothing about the request is malformed. */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description `INTERNAL_ERROR` — An unhandled failure. The message is deliberately generic; `traceId` identifies the server log line that explains it. */
             500: {
                 headers: {
                     [name: string]: unknown;
@@ -9108,7 +15258,7 @@ export interface operations {
                     "*/*": components["schemas"]["TeamMemberResponse"];
                 };
             };
-            /** @description Malformed request, or a field failed validation */
+            /** @description `VALIDATION_FAILED` — The request body could not be read, a field failed validation, a required header was absent, or a domain validation rule rejected an input the caller can correct. */
             400: {
                 headers: {
                     [name: string]: unknown;
@@ -9117,7 +15267,7 @@ export interface operations {
                     "application/json": components["schemas"]["ErrorResponse"];
                 };
             };
-            /** @description No valid session — absent, expired or revoked credential */
+            /** @description `AUTHENTICATION_FAILED` — No valid credential. Either none was presented, or the session behind it is expired, revoked, or belongs to a member who can no longer sign in. This status means the session is dead and nothing else does (D2.23) — a wrong *current* password on change-password is a 400 with a `currentPassword` field error, not this. */
             401: {
                 headers: {
                     [name: string]: unknown;
@@ -9126,7 +15276,7 @@ export interface operations {
                     "application/json": components["schemas"]["ErrorResponse"];
                 };
             };
-            /** @description Authenticated, but lacking the required permission */
+            /** @description `ACCESS_DENIED` — Authenticated, but lacking the permission the endpoint declares. The session is valid; do not sign the operator out. */
             403: {
                 headers: {
                     [name: string]: unknown;
@@ -9135,7 +15285,34 @@ export interface operations {
                     "application/json": components["schemas"]["ErrorResponse"];
                 };
             };
-            /** @description Unhandled failure; the traceId identifies the log line */
+            /** @description `NOT_FOUND` — A referenced entity does not exist, or the URL matches no endpoint. Also returned for a known path called with an unsupported method, as 405. */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description `CONFLICT` — The request collided with current state for a reason other than a version mismatch: a duplicate natural key (a slug, a code, an email), or a database constraint the application did not catch first. */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description `BUSINESS_RULE_VIOLATION` — The request was well-formed and the entities exist, but a domain rule forbids it — publishing a product with no price, archiving a brand products still reference, issuing more stock than a location holds. Distinct from 400: nothing about the request is malformed. */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description `INTERNAL_ERROR` — An unhandled failure. The message is deliberately generic; `traceId` identifies the server log line that explains it. */
             500: {
                 headers: {
                     [name: string]: unknown;
@@ -9166,7 +15343,7 @@ export interface operations {
                     "*/*": components["schemas"]["TeamMemberResponse"];
                 };
             };
-            /** @description Malformed request, or a field failed validation */
+            /** @description `VALIDATION_FAILED` — The request body could not be read, a field failed validation, a required header was absent, or a domain validation rule rejected an input the caller can correct. */
             400: {
                 headers: {
                     [name: string]: unknown;
@@ -9175,7 +15352,7 @@ export interface operations {
                     "application/json": components["schemas"]["ErrorResponse"];
                 };
             };
-            /** @description No valid session — absent, expired or revoked credential */
+            /** @description `AUTHENTICATION_FAILED` — No valid credential. Either none was presented, or the session behind it is expired, revoked, or belongs to a member who can no longer sign in. This status means the session is dead and nothing else does (D2.23) — a wrong *current* password on change-password is a 400 with a `currentPassword` field error, not this. */
             401: {
                 headers: {
                     [name: string]: unknown;
@@ -9184,7 +15361,7 @@ export interface operations {
                     "application/json": components["schemas"]["ErrorResponse"];
                 };
             };
-            /** @description Authenticated, but lacking the required permission */
+            /** @description `ACCESS_DENIED` — Authenticated, but lacking the permission the endpoint declares. The session is valid; do not sign the operator out. */
             403: {
                 headers: {
                     [name: string]: unknown;
@@ -9193,7 +15370,34 @@ export interface operations {
                     "application/json": components["schemas"]["ErrorResponse"];
                 };
             };
-            /** @description Unhandled failure; the traceId identifies the log line */
+            /** @description `NOT_FOUND` — A referenced entity does not exist, or the URL matches no endpoint. Also returned for a known path called with an unsupported method, as 405. */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description `CONFLICT` — The request collided with current state for a reason other than a version mismatch: a duplicate natural key (a slug, a code, an email), or a database constraint the application did not catch first. */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description `BUSINESS_RULE_VIOLATION` — The request was well-formed and the entities exist, but a domain rule forbids it — publishing a product with no price, archiving a brand products still reference, issuing more stock than a location holds. Distinct from 400: nothing about the request is malformed. */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description `INTERNAL_ERROR` — An unhandled failure. The message is deliberately generic; `traceId` identifies the server log line that explains it. */
             500: {
                 headers: {
                     [name: string]: unknown;
@@ -9224,7 +15428,7 @@ export interface operations {
                     "*/*": components["schemas"]["ForceLogoutResponse"];
                 };
             };
-            /** @description Malformed request, or a field failed validation */
+            /** @description `VALIDATION_FAILED` — The request body could not be read, a field failed validation, a required header was absent, or a domain validation rule rejected an input the caller can correct. */
             400: {
                 headers: {
                     [name: string]: unknown;
@@ -9233,7 +15437,7 @@ export interface operations {
                     "application/json": components["schemas"]["ErrorResponse"];
                 };
             };
-            /** @description No valid session — absent, expired or revoked credential */
+            /** @description `AUTHENTICATION_FAILED` — No valid credential. Either none was presented, or the session behind it is expired, revoked, or belongs to a member who can no longer sign in. This status means the session is dead and nothing else does (D2.23) — a wrong *current* password on change-password is a 400 with a `currentPassword` field error, not this. */
             401: {
                 headers: {
                     [name: string]: unknown;
@@ -9242,7 +15446,7 @@ export interface operations {
                     "application/json": components["schemas"]["ErrorResponse"];
                 };
             };
-            /** @description Authenticated, but lacking the required permission */
+            /** @description `ACCESS_DENIED` — Authenticated, but lacking the permission the endpoint declares. The session is valid; do not sign the operator out. */
             403: {
                 headers: {
                     [name: string]: unknown;
@@ -9251,7 +15455,34 @@ export interface operations {
                     "application/json": components["schemas"]["ErrorResponse"];
                 };
             };
-            /** @description Unhandled failure; the traceId identifies the log line */
+            /** @description `NOT_FOUND` — A referenced entity does not exist, or the URL matches no endpoint. Also returned for a known path called with an unsupported method, as 405. */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description `CONFLICT` — The request collided with current state for a reason other than a version mismatch: a duplicate natural key (a slug, a code, an email), or a database constraint the application did not catch first. */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description `BUSINESS_RULE_VIOLATION` — The request was well-formed and the entities exist, but a domain rule forbids it — publishing a product with no price, archiving a brand products still reference, issuing more stock than a location holds. Distinct from 400: nothing about the request is malformed. */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description `INTERNAL_ERROR` — An unhandled failure. The message is deliberately generic; `traceId` identifies the server log line that explains it. */
             500: {
                 headers: {
                     [name: string]: unknown;
@@ -9282,7 +15513,7 @@ export interface operations {
                     "*/*": components["schemas"]["InvitedTeamMemberResponse"];
                 };
             };
-            /** @description Malformed request, or a field failed validation */
+            /** @description `VALIDATION_FAILED` — The request body could not be read, a field failed validation, a required header was absent, or a domain validation rule rejected an input the caller can correct. */
             400: {
                 headers: {
                     [name: string]: unknown;
@@ -9291,7 +15522,7 @@ export interface operations {
                     "application/json": components["schemas"]["ErrorResponse"];
                 };
             };
-            /** @description No valid session — absent, expired or revoked credential */
+            /** @description `AUTHENTICATION_FAILED` — No valid credential. Either none was presented, or the session behind it is expired, revoked, or belongs to a member who can no longer sign in. This status means the session is dead and nothing else does (D2.23) — a wrong *current* password on change-password is a 400 with a `currentPassword` field error, not this. */
             401: {
                 headers: {
                     [name: string]: unknown;
@@ -9300,7 +15531,7 @@ export interface operations {
                     "application/json": components["schemas"]["ErrorResponse"];
                 };
             };
-            /** @description Authenticated, but lacking the required permission */
+            /** @description `ACCESS_DENIED` — Authenticated, but lacking the permission the endpoint declares. The session is valid; do not sign the operator out. */
             403: {
                 headers: {
                     [name: string]: unknown;
@@ -9309,7 +15540,34 @@ export interface operations {
                     "application/json": components["schemas"]["ErrorResponse"];
                 };
             };
-            /** @description Unhandled failure; the traceId identifies the log line */
+            /** @description `NOT_FOUND` — A referenced entity does not exist, or the URL matches no endpoint. Also returned for a known path called with an unsupported method, as 405. */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description `CONFLICT` — The request collided with current state for a reason other than a version mismatch: a duplicate natural key (a slug, a code, an email), or a database constraint the application did not catch first. */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description `BUSINESS_RULE_VIOLATION` — The request was well-formed and the entities exist, but a domain rule forbids it — publishing a product with no price, archiving a brand products still reference, issuing more stock than a location holds. Distinct from 400: nothing about the request is malformed. */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description `INTERNAL_ERROR` — An unhandled failure. The message is deliberately generic; `traceId` identifies the server log line that explains it. */
             500: {
                 headers: {
                     [name: string]: unknown;
@@ -9340,7 +15598,7 @@ export interface operations {
                     "*/*": components["schemas"]["PasswordResetLinkResponse"];
                 };
             };
-            /** @description Malformed request, or a field failed validation */
+            /** @description `VALIDATION_FAILED` — The request body could not be read, a field failed validation, a required header was absent, or a domain validation rule rejected an input the caller can correct. */
             400: {
                 headers: {
                     [name: string]: unknown;
@@ -9349,7 +15607,7 @@ export interface operations {
                     "application/json": components["schemas"]["ErrorResponse"];
                 };
             };
-            /** @description No valid session — absent, expired or revoked credential */
+            /** @description `AUTHENTICATION_FAILED` — No valid credential. Either none was presented, or the session behind it is expired, revoked, or belongs to a member who can no longer sign in. This status means the session is dead and nothing else does (D2.23) — a wrong *current* password on change-password is a 400 with a `currentPassword` field error, not this. */
             401: {
                 headers: {
                     [name: string]: unknown;
@@ -9358,7 +15616,7 @@ export interface operations {
                     "application/json": components["schemas"]["ErrorResponse"];
                 };
             };
-            /** @description Authenticated, but lacking the required permission */
+            /** @description `ACCESS_DENIED` — Authenticated, but lacking the permission the endpoint declares. The session is valid; do not sign the operator out. */
             403: {
                 headers: {
                     [name: string]: unknown;
@@ -9367,7 +15625,34 @@ export interface operations {
                     "application/json": components["schemas"]["ErrorResponse"];
                 };
             };
-            /** @description Unhandled failure; the traceId identifies the log line */
+            /** @description `NOT_FOUND` — A referenced entity does not exist, or the URL matches no endpoint. Also returned for a known path called with an unsupported method, as 405. */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description `CONFLICT` — The request collided with current state for a reason other than a version mismatch: a duplicate natural key (a slug, a code, an email), or a database constraint the application did not catch first. */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description `BUSINESS_RULE_VIOLATION` — The request was well-formed and the entities exist, but a domain rule forbids it — publishing a product with no price, archiving a brand products still reference, issuing more stock than a location holds. Distinct from 400: nothing about the request is malformed. */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description `INTERNAL_ERROR` — An unhandled failure. The message is deliberately generic; `traceId` identifies the server log line that explains it. */
             500: {
                 headers: {
                     [name: string]: unknown;
@@ -9402,7 +15687,7 @@ export interface operations {
                     "*/*": components["schemas"]["TeamMemberResponse"];
                 };
             };
-            /** @description Malformed request, or a field failed validation */
+            /** @description `VALIDATION_FAILED` — The request body could not be read, a field failed validation, a required header was absent, or a domain validation rule rejected an input the caller can correct. */
             400: {
                 headers: {
                     [name: string]: unknown;
@@ -9411,7 +15696,7 @@ export interface operations {
                     "application/json": components["schemas"]["ErrorResponse"];
                 };
             };
-            /** @description No valid session — absent, expired or revoked credential */
+            /** @description `AUTHENTICATION_FAILED` — No valid credential. Either none was presented, or the session behind it is expired, revoked, or belongs to a member who can no longer sign in. This status means the session is dead and nothing else does (D2.23) — a wrong *current* password on change-password is a 400 with a `currentPassword` field error, not this. */
             401: {
                 headers: {
                     [name: string]: unknown;
@@ -9420,7 +15705,7 @@ export interface operations {
                     "application/json": components["schemas"]["ErrorResponse"];
                 };
             };
-            /** @description Authenticated, but lacking the required permission */
+            /** @description `ACCESS_DENIED` — Authenticated, but lacking the permission the endpoint declares. The session is valid; do not sign the operator out. */
             403: {
                 headers: {
                     [name: string]: unknown;
@@ -9429,7 +15714,669 @@ export interface operations {
                     "application/json": components["schemas"]["ErrorResponse"];
                 };
             };
-            /** @description Unhandled failure; the traceId identifies the log line */
+            /** @description `NOT_FOUND` — A referenced entity does not exist, or the URL matches no endpoint. Also returned for a known path called with an unsupported method, as 405. */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description `VERSION_CONFLICT` or `CONFLICT` — The `version` sent with an update is not the version stored — the record was changed by someone else since it was read. Nothing was written. Re-read the record, show the operator what changed, and submit again with the new `version`. */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description `BUSINESS_RULE_VIOLATION` — The request was well-formed and the entities exist, but a domain rule forbids it — publishing a product with no price, archiving a brand products still reference, issuing more stock than a location holds. Distinct from 400: nothing about the request is malformed. */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description `INTERNAL_ERROR` — An unhandled failure. The message is deliberately generic; `traceId` identifies the server log line that explains it. */
+            500: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+        };
+    };
+    suspend_1: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "*/*": components["schemas"]["TeamMemberResponse"];
+                };
+            };
+            /** @description `VALIDATION_FAILED` — The request body could not be read, a field failed validation, a required header was absent, or a domain validation rule rejected an input the caller can correct. */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description `AUTHENTICATION_FAILED` — No valid credential. Either none was presented, or the session behind it is expired, revoked, or belongs to a member who can no longer sign in. This status means the session is dead and nothing else does (D2.23) — a wrong *current* password on change-password is a 400 with a `currentPassword` field error, not this. */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description `ACCESS_DENIED` — Authenticated, but lacking the permission the endpoint declares. The session is valid; do not sign the operator out. */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description `NOT_FOUND` — A referenced entity does not exist, or the URL matches no endpoint. Also returned for a known path called with an unsupported method, as 405. */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description `CONFLICT` — The request collided with current state for a reason other than a version mismatch: a duplicate natural key (a slug, a code, an email), or a database constraint the application did not catch first. */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description `BUSINESS_RULE_VIOLATION` — The request was well-formed and the entities exist, but a domain rule forbids it — publishing a product with no price, archiving a brand products still reference, issuing more stock than a location holds. Distinct from 400: nothing about the request is malformed. */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description `INTERNAL_ERROR` — An unhandled failure. The message is deliberately generic; `traceId` identifies the server log line that explains it. */
+            500: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+        };
+    };
+    list_1: {
+        parameters: {
+            query: {
+                pageable: components["schemas"]["Pageable"];
+                role?: "CONSUMER" | "PARTNER";
+                search?: string;
+                status?: "INVITED" | "ACTIVE" | "SUSPENDED";
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "*/*": components["schemas"]["PageResponseUserSummaryResponse"];
+                };
+            };
+            /** @description `VALIDATION_FAILED` — The request body could not be read, a field failed validation, a required header was absent, or a domain validation rule rejected an input the caller can correct. */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description `AUTHENTICATION_FAILED` — No valid credential. Either none was presented, or the session behind it is expired, revoked, or belongs to a member who can no longer sign in. This status means the session is dead and nothing else does (D2.23) — a wrong *current* password on change-password is a 400 with a `currentPassword` field error, not this. */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description `ACCESS_DENIED` — Authenticated, but lacking the permission the endpoint declares. The session is valid; do not sign the operator out. */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description `INTERNAL_ERROR` — An unhandled failure. The message is deliberately generic; `traceId` identifies the server log line that explains it. */
+            500: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+        };
+    };
+    create_1: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["CreateUserRequest"];
+            };
+        };
+        responses: {
+            /** @description Created */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "*/*": components["schemas"]["UserResponse"];
+                };
+            };
+            /** @description `VALIDATION_FAILED` — The request body could not be read, a field failed validation, a required header was absent, or a domain validation rule rejected an input the caller can correct. */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description `AUTHENTICATION_FAILED` — No valid credential. Either none was presented, or the session behind it is expired, revoked, or belongs to a member who can no longer sign in. This status means the session is dead and nothing else does (D2.23) — a wrong *current* password on change-password is a 400 with a `currentPassword` field error, not this. */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description `ACCESS_DENIED` — Authenticated, but lacking the permission the endpoint declares. The session is valid; do not sign the operator out. */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description `CONFLICT` — The request collided with current state for a reason other than a version mismatch: a duplicate natural key (a slug, a code, an email), or a database constraint the application did not catch first. */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description `BUSINESS_RULE_VIOLATION` — The request was well-formed and the entities exist, but a domain rule forbids it — publishing a product with no price, archiving a brand products still reference, issuing more stock than a location holds. Distinct from 400: nothing about the request is malformed. */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description `INTERNAL_ERROR` — An unhandled failure. The message is deliberately generic; `traceId` identifies the server log line that explains it. */
+            500: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+        };
+    };
+    get_1: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "*/*": components["schemas"]["UserResponse"];
+                };
+            };
+            /** @description `VALIDATION_FAILED` — The request body could not be read, a field failed validation, a required header was absent, or a domain validation rule rejected an input the caller can correct. */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description `AUTHENTICATION_FAILED` — No valid credential. Either none was presented, or the session behind it is expired, revoked, or belongs to a member who can no longer sign in. This status means the session is dead and nothing else does (D2.23) — a wrong *current* password on change-password is a 400 with a `currentPassword` field error, not this. */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description `ACCESS_DENIED` — Authenticated, but lacking the permission the endpoint declares. The session is valid; do not sign the operator out. */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description `NOT_FOUND` — A referenced entity does not exist, or the URL matches no endpoint. Also returned for a known path called with an unsupported method, as 405. */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description `INTERNAL_ERROR` — An unhandled failure. The message is deliberately generic; `traceId` identifies the server log line that explains it. */
+            500: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+        };
+    };
+    update_1: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["UpdateUserRequest"];
+            };
+        };
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "*/*": components["schemas"]["UserResponse"];
+                };
+            };
+            /** @description `VALIDATION_FAILED` — The request body could not be read, a field failed validation, a required header was absent, or a domain validation rule rejected an input the caller can correct. */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description `AUTHENTICATION_FAILED` — No valid credential. Either none was presented, or the session behind it is expired, revoked, or belongs to a member who can no longer sign in. This status means the session is dead and nothing else does (D2.23) — a wrong *current* password on change-password is a 400 with a `currentPassword` field error, not this. */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description `ACCESS_DENIED` — Authenticated, but lacking the permission the endpoint declares. The session is valid; do not sign the operator out. */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description `NOT_FOUND` — A referenced entity does not exist, or the URL matches no endpoint. Also returned for a known path called with an unsupported method, as 405. */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description `VERSION_CONFLICT` or `CONFLICT` — The `version` sent with an update is not the version stored — the record was changed by someone else since it was read. Nothing was written. Re-read the record, show the operator what changed, and submit again with the new `version`. */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description `BUSINESS_RULE_VIOLATION` — The request was well-formed and the entities exist, but a domain rule forbids it — publishing a product with no price, archiving a brand products still reference, issuing more stock than a location holds. Distinct from 400: nothing about the request is malformed. */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description `INTERNAL_ERROR` — An unhandled failure. The message is deliberately generic; `traceId` identifies the server log line that explains it. */
+            500: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+        };
+    };
+    grantPartner: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "*/*": components["schemas"]["UserResponse"];
+                };
+            };
+            /** @description `VALIDATION_FAILED` — The request body could not be read, a field failed validation, a required header was absent, or a domain validation rule rejected an input the caller can correct. */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description `AUTHENTICATION_FAILED` — No valid credential. Either none was presented, or the session behind it is expired, revoked, or belongs to a member who can no longer sign in. This status means the session is dead and nothing else does (D2.23) — a wrong *current* password on change-password is a 400 with a `currentPassword` field error, not this. */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description `ACCESS_DENIED` — Authenticated, but lacking the permission the endpoint declares. The session is valid; do not sign the operator out. */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description `NOT_FOUND` — A referenced entity does not exist, or the URL matches no endpoint. Also returned for a known path called with an unsupported method, as 405. */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description `CONFLICT` — The request collided with current state for a reason other than a version mismatch: a duplicate natural key (a slug, a code, an email), or a database constraint the application did not catch first. */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description `BUSINESS_RULE_VIOLATION` — The request was well-formed and the entities exist, but a domain rule forbids it — publishing a product with no price, archiving a brand products still reference, issuing more stock than a location holds. Distinct from 400: nothing about the request is malformed. */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description `INTERNAL_ERROR` — An unhandled failure. The message is deliberately generic; `traceId` identifies the server log line that explains it. */
+            500: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+        };
+    };
+    reinstate: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "*/*": components["schemas"]["UserResponse"];
+                };
+            };
+            /** @description `VALIDATION_FAILED` — The request body could not be read, a field failed validation, a required header was absent, or a domain validation rule rejected an input the caller can correct. */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description `AUTHENTICATION_FAILED` — No valid credential. Either none was presented, or the session behind it is expired, revoked, or belongs to a member who can no longer sign in. This status means the session is dead and nothing else does (D2.23) — a wrong *current* password on change-password is a 400 with a `currentPassword` field error, not this. */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description `ACCESS_DENIED` — Authenticated, but lacking the permission the endpoint declares. The session is valid; do not sign the operator out. */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description `NOT_FOUND` — A referenced entity does not exist, or the URL matches no endpoint. Also returned for a known path called with an unsupported method, as 405. */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description `CONFLICT` — The request collided with current state for a reason other than a version mismatch: a duplicate natural key (a slug, a code, an email), or a database constraint the application did not catch first. */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description `BUSINESS_RULE_VIOLATION` — The request was well-formed and the entities exist, but a domain rule forbids it — publishing a product with no price, archiving a brand products still reference, issuing more stock than a location holds. Distinct from 400: nothing about the request is malformed. */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description `INTERNAL_ERROR` — An unhandled failure. The message is deliberately generic; `traceId` identifies the server log line that explains it. */
+            500: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+        };
+    };
+    revokePartner: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "*/*": components["schemas"]["UserResponse"];
+                };
+            };
+            /** @description `VALIDATION_FAILED` — The request body could not be read, a field failed validation, a required header was absent, or a domain validation rule rejected an input the caller can correct. */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description `AUTHENTICATION_FAILED` — No valid credential. Either none was presented, or the session behind it is expired, revoked, or belongs to a member who can no longer sign in. This status means the session is dead and nothing else does (D2.23) — a wrong *current* password on change-password is a 400 with a `currentPassword` field error, not this. */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description `ACCESS_DENIED` — Authenticated, but lacking the permission the endpoint declares. The session is valid; do not sign the operator out. */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description `NOT_FOUND` — A referenced entity does not exist, or the URL matches no endpoint. Also returned for a known path called with an unsupported method, as 405. */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description `CONFLICT` — The request collided with current state for a reason other than a version mismatch: a duplicate natural key (a slug, a code, an email), or a database constraint the application did not catch first. */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description `BUSINESS_RULE_VIOLATION` — The request was well-formed and the entities exist, but a domain rule forbids it — publishing a product with no price, archiving a brand products still reference, issuing more stock than a location holds. Distinct from 400: nothing about the request is malformed. */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description `INTERNAL_ERROR` — An unhandled failure. The message is deliberately generic; `traceId` identifies the server log line that explains it. */
             500: {
                 headers: {
                     [name: string]: unknown;
@@ -9457,10 +16404,10 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "*/*": components["schemas"]["TeamMemberResponse"];
+                    "*/*": components["schemas"]["UserResponse"];
                 };
             };
-            /** @description Malformed request, or a field failed validation */
+            /** @description `VALIDATION_FAILED` — The request body could not be read, a field failed validation, a required header was absent, or a domain validation rule rejected an input the caller can correct. */
             400: {
                 headers: {
                     [name: string]: unknown;
@@ -9469,7 +16416,7 @@ export interface operations {
                     "application/json": components["schemas"]["ErrorResponse"];
                 };
             };
-            /** @description No valid session — absent, expired or revoked credential */
+            /** @description `AUTHENTICATION_FAILED` — No valid credential. Either none was presented, or the session behind it is expired, revoked, or belongs to a member who can no longer sign in. This status means the session is dead and nothing else does (D2.23) — a wrong *current* password on change-password is a 400 with a `currentPassword` field error, not this. */
             401: {
                 headers: {
                     [name: string]: unknown;
@@ -9478,7 +16425,7 @@ export interface operations {
                     "application/json": components["schemas"]["ErrorResponse"];
                 };
             };
-            /** @description Authenticated, but lacking the required permission */
+            /** @description `ACCESS_DENIED` — Authenticated, but lacking the permission the endpoint declares. The session is valid; do not sign the operator out. */
             403: {
                 headers: {
                     [name: string]: unknown;
@@ -9487,7 +16434,34 @@ export interface operations {
                     "application/json": components["schemas"]["ErrorResponse"];
                 };
             };
-            /** @description Unhandled failure; the traceId identifies the log line */
+            /** @description `NOT_FOUND` — A referenced entity does not exist, or the URL matches no endpoint. Also returned for a known path called with an unsupported method, as 405. */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description `CONFLICT` — The request collided with current state for a reason other than a version mismatch: a duplicate natural key (a slug, a code, an email), or a database constraint the application did not catch first. */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description `BUSINESS_RULE_VIOLATION` — The request was well-formed and the entities exist, but a domain rule forbids it — publishing a product with no price, archiving a brand products still reference, issuing more stock than a location holds. Distinct from 400: nothing about the request is malformed. */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description `INTERNAL_ERROR` — An unhandled failure. The message is deliberately generic; `traceId` identifies the server log line that explains it. */
             500: {
                 headers: {
                     [name: string]: unknown;
@@ -9521,7 +16495,7 @@ export interface operations {
                     "*/*": components["schemas"]["PageResponseWarehouseResponse"];
                 };
             };
-            /** @description Malformed request, or a field failed validation */
+            /** @description `VALIDATION_FAILED` — The request body could not be read, a field failed validation, a required header was absent, or a domain validation rule rejected an input the caller can correct. */
             400: {
                 headers: {
                     [name: string]: unknown;
@@ -9530,7 +16504,7 @@ export interface operations {
                     "application/json": components["schemas"]["ErrorResponse"];
                 };
             };
-            /** @description No valid session — absent, expired or revoked credential */
+            /** @description `AUTHENTICATION_FAILED` — No valid credential. Either none was presented, or the session behind it is expired, revoked, or belongs to a member who can no longer sign in. This status means the session is dead and nothing else does (D2.23) — a wrong *current* password on change-password is a 400 with a `currentPassword` field error, not this. */
             401: {
                 headers: {
                     [name: string]: unknown;
@@ -9539,7 +16513,7 @@ export interface operations {
                     "application/json": components["schemas"]["ErrorResponse"];
                 };
             };
-            /** @description Authenticated, but lacking the required permission */
+            /** @description `ACCESS_DENIED` — Authenticated, but lacking the permission the endpoint declares. The session is valid; do not sign the operator out. */
             403: {
                 headers: {
                     [name: string]: unknown;
@@ -9548,7 +16522,7 @@ export interface operations {
                     "application/json": components["schemas"]["ErrorResponse"];
                 };
             };
-            /** @description Unhandled failure; the traceId identifies the log line */
+            /** @description `INTERNAL_ERROR` — An unhandled failure. The message is deliberately generic; `traceId` identifies the server log line that explains it. */
             500: {
                 headers: {
                     [name: string]: unknown;
@@ -9581,7 +16555,7 @@ export interface operations {
                     "*/*": components["schemas"]["WarehouseResponse"];
                 };
             };
-            /** @description Malformed request, or a field failed validation */
+            /** @description `VALIDATION_FAILED` — The request body could not be read, a field failed validation, a required header was absent, or a domain validation rule rejected an input the caller can correct. */
             400: {
                 headers: {
                     [name: string]: unknown;
@@ -9590,7 +16564,7 @@ export interface operations {
                     "application/json": components["schemas"]["ErrorResponse"];
                 };
             };
-            /** @description No valid session — absent, expired or revoked credential */
+            /** @description `AUTHENTICATION_FAILED` — No valid credential. Either none was presented, or the session behind it is expired, revoked, or belongs to a member who can no longer sign in. This status means the session is dead and nothing else does (D2.23) — a wrong *current* password on change-password is a 400 with a `currentPassword` field error, not this. */
             401: {
                 headers: {
                     [name: string]: unknown;
@@ -9599,7 +16573,7 @@ export interface operations {
                     "application/json": components["schemas"]["ErrorResponse"];
                 };
             };
-            /** @description Authenticated, but lacking the required permission */
+            /** @description `ACCESS_DENIED` — Authenticated, but lacking the permission the endpoint declares. The session is valid; do not sign the operator out. */
             403: {
                 headers: {
                     [name: string]: unknown;
@@ -9608,7 +16582,25 @@ export interface operations {
                     "application/json": components["schemas"]["ErrorResponse"];
                 };
             };
-            /** @description Unhandled failure; the traceId identifies the log line */
+            /** @description `CONFLICT` — The request collided with current state for a reason other than a version mismatch: a duplicate natural key (a slug, a code, an email), or a database constraint the application did not catch first. */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description `BUSINESS_RULE_VIOLATION` — The request was well-formed and the entities exist, but a domain rule forbids it — publishing a product with no price, archiving a brand products still reference, issuing more stock than a location holds. Distinct from 400: nothing about the request is malformed. */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description `INTERNAL_ERROR` — An unhandled failure. The message is deliberately generic; `traceId` identifies the server log line that explains it. */
             500: {
                 headers: {
                     [name: string]: unknown;
@@ -9639,7 +16631,7 @@ export interface operations {
                     "*/*": components["schemas"]["WarehouseResponse"];
                 };
             };
-            /** @description Malformed request, or a field failed validation */
+            /** @description `VALIDATION_FAILED` — The request body could not be read, a field failed validation, a required header was absent, or a domain validation rule rejected an input the caller can correct. */
             400: {
                 headers: {
                     [name: string]: unknown;
@@ -9648,7 +16640,7 @@ export interface operations {
                     "application/json": components["schemas"]["ErrorResponse"];
                 };
             };
-            /** @description No valid session — absent, expired or revoked credential */
+            /** @description `AUTHENTICATION_FAILED` — No valid credential. Either none was presented, or the session behind it is expired, revoked, or belongs to a member who can no longer sign in. This status means the session is dead and nothing else does (D2.23) — a wrong *current* password on change-password is a 400 with a `currentPassword` field error, not this. */
             401: {
                 headers: {
                     [name: string]: unknown;
@@ -9657,7 +16649,7 @@ export interface operations {
                     "application/json": components["schemas"]["ErrorResponse"];
                 };
             };
-            /** @description Authenticated, but lacking the required permission */
+            /** @description `ACCESS_DENIED` — Authenticated, but lacking the permission the endpoint declares. The session is valid; do not sign the operator out. */
             403: {
                 headers: {
                     [name: string]: unknown;
@@ -9666,7 +16658,16 @@ export interface operations {
                     "application/json": components["schemas"]["ErrorResponse"];
                 };
             };
-            /** @description Unhandled failure; the traceId identifies the log line */
+            /** @description `NOT_FOUND` — A referenced entity does not exist, or the URL matches no endpoint. Also returned for a known path called with an unsupported method, as 405. */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description `INTERNAL_ERROR` — An unhandled failure. The message is deliberately generic; `traceId` identifies the server log line that explains it. */
             500: {
                 headers: {
                     [name: string]: unknown;
@@ -9701,7 +16702,7 @@ export interface operations {
                     "*/*": components["schemas"]["WarehouseResponse"];
                 };
             };
-            /** @description Malformed request, or a field failed validation */
+            /** @description `VALIDATION_FAILED` — The request body could not be read, a field failed validation, a required header was absent, or a domain validation rule rejected an input the caller can correct. */
             400: {
                 headers: {
                     [name: string]: unknown;
@@ -9710,7 +16711,7 @@ export interface operations {
                     "application/json": components["schemas"]["ErrorResponse"];
                 };
             };
-            /** @description No valid session — absent, expired or revoked credential */
+            /** @description `AUTHENTICATION_FAILED` — No valid credential. Either none was presented, or the session behind it is expired, revoked, or belongs to a member who can no longer sign in. This status means the session is dead and nothing else does (D2.23) — a wrong *current* password on change-password is a 400 with a `currentPassword` field error, not this. */
             401: {
                 headers: {
                     [name: string]: unknown;
@@ -9719,7 +16720,7 @@ export interface operations {
                     "application/json": components["schemas"]["ErrorResponse"];
                 };
             };
-            /** @description Authenticated, but lacking the required permission */
+            /** @description `ACCESS_DENIED` — Authenticated, but lacking the permission the endpoint declares. The session is valid; do not sign the operator out. */
             403: {
                 headers: {
                     [name: string]: unknown;
@@ -9728,7 +16729,34 @@ export interface operations {
                     "application/json": components["schemas"]["ErrorResponse"];
                 };
             };
-            /** @description Unhandled failure; the traceId identifies the log line */
+            /** @description `NOT_FOUND` — A referenced entity does not exist, or the URL matches no endpoint. Also returned for a known path called with an unsupported method, as 405. */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description `VERSION_CONFLICT` or `CONFLICT` — The `version` sent with an update is not the version stored — the record was changed by someone else since it was read. Nothing was written. Re-read the record, show the operator what changed, and submit again with the new `version`. */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description `BUSINESS_RULE_VIOLATION` — The request was well-formed and the entities exist, but a domain rule forbids it — publishing a product with no price, archiving a brand products still reference, issuing more stock than a location holds. Distinct from 400: nothing about the request is malformed. */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description `INTERNAL_ERROR` — An unhandled failure. The message is deliberately generic; `traceId` identifies the server log line that explains it. */
             500: {
                 headers: {
                     [name: string]: unknown;
@@ -9759,7 +16787,7 @@ export interface operations {
                     "*/*": components["schemas"]["WarehouseResponse"];
                 };
             };
-            /** @description Malformed request, or a field failed validation */
+            /** @description `VALIDATION_FAILED` — The request body could not be read, a field failed validation, a required header was absent, or a domain validation rule rejected an input the caller can correct. */
             400: {
                 headers: {
                     [name: string]: unknown;
@@ -9768,7 +16796,7 @@ export interface operations {
                     "application/json": components["schemas"]["ErrorResponse"];
                 };
             };
-            /** @description No valid session — absent, expired or revoked credential */
+            /** @description `AUTHENTICATION_FAILED` — No valid credential. Either none was presented, or the session behind it is expired, revoked, or belongs to a member who can no longer sign in. This status means the session is dead and nothing else does (D2.23) — a wrong *current* password on change-password is a 400 with a `currentPassword` field error, not this. */
             401: {
                 headers: {
                     [name: string]: unknown;
@@ -9777,7 +16805,7 @@ export interface operations {
                     "application/json": components["schemas"]["ErrorResponse"];
                 };
             };
-            /** @description Authenticated, but lacking the required permission */
+            /** @description `ACCESS_DENIED` — Authenticated, but lacking the permission the endpoint declares. The session is valid; do not sign the operator out. */
             403: {
                 headers: {
                     [name: string]: unknown;
@@ -9786,7 +16814,34 @@ export interface operations {
                     "application/json": components["schemas"]["ErrorResponse"];
                 };
             };
-            /** @description Unhandled failure; the traceId identifies the log line */
+            /** @description `NOT_FOUND` — A referenced entity does not exist, or the URL matches no endpoint. Also returned for a known path called with an unsupported method, as 405. */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description `CONFLICT` — The request collided with current state for a reason other than a version mismatch: a duplicate natural key (a slug, a code, an email), or a database constraint the application did not catch first. */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description `BUSINESS_RULE_VIOLATION` — The request was well-formed and the entities exist, but a domain rule forbids it — publishing a product with no price, archiving a brand products still reference, issuing more stock than a location holds. Distinct from 400: nothing about the request is malformed. */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description `INTERNAL_ERROR` — An unhandled failure. The message is deliberately generic; `traceId` identifies the server log line that explains it. */
             500: {
                 headers: {
                     [name: string]: unknown;
@@ -9817,7 +16872,7 @@ export interface operations {
                     "*/*": components["schemas"]["WarehouseResponse"];
                 };
             };
-            /** @description Malformed request, or a field failed validation */
+            /** @description `VALIDATION_FAILED` — The request body could not be read, a field failed validation, a required header was absent, or a domain validation rule rejected an input the caller can correct. */
             400: {
                 headers: {
                     [name: string]: unknown;
@@ -9826,7 +16881,7 @@ export interface operations {
                     "application/json": components["schemas"]["ErrorResponse"];
                 };
             };
-            /** @description No valid session — absent, expired or revoked credential */
+            /** @description `AUTHENTICATION_FAILED` — No valid credential. Either none was presented, or the session behind it is expired, revoked, or belongs to a member who can no longer sign in. This status means the session is dead and nothing else does (D2.23) — a wrong *current* password on change-password is a 400 with a `currentPassword` field error, not this. */
             401: {
                 headers: {
                     [name: string]: unknown;
@@ -9835,7 +16890,7 @@ export interface operations {
                     "application/json": components["schemas"]["ErrorResponse"];
                 };
             };
-            /** @description Authenticated, but lacking the required permission */
+            /** @description `ACCESS_DENIED` — Authenticated, but lacking the permission the endpoint declares. The session is valid; do not sign the operator out. */
             403: {
                 headers: {
                     [name: string]: unknown;
@@ -9844,7 +16899,34 @@ export interface operations {
                     "application/json": components["schemas"]["ErrorResponse"];
                 };
             };
-            /** @description Unhandled failure; the traceId identifies the log line */
+            /** @description `NOT_FOUND` — A referenced entity does not exist, or the URL matches no endpoint. Also returned for a known path called with an unsupported method, as 405. */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description `CONFLICT` — The request collided with current state for a reason other than a version mismatch: a duplicate natural key (a slug, a code, an email), or a database constraint the application did not catch first. */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description `BUSINESS_RULE_VIOLATION` — The request was well-formed and the entities exist, but a domain rule forbids it — publishing a product with no price, archiving a brand products still reference, issuing more stock than a location holds. Distinct from 400: nothing about the request is malformed. */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description `INTERNAL_ERROR` — An unhandled failure. The message is deliberately generic; `traceId` identifies the server log line that explains it. */
             500: {
                 headers: {
                     [name: string]: unknown;
