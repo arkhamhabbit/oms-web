@@ -13,8 +13,21 @@ import {
   DialogTitle,
 } from '@/components/ui/dialog'
 import { Input } from '@/components/ui/input'
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
-import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from '@/components/ui/form'
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from '@/components/ui/select'
+import {
+  Form,
+  FormControl,
+  FormField,
+  FormItem,
+  FormLabel,
+  FormMessage,
+} from '@/components/ui/form'
 import { ImageUrlField } from '@/components/form/ImageUrlField'
 import { ApiClientError, applyApiErrorToForm } from '@/lib/api-error'
 import { slugify } from '@/lib/slug'
@@ -115,6 +128,8 @@ function CategoryFormDialog({
           // reparented through /move, not this form, so it isn't part of the edit payload.
           status: category!.status!,
           live: category!.live!,
+          // D2.24 — version is required and compared before any field is applied.
+          version: category!.version!,
         })
       : createCategory.mutateAsync({ ...payload, parentId })
 
@@ -177,7 +192,9 @@ function CategoryFormDialog({
                       onChange={(event) => {
                         field.onChange(event)
                         if (!slugEditedRef.current) {
-                          form.setValue('slug', slugify(event.target.value), { shouldValidate: true })
+                          form.setValue('slug', slugify(event.target.value), {
+                            shouldValidate: true,
+                          })
                         }
                       }}
                     />

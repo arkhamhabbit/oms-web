@@ -28,7 +28,7 @@ describe('unwrap', () => {
         Promise.resolve({
           data: undefined,
           error: {
-            code: 'VALIDATION_ERROR',
+            code: 'VALIDATION_FAILED',
             message: 'Invalid request',
             traceId: 'trace-abc',
             fieldErrors: [{ field: 'email', message: 'Required' }],
@@ -38,7 +38,7 @@ describe('unwrap', () => {
       )
     ).rejects.toMatchObject({
       status: 400,
-      code: 'VALIDATION_ERROR',
+      code: 'VALIDATION_FAILED',
       message: 'Invalid request',
       traceId: 'trace-abc',
       fieldErrors: [{ field: 'email', message: 'Required' }],

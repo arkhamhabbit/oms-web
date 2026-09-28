@@ -19,11 +19,7 @@ import {
 } from '@/components/ui/form'
 import { useBreadcrumb } from '@/layouts/breadcrumb-context'
 import { applyApiErrorToForm, ApiClientError } from '@/lib/api-error'
-import {
-  useChangePasswordMutation,
-  useProfileQuery,
-  useUpdateProfileMutation,
-} from '@/api/auth'
+import { useChangePasswordMutation, useProfileQuery, useUpdateProfileMutation } from '@/api/auth'
 
 const profileSchema = z.object({
   name: z.string().min(1, 'Name is required').max(200),
@@ -55,14 +51,19 @@ function ProfileDetailsCard() {
   }, [profile.data, form])
 
   function onSubmit(values: ProfileFormValues) {
-    updateProfile.mutate(values, {
-      onSuccess: () => toast.success('Profile updated'),
-      onError: (error) => {
-        if (error instanceof ApiClientError) {
-          applyApiErrorToForm(error, form)
-        }
-      },
-    })
+    updateProfile.mutate(
+      // D2.11/D2.24 — version is required and compared server-side; sent back exactly as
+      // loaded so a concurrent edit is detected rather than silently overwritten.
+      { ...values, version: profile.data!.version! },
+      {
+        onSuccess: () => toast.success('Profile updated'),
+        onError: (error) => {
+          if (error instanceof ApiClientError) {
+            applyApiErrorToForm(error, form)
+          }
+        },
+      }
+    )
   }
 
   return (

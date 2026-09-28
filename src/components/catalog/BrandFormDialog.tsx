@@ -13,7 +13,14 @@ import {
   DialogTitle,
 } from '@/components/ui/dialog'
 import { Input } from '@/components/ui/input'
-import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from '@/components/ui/form'
+import {
+  Form,
+  FormControl,
+  FormField,
+  FormItem,
+  FormLabel,
+  FormMessage,
+} from '@/components/ui/form'
 import { ImageUrlField } from '@/components/form/ImageUrlField'
 import { ApiClientError, applyApiErrorToForm } from '@/lib/api-error'
 import { slugify } from '@/lib/slug'
@@ -28,7 +35,13 @@ const brandFormSchema = z.object({
 })
 type BrandFormValues = z.infer<typeof brandFormSchema>
 
-const emptyValues: BrandFormValues = { name: '', slug: '', description: '', logoUrl: '', bannerUrl: '' }
+const emptyValues: BrandFormValues = {
+  name: '',
+  slug: '',
+  description: '',
+  logoUrl: '',
+  bannerUrl: '',
+}
 
 export interface BrandFormDialogProps {
   open: boolean
@@ -88,6 +101,8 @@ function BrandFormDialog({ open, onOpenChange, brand }: BrandFormDialogProps) {
           // payload; sent back unchanged from what was loaded, never defaulted.
           status: brand!.status!,
           live: brand!.live!,
+          // D2.24 — version is required and compared before any field is applied.
+          version: brand!.version!,
         })
       : createBrand.mutateAsync(payload)
 
@@ -123,7 +138,9 @@ function BrandFormDialog({ open, onOpenChange, brand }: BrandFormDialogProps) {
                       onChange={(event) => {
                         field.onChange(event)
                         if (!slugEditedRef.current) {
-                          form.setValue('slug', slugify(event.target.value), { shouldValidate: true })
+                          form.setValue('slug', slugify(event.target.value), {
+                            shouldValidate: true,
+                          })
                         }
                       }}
                     />
