@@ -37,3 +37,14 @@ export function majorStringToMinor(input: string): number | null {
   const fraction = Number.parseInt(fractionPadded, 10)
   return whole * MINOR_UNITS_PER_MAJOR + fraction
 }
+
+/**
+ * D4.11: `base_selling_price <= mrp` — selling above MRP is illegal in India. Both amounts are
+ * minor-unit integers, so this is a plain integer comparison, never routed through float. This is
+ * a **client-side hint only**: the server is the authority (a check constraint), and a value this
+ * says is fine can still be refused for a reason this function doesn't know about — see the
+ * variant form, which shows this as an inline warning and submits regardless.
+ */
+export function sellingPriceExceedsMrp(baseSellingPriceMinor: number, mrpMinor: number): boolean {
+  return baseSellingPriceMinor > mrpMinor
+}

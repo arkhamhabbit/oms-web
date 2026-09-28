@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest'
 
-import { majorStringToMinor, minorToMajorString } from '@/lib/money'
+import { majorStringToMinor, minorToMajorString, sellingPriceExceedsMrp } from '@/lib/money'
 
 describe('minorToMajorString', () => {
   it('formats whole rupees with two decimal places', () => {
@@ -54,5 +54,19 @@ describe('majorStringToMinor', () => {
     for (const minor of amounts) {
       expect(majorStringToMinor(minorToMajorString(minor))).toBe(minor)
     }
+  })
+})
+
+describe('sellingPriceExceedsMrp', () => {
+  it('flags a selling price above MRP', () => {
+    expect(sellingPriceExceedsMrp(500000, 449900)).toBe(true)
+  })
+
+  it('allows a selling price equal to MRP (D4.11: <=, not <)', () => {
+    expect(sellingPriceExceedsMrp(449900, 449900)).toBe(false)
+  })
+
+  it('allows a selling price below MRP', () => {
+    expect(sellingPriceExceedsMrp(399900, 449900)).toBe(false)
   })
 })
