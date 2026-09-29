@@ -1,3 +1,5 @@
+import { ATTRIBUTE_UNITS } from '@/api/enums.gen'
+
 /**
  * D4.10 — an OPTION attribute is always single-select and always variant-level. This is
  * enforced by the server regardless of what the form does (D2.17: client gating is
@@ -46,24 +48,10 @@ export function hasValues(dataType: AttributeDataType): boolean {
 }
 
 /**
- * D4.10's closed set. **Contract gap**: `unit` is typed as a plain `string` in the published
- * OpenAPI contract (`AttributeResponse.unit`, `CreateAttributeRequest.unit`, ...), not as an
- * enum — so this list is sourced from the locked decision doc, not from the schema, and the UI
- * cannot verify it stays in sync with `Attribute.ALLOWED_UNITS` on the server. Flagged in the
- * task's Status block; the fix belongs in the contract (an enum on `unit`), not here.
+ * D4.10's closed set, published as an enum in the contract (0.8) and emitted from it by
+ * `scripts/generate-enums.mjs` — no hand-maintained copy to drift. The test pins the set so a
+ * change on the server is a visible decision here, not a silent one.
  */
-export const ALLOWED_UNITS = [
-  'g',
-  'mg',
-  'kg',
-  'ml',
-  'l',
-  'kcal',
-  'iu',
-  'mcg',
-  'servings',
-  'days',
-  'pieces',
-] as const
+export const ALLOWED_UNITS = ATTRIBUTE_UNITS
 
-export type AllowedUnit = (typeof ALLOWED_UNITS)[number]
+export type AllowedUnit = (typeof ATTRIBUTE_UNITS)[number]

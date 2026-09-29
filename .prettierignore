@@ -1,3 +1,5 @@
 dist
 coverage
 node_modules
+src/api/schema.gen.ts
+src/api/enums.gen.ts

@@ -275,7 +275,7 @@ function RolesCard({ user, canWrite, onError }: CardProps & { canWrite: boolean 
 
   function run(kind: 'grant-partner' | 'revoke-partner') {
     action
-      .mutateAsync(kind)
+      .mutateAsync({ action: kind, version: user.version! })
       .then(() => toast.success(kind === 'grant-partner' ? 'Partner granted' : 'Partner revoked'))
       .catch(onError)
   }
@@ -334,7 +334,7 @@ function LifecycleCard({ user, onError }: CardProps) {
     }
     const kind = confirm
     action
-      .mutateAsync(kind)
+      .mutateAsync({ action: kind, version: user.version! })
       .then((updated) => {
         const resulting =
           updated.status === 'ACTIVE'

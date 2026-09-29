@@ -71,23 +71,24 @@ export function useUpdateUserMutation(id: string) {
 export type UserAction = 'grant-partner' | 'revoke-partner' | 'suspend' | 'reinstate'
 
 /**
- * The four bodiless, versionless writes. Called by path, never by operationId (the
- * operation ids are positional and get renumbered when a controller is added).
+ * The four state changes. Since 0.8 each carries the loaded `version` and a stale one is refused
+ * with 409 `VERSION_CONFLICT` (D2.24) — a role grant races a suspend on the same row. Called by
+ * path, never by operationId.
  */
 export function useUserActionMutation(id: string) {
   const invalidate = useInvalidateUsers()
   return useMutation({
-    mutationFn: (action: UserAction) => {
-      const params = { params: { path: { id } } }
+    mutationFn: ({ action, version }: { action: UserAction; version: number }) => {
+      const args = { params: { path: { id } }, body: { version } }
       switch (action) {
         case 'grant-partner':
-          return unwrap<User>(api.POST('/api/admin/users/{id}/grant-partner', params))
+          return unwrap<User>(api.POST('/api/admin/users/{id}/grant-partner', args))
         case 'revoke-partner':
-          return unwrap<User>(api.POST('/api/admin/users/{id}/revoke-partner', params))
+          return unwrap<User>(api.POST('/api/admin/users/{id}/revoke-partner', args))
         case 'suspend':
-          return unwrap<User>(api.POST('/api/admin/users/{id}/suspend', params))
+          return unwrap<User>(api.POST('/api/admin/users/{id}/suspend', args))
         case 'reinstate':
-          return unwrap<User>(api.POST('/api/admin/users/{id}/reinstate', params))
+          return unwrap<User>(api.POST('/api/admin/users/{id}/reinstate', args))
       }
     },
     onSuccess: invalidate,

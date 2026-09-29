@@ -6,7 +6,13 @@ import { PlusIcon } from 'lucide-react'
 import { DataTable } from '@/components/data-table/DataTable'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from '@/components/ui/select'
 import { CatalogStatusBadges } from '@/components/catalog/CatalogStatusBadges'
 import { ProductFormDialog } from '@/components/catalog/ProductFormDialog'
 import { useBreadcrumb } from '@/layouts/breadcrumb-context'
@@ -15,7 +21,7 @@ import type { CatalogStatus } from '@/lib/catalog-transitions'
 import { useBrandsQuery } from '@/api/brands'
 import {
   useProductsQuery,
-  type Product,
+  type ProductListItem,
   type ProductAudience,
   type ProductStatus,
 } from '@/api/products'
@@ -37,10 +43,8 @@ function ProductsPage() {
   const [brandId, setBrandId] = React.useState<string | 'ALL'>('ALL')
   const [search, setSearch] = React.useState('')
 
-  // All brands, for both the filter select and looking up a row's brand name — the list
-  // endpoint returns only `brandId` (see the column note below).
+  // All brands, for the filter select. Row brand names come from the list itself (`brandName`).
   const brandsQuery = useBrandsQuery({ page: 0, size: 200 })
-  const brandsById = new Map((brandsQuery.data?.content ?? []).map((b) => [b.id, b]))
 
   const productsQuery = useProductsQuery({
     page: pageIndex,
@@ -55,21 +59,17 @@ function ProductsPage() {
   const [formOpen, setFormOpen] = React.useState(false)
   const rows = productsQuery.data?.content ?? []
 
-  const columns: ColumnDef<Product, unknown>[] = [
+  const columns: ColumnDef<ProductListItem, unknown>[] = [
     { accessorKey: 'name', header: 'Name' },
     {
       id: 'brand',
       header: 'Brand',
-      cell: ({ row }) => brandsById.get(row.original.brandId)?.name ?? '—',
+      cell: ({ row }) => row.original.brandName ?? '—',
     },
     {
       id: 'primaryCategory',
       header: 'Primary category',
-      // Contract gap (flagged in the task's Status block): `ProductResponse` (the list shape)
-      // carries no category information at all — only `ProductDetailResponse` (a per-product
-      // single-get) does. Showing this column accurately for every row of a list would mean one
-      // extra request per row, which this list does not do. Open the product to see it.
-      cell: () => <span className="text-muted-foreground">—</span>,
+      cell: ({ row }) => row.original.primaryCategoryName ?? '—',
     },
     {
       id: 'status',
@@ -84,8 +84,7 @@ function ProductsPage() {
     {
       id: 'variantCount',
       header: 'Variants',
-      // Same contract gap as primary category — not on the list shape.
-      cell: () => <span className="text-muted-foreground">—</span>,
+      cell: ({ row }) => row.original.variantCount ?? '—',
     },
     { accessorKey: 'audience', header: 'Audience' },
   ]
