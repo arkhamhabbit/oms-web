@@ -96,6 +96,7 @@ export async function unwrap<T>(
         code: result.error.code ?? 'UNKNOWN_ERROR',
         message: result.error.message ?? 'An unexpected error occurred',
         traceId: result.error.traceId ?? requestId ?? 'unknown',
+        existingId: result.error.existingId,
         fieldErrors: (result.error.fieldErrors ?? []).map((fieldError) => ({
           field: fieldError.field ?? '',
           message: fieldError.message ?? '',

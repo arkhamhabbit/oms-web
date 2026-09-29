@@ -22,8 +22,6 @@ import { useRolesQuery } from '@/api/roles'
 import { useTeamMembersQuery, type TeamMember, type TeamMemberStatus } from '@/api/team'
 
 const PAGE_SIZE = 20
-/** A team is tens of people. When a filter the API cannot do is active, everything is fetched. */
-const FETCH_ALL_SIZE = 500
 const STATUS_OPTIONS: TeamMemberStatus[] = ['INVITED', 'ACTIVE', 'SUSPENDED', 'DEACTIVATED']
 
 function formatLastActive(value: string | undefined) {
@@ -44,31 +42,15 @@ function TeamPage() {
 
   const roles = useRolesQuery()
 
-  // Contract gap (recorded in the W1.3 Status): GET /team-members filters by `status` only —
-  // there is no role filter and no search. Status and paging stay server-side; when a role or
-  // search is set, the whole (small) set is fetched for the chosen status and filtered locally.
-  const clientFiltered = roleId !== 'ALL' || search.trim() !== ''
-
+  // Status, role, search and paging are all server-side (0.8 added role + search).
   const members = useTeamMembersQuery({
-    page: clientFiltered ? 0 : pageIndex,
-    size: clientFiltered ? FETCH_ALL_SIZE : PAGE_SIZE,
+    page: pageIndex,
+    size: PAGE_SIZE,
     status: status === 'ALL' ? undefined : status,
+    roleId: roleId === 'ALL' ? undefined : roleId,
+    search: search.trim(),
   })
-
-  const rows = React.useMemo(() => {
-    const content = members.data?.content ?? []
-    if (!clientFiltered) {
-      return content
-    }
-    const needle = search.trim().toLowerCase()
-    return content.filter(
-      (m) =>
-        (roleId === 'ALL' || (m.roles ?? []).some((r) => r.id === roleId)) &&
-        (needle === '' ||
-          (m.name ?? '').toLowerCase().includes(needle) ||
-          (m.email ?? '').toLowerCase().includes(needle))
-    )
-  }, [members.data, clientFiltered, roleId, search])
+  const rows = members.data?.content ?? []
 
   const columns: ColumnDef<TeamMember, unknown>[] = [
     { accessorKey: 'name', header: 'Name' },
@@ -100,7 +82,7 @@ function TeamPage() {
     {
       id: 'lastActive',
       header: 'Last active',
-      cell: ({ row }) => formatLastActive(row.original.lastLoginAt),
+      cell: ({ row }) => formatLastActive(row.original.lastActiveAt),
     },
   ]
 
@@ -167,17 +149,13 @@ function TeamPage() {
         isLoading={members.isLoading}
         emptyMessage="No team members match these filters."
         onRowClick={(member) => navigate(`/team/${member.id}`)}
-        {...(clientFiltered
-          ? { pageSize: PAGE_SIZE }
-          : {
-              serverPagination: {
-                pageIndex,
-                pageSize: PAGE_SIZE,
-                pageCount: members.data?.totalPages ?? 0,
-                totalElements: members.data?.totalElements ?? 0,
-                onPageIndexChange: setPageIndex,
-              },
-            })}
+        serverPagination={{
+          pageIndex,
+          pageSize: PAGE_SIZE,
+          pageCount: members.data?.totalPages ?? 0,
+          totalElements: members.data?.totalElements ?? 0,
+          onPageIndexChange: setPageIndex,
+        }}
       />
 
       <MemberCreateDialog open={createOpen} onOpenChange={setCreateOpen} />

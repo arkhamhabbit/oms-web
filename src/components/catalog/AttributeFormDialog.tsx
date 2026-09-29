@@ -32,6 +32,7 @@ import { ApiClientError, applyApiErrorToForm } from '@/lib/api-error'
 import { slugify } from '@/lib/slug'
 import {
   ALLOWED_UNITS,
+  type AllowedUnit,
   applyKindConstraint,
   isKindConstraintLocked,
   unitApplies,
@@ -152,7 +153,10 @@ function AttributeFormDialog({ open, onOpenChange, attribute }: AttributeFormDia
       name: values.name,
       groupId,
       helpText: values.helpText || undefined,
-      unit: unitApplies(values.dataType) ? values.unit || undefined : undefined,
+      // The unit <Select> only offers the contract's enum, so this narrowing is safe.
+      unit: unitApplies(values.dataType)
+        ? ((values.unit || undefined) as AllowedUnit | undefined)
+        : undefined,
     }
 
     const mutation = isEdit

@@ -7,7 +7,20 @@ import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { useBreadcrumb } from '@/layouts/breadcrumb-context'
-import { useAuditEntriesQuery, type AuditEntry } from '@/api/audit'
+import {
+  useAuditEntriesQuery,
+  type AuditAction,
+  type AuditEntityType,
+  type AuditEntry,
+} from '@/api/audit'
+import { AUDIT_ACTIONS, AUDIT_ENTITY_TYPES } from '@/api/enums.gen'
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from '@/components/ui/select'
 import { isApiError } from '@/lib/api-error'
 import { diffSnapshots, formatDiffValue, type DiffRow } from '@/lib/audit-diff'
 import { cn } from '@/lib/utils'
@@ -15,10 +28,10 @@ import { cn } from '@/lib/utils'
 const PAGE_SIZE = 25
 
 interface Filters {
-  entityType: string
+  entityType: AuditEntityType | ''
   entityId: string
   actorId: string
-  action: string
+  action: AuditAction | ''
   from: string
   to: string
 }
@@ -136,10 +149,10 @@ function AuditPage() {
   const query = useAuditEntriesQuery({
     page: pageIndex,
     size: PAGE_SIZE,
-    entityType: applied.entityType.trim(),
+    entityType: applied.entityType || undefined,
     entityId: applied.entityId.trim(),
     actorId: applied.actorId.trim(),
-    action: applied.action.trim(),
+    action: applied.action || undefined,
     from: toInstant(applied.from),
     to: toInstant(applied.to),
   })
@@ -179,12 +192,22 @@ function AuditPage() {
       <form onSubmit={apply} className="grid gap-3 rounded-md border p-3 md:grid-cols-3">
         <div className="grid gap-1.5">
           <Label htmlFor="audit-entity-type">Entity type</Label>
-          <Input
-            id="audit-entity-type"
-            placeholder="e.g. team_member"
-            value={draft.entityType}
-            onChange={(e) => set('entityType', e.target.value)}
-          />
+          <Select
+            value={draft.entityType || 'ALL'}
+            onValueChange={(v) => set('entityType', v === 'ALL' ? '' : (v as AuditEntityType))}
+          >
+            <SelectTrigger id="audit-entity-type" aria-label="Entity type">
+              <SelectValue placeholder="All entity types" />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="ALL">All entity types</SelectItem>
+              {AUDIT_ENTITY_TYPES.map((t) => (
+                <SelectItem key={t} value={t}>
+                  {t}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
         </div>
         <div className="grid gap-1.5">
           <Label htmlFor="audit-entity-id">Entity ID</Label>
@@ -206,11 +229,22 @@ function AuditPage() {
         </div>
         <div className="grid gap-1.5">
           <Label htmlFor="audit-action">Action</Label>
-          <Input
-            id="audit-action"
-            value={draft.action}
-            onChange={(e) => set('action', e.target.value)}
-          />
+          <Select
+            value={draft.action || 'ALL'}
+            onValueChange={(v) => set('action', v === 'ALL' ? '' : (v as AuditAction))}
+          >
+            <SelectTrigger id="audit-action" aria-label="Action">
+              <SelectValue placeholder="All actions" />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="ALL">All actions</SelectItem>
+              {AUDIT_ACTIONS.map((a) => (
+                <SelectItem key={a} value={a}>
+                  {a}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
         </div>
         <div className="grid gap-1.5">
           <Label htmlFor="audit-from">From (inclusive)</Label>

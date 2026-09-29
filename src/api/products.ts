@@ -4,6 +4,7 @@ import { api, unwrap } from '@/api/client'
 import type { components } from '@/api/schema.gen'
 
 export type Product = components['schemas']['ProductResponse']
+export type ProductListItem = components['schemas']['ProductListItemResponse']
 export type ProductStatus = NonNullable<Product['status']>
 export type ProductAudience = NonNullable<Product['audience']>
 export type ProductListingVisibility = NonNullable<Product['listingVisibility']>

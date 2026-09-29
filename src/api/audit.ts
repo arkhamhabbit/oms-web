@@ -1,17 +1,22 @@
 import { useQuery } from '@tanstack/react-query'
 
 import { api, unwrap } from '@/api/client'
-import type { components } from '@/api/schema.gen'
+import type { components, paths } from '@/api/schema.gen'
 
 export type AuditEntry = components['schemas']['AuditEntryResponse']
+
+type AuditQuery = NonNullable<paths['/api/admin/audit-entries']['get']['parameters']['query']>
+/** Both are enums in the contract (0.8) — their values come from `enums.gen.ts`. */
+export type AuditEntityType = NonNullable<AuditQuery['entityType']>
+export type AuditAction = NonNullable<AuditQuery['action']>
 
 export interface AuditListParams {
   page: number
   size: number
-  entityType?: string
+  entityType?: AuditEntityType
   entityId?: string
   actorId?: string
-  action?: string
+  action?: AuditAction
   /** Inclusive, UTC instant. */
   from?: string
   /** Exclusive, UTC instant. */

@@ -12,8 +12,8 @@
     "preview": "vite preview",
     "test": "vitest run",
     "test:watch": "vitest",
-    "generate:api": "openapi-typescript ../orchestrator/contracts/openapi/oms-core.json -o src/api/schema.gen.ts --alphabetize",
-    "generate:api:check": "openapi-typescript ../orchestrator/contracts/openapi/oms-core.json -o src/api/schema.gen.ts --alphabetize --check"
+    "generate:api": "openapi-typescript ../orchestrator/contracts/openapi/oms-core.json -o src/api/schema.gen.ts --alphabetize && node scripts/generate-enums.mjs",
+    "generate:api:check": "openapi-typescript ../orchestrator/contracts/openapi/oms-core.json -o src/api/schema.gen.ts --alphabetize --check && node scripts/generate-enums.mjs --check"
   },
   "dependencies": {
     "@hookform/resolvers": "^5.8.0",

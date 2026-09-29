@@ -73,7 +73,7 @@ function CreateForm({
   const form = useForm<Values>({ resolver: zodResolver(schema), defaultValues: emptyValues })
   // A duplicate is a sentence with a way to the account that already has the number.
   const [duplicate, setDuplicate] = React.useState<
-    { message: string; search: string } | undefined
+    { message: string; existingId?: string; search: string } | undefined
   >()
 
   function onSubmit(values: Values) {
@@ -92,7 +92,11 @@ function CreateForm({
       .catch((error) => {
         if (error instanceof ApiClientError && error.code === 'CONFLICT') {
           const usedEmail = values.email !== '' && error.message.toLowerCase().includes('email')
-          setDuplicate({ message: error.message, search: usedEmail ? values.email : values.mobile })
+          setDuplicate({
+            message: error.message,
+            existingId: error.existingId,
+            search: usedEmail ? values.email : values.mobile,
+          })
         } else if (error instanceof ApiClientError) {
           applyApiErrorToForm(error, form)
         }
@@ -109,11 +113,16 @@ function CreateForm({
           >
             {duplicate.message}{' '}
             <Link
-              to={`/users?search=${encodeURIComponent(duplicate.search)}`}
+              // 0.8 names the holder by id; fall back to a search only if the server didn't.
+              to={
+                duplicate.existingId
+                  ? `/users/${duplicate.existingId}`
+                  : `/users?search=${encodeURIComponent(duplicate.search)}`
+              }
               className="font-medium underline underline-offset-2"
               onClick={() => onOpenChange(false)}
             >
-              Find the existing account
+              Open the existing account
             </Link>
             .
           </p>

@@ -17,6 +17,8 @@ export interface TeamListParams {
   page: number
   size: number
   status?: TeamMemberStatus
+  roleId?: string
+  search?: string
 }
 
 export function useTeamMembersQuery(params: TeamListParams) {
@@ -29,6 +31,8 @@ export function useTeamMembersQuery(params: TeamListParams) {
             query: {
               pageable: { page: params.page, size: params.size },
               status: params.status,
+              roleId: params.roleId,
+              search: params.search || undefined,
             },
           },
         })

@@ -17,7 +17,7 @@ export interface paths {
          *
          *     **Requires permission:** `catalog.attribute.read`.
          */
-        get: operations["list_12"];
+        get: operations["attributeGroupList"];
         put?: never;
         /**
          * Creates a form section
@@ -28,7 +28,7 @@ export interface paths {
          *
          *     **Requires permission:** `catalog.attribute.write`.
          */
-        post: operations["create_11"];
+        post: operations["attributeGroupCreate"];
         delete?: never;
         options?: never;
         head?: never;
@@ -54,7 +54,7 @@ export interface paths {
          *
          *     **Concurrency** — send back the `version` you read. If the record has been changed by someone else since, this returns **409 `VERSION_CONFLICT`** with a `version` field error and writes nothing. Re-read it, show the operator what moved, and submit again with the new `version`.
          */
-        put: operations["update_11"];
+        put: operations["attributeGroupUpdate"];
         post?: never;
         delete?: never;
         options?: never;
@@ -77,7 +77,7 @@ export interface paths {
          *
          *     **Requires permission:** `catalog.attribute.write`.
          */
-        post: operations["deactivate_4"];
+        post: operations["attributeGroupDeactivate"];
         delete?: never;
         options?: never;
         head?: never;
@@ -102,7 +102,7 @@ export interface paths {
          *
          *     **Requires permission:** `catalog.attribute.write`.
          */
-        post: operations["reactivate_3"];
+        post: operations["attributeGroupReactivate"];
         delete?: never;
         options?: never;
         head?: never;
@@ -131,7 +131,7 @@ export interface paths {
          *
          *     **Requires permission:** `catalog.attribute.write`.
          */
-        post: operations["reorder_3"];
+        post: operations["attributeGroupReorder"];
         delete?: never;
         options?: never;
         head?: never;
@@ -151,7 +151,7 @@ export interface paths {
          *
          *     **Requires permission:** `catalog.attribute.read`.
          */
-        get: operations["list_11"];
+        get: operations["attributeList"];
         put?: never;
         /**
          * Creates an attribute
@@ -170,7 +170,7 @@ export interface paths {
          *
          *     **Requires permission:** `catalog.attribute.write`.
          */
-        post: operations["create_10"];
+        post: operations["attributeCreate"];
         delete?: never;
         options?: never;
         head?: never;
@@ -193,7 +193,7 @@ export interface paths {
          *
          *     **Requires permission:** `catalog.attribute.read`.
          */
-        get: operations["listValues"];
+        get: operations["attributeListValues"];
         put?: never;
         /**
          * Adds a value to the set
@@ -208,7 +208,7 @@ export interface paths {
          *
          *     **Requires permission:** `catalog.attribute.write`.
          */
-        post: operations["addValue"];
+        post: operations["attributeAddValue"];
         delete?: never;
         options?: never;
         head?: never;
@@ -236,7 +236,7 @@ export interface paths {
          *
          *     **Concurrency** — send back the `version` you read. If the record has been changed by someone else since, this returns **409 `VERSION_CONFLICT`** with a `version` field error and writes nothing. Re-read it, show the operator what moved, and submit again with the new `version`.
          */
-        put: operations["updateValue"];
+        put: operations["attributeUpdateValue"];
         post?: never;
         delete?: never;
         options?: never;
@@ -263,7 +263,7 @@ export interface paths {
          *
          *     **Requires permission:** `catalog.attribute.write`.
          */
-        post: operations["deactivateValue"];
+        post: operations["attributeDeactivateValue"];
         delete?: never;
         options?: never;
         head?: never;
@@ -285,7 +285,7 @@ export interface paths {
          *
          *     **Requires permission:** `catalog.attribute.write`.
          */
-        post: operations["reactivateValue"];
+        post: operations["attributeReactivateValue"];
         delete?: never;
         options?: never;
         head?: never;
@@ -307,7 +307,7 @@ export interface paths {
          *
          *     **Requires permission:** `catalog.attribute.write`.
          */
-        post: operations["reorderValues"];
+        post: operations["attributeReorderValues"];
         delete?: never;
         options?: never;
         head?: never;
@@ -327,7 +327,7 @@ export interface paths {
          *
          *     **Requires permission:** `catalog.attribute.read`.
          */
-        get: operations["get_10"];
+        get: operations["attributeGet"];
         /**
          * Edits an attribute
          * @description Edits an attribute.
@@ -351,7 +351,7 @@ export interface paths {
          *
          *     **Concurrency** — send back the `version` you read. If the record has been changed by someone else since, this returns **409 `VERSION_CONFLICT`** with a `version` field error and writes nothing. Re-read it, show the operator what moved, and submit again with the new `version`.
          */
-        put: operations["update_10"];
+        put: operations["attributeUpdate"];
         post?: never;
         delete?: never;
         options?: never;
@@ -382,7 +382,7 @@ export interface paths {
          *
          *     **Requires permission:** `catalog.attribute.write`.
          */
-        post: operations["deactivate_3"];
+        post: operations["attributeDeactivate"];
         delete?: never;
         options?: never;
         head?: never;
@@ -404,7 +404,7 @@ export interface paths {
          *
          *     **Requires permission:** `catalog.attribute.write`.
          */
-        post: operations["reactivate_2"];
+        post: operations["attributeReactivate"];
         delete?: never;
         options?: never;
         head?: never;
@@ -430,7 +430,7 @@ export interface paths {
          *
          *     **Requires permission:** `catalog.attribute.write`.
          */
-        post: operations["reorder_2"];
+        post: operations["attributeReorder"];
         delete?: never;
         options?: never;
         head?: never;
@@ -446,13 +446,15 @@ export interface paths {
         };
         /**
          * Filtered, paginated, newest first
-         * @description Filtered, paginated, newest first.
+         * @description Filtered, paginated, newest first. Every filter is optional.
          *
-         *      <p><code>from</code> is inclusive, <code>to</code> exclusive. Both are instants in UTC.
+         *      <p><code>entityType</code> and <code>action</code> match exactly; the values this build writes are
+         *      published as their enumerations. <code>from</code> is inclusive, <code>to</code> exclusive. Both are
+         *      instants in UTC.
          *
          *     **Requires permission:** `audit.read`.
          */
-        get: operations["list_15"];
+        get: operations["auditList"];
         put?: never;
         post?: never;
         delete?: never;
@@ -485,7 +487,7 @@ export interface paths {
          *
          *     **No authentication required.** The invited member has no credential yet — the token is the credential.
          */
-        post: operations["acceptInvite"];
+        post: operations["authAcceptInvite"];
         delete?: never;
         options?: never;
         head?: never;
@@ -514,7 +516,7 @@ export interface paths {
          *
          *     **No authentication required.** Completes a reset for someone who by definition cannot log in.
          */
-        post: operations["completePasswordReset"];
+        post: operations["authCompletePasswordReset"];
         delete?: never;
         options?: never;
         head?: never;
@@ -541,7 +543,7 @@ export interface paths {
          *
          *     **No authentication required.** Establishes the credential everything else requires.
          */
-        post: operations["login"];
+        post: operations["authLogin"];
         delete?: never;
         options?: never;
         head?: never;
@@ -568,7 +570,7 @@ export interface paths {
          *
          *     **Requires authentication.** No specific permission beyond a live session.
          */
-        post: operations["logout"];
+        post: operations["authLogout"];
         delete?: never;
         options?: never;
         head?: never;
@@ -593,7 +595,7 @@ export interface paths {
          *
          *     **No authentication required.** Someone who has forgotten their password cannot authenticate.
          */
-        post: operations["requestPasswordReset"];
+        post: operations["authRequestPasswordReset"];
         delete?: never;
         options?: never;
         head?: never;
@@ -617,7 +619,7 @@ export interface paths {
          *
          *     **Requires permission:** `inventory.read`.
          */
-        get: operations["list_10"];
+        get: operations["batchList"];
         put?: never;
         /**
          * Registers a batch against a variant, before stock can be received into it
@@ -633,7 +635,7 @@ export interface paths {
          *
          *     **Requires permission:** `inventory.adjust`.
          */
-        post: operations["create_9"];
+        post: operations["batchCreate"];
         delete?: never;
         options?: never;
         head?: never;
@@ -653,7 +655,7 @@ export interface paths {
          *
          *     **Requires permission:** `inventory.read`.
          */
-        get: operations["get_12"];
+        get: operations["batchGet"];
         put?: never;
         post?: never;
         delete?: never;
@@ -682,7 +684,7 @@ export interface paths {
          *
          *     **Requires permission:** `catalog.brand.read`.
          */
-        get: operations["list_9"];
+        get: operations["brandList"];
         put?: never;
         /**
          * Creates a brand, in <code>DRAFT</code> and not live
@@ -698,7 +700,7 @@ export interface paths {
          *
          *     **Requires permission:** `catalog.brand.write`.
          */
-        post: operations["create_8"];
+        post: operations["brandCreate"];
         delete?: never;
         options?: never;
         head?: never;
@@ -721,7 +723,7 @@ export interface paths {
          *
          *     **Requires permission:** `catalog.brand.read`.
          */
-        get: operations["get_9"];
+        get: operations["brandGet"];
         /**
          * Edits the brand's content
          * @description Edits the brand's content.
@@ -738,7 +740,7 @@ export interface paths {
          *
          *     **Concurrency** — send back the `version` you read. If the record has been changed by someone else since, this returns **409 `VERSION_CONFLICT`** with a `version` field error and writes nothing. Re-read it, show the operator what moved, and submit again with the new `version`.
          */
-        put: operations["update_9"];
+        put: operations["brandUpdate"];
         post?: never;
         delete?: never;
         options?: never;
@@ -765,7 +767,7 @@ export interface paths {
          *
          *     **Requires permission:** `catalog.brand.publish`.
          */
-        post: operations["activate_2"];
+        post: operations["brandActivate"];
         delete?: never;
         options?: never;
         head?: never;
@@ -794,7 +796,7 @@ export interface paths {
          *
          *     **Requires permission:** `catalog.brand.publish`.
          */
-        post: operations["archive_2"];
+        post: operations["brandArchive"];
         delete?: never;
         options?: never;
         head?: never;
@@ -821,7 +823,7 @@ export interface paths {
          *
          *     **Requires permission:** `catalog.brand.publish`.
          */
-        post: operations["publish_2"];
+        post: operations["brandPublish"];
         delete?: never;
         options?: never;
         head?: never;
@@ -843,7 +845,7 @@ export interface paths {
          *
          *     **Requires permission:** `catalog.brand.publish`.
          */
-        post: operations["unpublish_2"];
+        post: operations["brandUnpublish"];
         delete?: never;
         options?: never;
         head?: never;
@@ -869,7 +871,7 @@ export interface paths {
          *
          *     **Requires permission:** `catalog.brand.write`.
          */
-        post: operations["reorder_1"];
+        post: operations["brandReorder"];
         delete?: never;
         options?: never;
         head?: never;
@@ -895,7 +897,7 @@ export interface paths {
          *
          *     **Requires permission:** `catalog.category.read`.
          */
-        get: operations["list_8"];
+        get: operations["categoryList"];
         put?: never;
         /**
          * Creates a category, in <code>DRAFT</code> and not live
@@ -909,7 +911,7 @@ export interface paths {
          *
          *     **Requires permission:** `catalog.category.write`.
          */
-        post: operations["create_7"];
+        post: operations["categoryCreate"];
         delete?: never;
         options?: never;
         head?: never;
@@ -931,7 +933,7 @@ export interface paths {
          *
          *     **Requires permission:** `catalog.category.read`.
          */
-        get: operations["get_8"];
+        get: operations["categoryGet"];
         /**
          * Edits the category's content
          * @description Edits the category's content.
@@ -947,7 +949,7 @@ export interface paths {
          *
          *     **Concurrency** — send back the `version` you read. If the record has been changed by someone else since, this returns **409 `VERSION_CONFLICT`** with a `version` field error and writes nothing. Re-read it, show the operator what moved, and submit again with the new `version`.
          */
-        put: operations["update_8"];
+        put: operations["categoryUpdate"];
         post?: never;
         delete?: never;
         options?: never;
@@ -970,7 +972,7 @@ export interface paths {
          *
          *     **Requires permission:** `catalog.category.publish`.
          */
-        post: operations["activate_1"];
+        post: operations["categoryActivate"];
         delete?: never;
         options?: never;
         head?: never;
@@ -998,7 +1000,7 @@ export interface paths {
          *
          *     **Requires permission:** `catalog.category.publish`.
          */
-        post: operations["archive_1"];
+        post: operations["categoryArchive"];
         delete?: never;
         options?: never;
         head?: never;
@@ -1020,7 +1022,7 @@ export interface paths {
          *
          *     **Requires permission:** `catalog.category.write`.
          */
-        post: operations["move"];
+        post: operations["categoryMove"];
         delete?: never;
         options?: never;
         head?: never;
@@ -1042,7 +1044,7 @@ export interface paths {
          *
          *     **Requires permission:** `catalog.category.publish`.
          */
-        post: operations["publish_1"];
+        post: operations["categoryPublish"];
         delete?: never;
         options?: never;
         head?: never;
@@ -1064,7 +1066,7 @@ export interface paths {
          *
          *     **Requires permission:** `catalog.category.publish`.
          */
-        post: operations["unpublish_1"];
+        post: operations["categoryUnpublish"];
         delete?: never;
         options?: never;
         head?: never;
@@ -1086,7 +1088,7 @@ export interface paths {
          *
          *     **Requires permission:** `catalog.category.write`.
          */
-        post: operations["reorder"];
+        post: operations["categoryReorder"];
         delete?: never;
         options?: never;
         head?: never;
@@ -1109,7 +1111,7 @@ export interface paths {
          *
          *     **Requires permission:** `catalog.category.read`.
          */
-        get: operations["tree"];
+        get: operations["categoryTree"];
         put?: never;
         post?: never;
         delete?: never;
@@ -1134,7 +1136,7 @@ export interface paths {
          *
          *     **Requires permission:** `procurement.grn.read`.
          */
-        get: operations["list_7"];
+        get: operations["goodsReceiptList"];
         put?: never;
         /**
          * Posts a goods receipt against a purchase order, receiving stock into its warehouse
@@ -1166,7 +1168,7 @@ export interface paths {
          *
          *     **Requires permission:** `procurement.grn.create`.
          */
-        post: operations["post"];
+        post: operations["goodsReceiptPost"];
         delete?: never;
         options?: never;
         head?: never;
@@ -1186,7 +1188,7 @@ export interface paths {
          *
          *     **Requires permission:** `procurement.grn.read`.
          */
-        get: operations["get_11"];
+        get: operations["goodsReceiptGet"];
         put?: never;
         post?: never;
         delete?: never;
@@ -1214,7 +1216,250 @@ export interface paths {
          *
          *     **Requires permission:** `team.read`.
          */
-        get: operations["list_14"];
+        get: operations["loginEventList"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/admin/membership/resolve": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Resolves the tier a points figure earns: the highest tier whose threshold <code>points</code>
+         *      clears, under the version in effect at <code>at</code> (default now)
+         * @description Resolves the tier a points figure earns: the highest tier whose threshold <code>points</code>
+         *      clears, under the version in effect at <code>at</code> (default now). The same function every domain
+         *      uses; nothing is stored.
+         *
+         *      <p><code>points</code> is points earned in the trailing twelve months — not a balance. Required, and
+         *      400 <code>VALIDATION_FAILED</code> when negative. 404 <code>NOT_FOUND</code> for an instant before the
+         *      launch version took effect.
+         *
+         *     **Requires permission:** `membership.read`.
+         */
+        get: operations["membershipResolveTier"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/admin/membership/users/{userId}/tier": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * A consumer's or partner's tier right now, resolved from the points they earned in the trailing
+         *      twelve months
+         * @description A consumer's or partner's tier right now, resolved from the points they earned in the trailing
+         *      twelve months. Computed on every call; the user record holds no tier.
+         *
+         *      <p><b>Until the ledger exists, the earned figure is 0 for every user</b>, so every user
+         *      resolves to the base tier. That is the true figure — nobody has earned anything yet — not a
+         *      placeholder value; it becomes live when the ledger lands, with no change to this endpoint.
+         *
+         *      <p>404 <code>NOT_FOUND</code> for a user that does not exist or has been deleted.
+         *
+         *     **Requires permission:** `membership.read`.
+         */
+        get: operations["membershipUserTier"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/admin/membership/versions": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Lists membership versions with their tier ladders: drafts first, then published versions,
+         *      latest effective date first
+         * @description Lists membership versions with their tier ladders: drafts first, then published versions,
+         *      latest effective date first.
+         *
+         *      <p><code>status</code> is optional and filters on what is stored (<code>DRAFT</code> / <code>
+         *      PUBLISHED</code>). Each version also carries its derived <code>state</code> — <code>DRAFT</code>, <code>
+         *      SCHEDULED</code>, <code>EFFECTIVE</code> or <code>SUPERSEDED</code> — and exactly one version is <code>
+         *      EFFECTIVE</code>.
+         *
+         *     **Requires permission:** `membership.read`.
+         */
+        get: operations["membershipListMembershipVersions"];
+        put?: never;
+        /**
+         * Creates a draft version with its complete tier ladder, lowest tier first
+         * @description Creates a draft version with its complete tier ladder, lowest tier first. A draft governs
+         *      nothing until it is published.
+         *
+         *      <p><b>The ladder is validated as a whole</b>, with 400 <code>VALIDATION_FAILED</code> and a field
+         *      error per problem (<code>tiers[2].thresholdPoints12mo</code>): at least one tier and at most 20; the
+         *      first tier's threshold is 0 and no other's is; thresholds strictly increase down the list;
+         *      codes and names are unique. A tier's rank is its position in the list.
+         *
+         *      <p>The benefit flags are stored, not applied: pricing reads <code>pricingLevel</code>, orders read
+         *      <code>freeShipping</code>, invites read <code>activeInviteLimit</code>.
+         *
+         *     **Requires permission:** `membership.write`.
+         */
+        post: operations["membershipCreateMembershipVersion"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/admin/membership/versions/{id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * One version with its ladder, and the <code>version</code> to send back on an edit or a publish.
+         * @description One version with its ladder, and the <code>version</code> to send back on an edit or a publish.
+         *
+         *     **Requires permission:** `membership.read`.
+         */
+        get: operations["membershipGetMembershipVersion"];
+        /**
+         * Edits a draft's name, notes and tier ladder
+         * @description Edits a draft's name, notes and tier ladder. <code>tiers</code> <b>replaces</b> the ladder — send
+         *      all of it; the draft's tier ids change with every save. Validated exactly as on create.
+         *
+         *      <p><b>Refused on a published version</b> with 422 <code>BUSINESS_RULE_VIOLATION</code>: a published
+         *      version is immutable, and a change is a new version.
+         *
+         *      <p>A stale <code>version</code> is refused with 409 <code>VERSION_CONFLICT</code> and nothing is written.
+         *      Every save moves the version, including one that changes only tiers.
+         *
+         *     **Requires permission:** `membership.write`.
+         *
+         *     **Concurrency** — send back the `version` you read. If the record has been changed by someone else since, this returns **409 `VERSION_CONFLICT`** with a `version` field error and writes nothing. Re-read it, show the operator what moved, and submit again with the new `version`.
+         */
+        put: operations["membershipUpdateMembershipVersion"];
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/admin/membership/versions/{id}/publish": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Publishes a draft: stamps <code>effectiveFrom</code> and makes the version immutable — for good,
+         *      there is no unpublish
+         * @description Publishes a draft: stamps <code>effectiveFrom</code> and makes the version immutable — for good,
+         *      there is no unpublish. <b>Its own permission</b>, <code>membership.publish</code>: putting a ladder
+         *      live decides every member's tier and benefits from that instant.
+         *
+         *      <p><code>effectiveFrom</code> omitted means now; a future instant <b>schedules</b> the version, and
+         *      the current one stays in effect until then. Refused:
+         *
+         *      <ul>
+         *        <li>400 <code>VALIDATION_FAILED</code> on <code>effectiveFrom</code> in the past — backdating would
+         *            change the tier history records were already resolved against.
+         *        <li>409 <code>CONFLICT</code> when another published version already takes effect at that exact
+         *            instant — exactly one version governs any instant.
+         *        <li>422 <code>BUSINESS_RULE_VIOLATION</code> on a version that is already published, or whose
+         *            stored ladder breaks the ladder rules.
+         *        <li>409 <code>VERSION_CONFLICT</code> when the draft has been edited since the <code>version</code> you
+         *            reviewed — nothing is published.
+         *      </ul>
+         *
+         *     **Requires permission:** `membership.publish`.
+         *
+         *     **Concurrency** — send back the `version` you read. If the record has been changed by someone else since, this returns **409 `VERSION_CONFLICT`** with a `version` field error and writes nothing. Re-read it, show the operator what moved, and submit again with the new `version`.
+         */
+        post: operations["membershipPublishMembershipVersion"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/admin/membership/versions/{id}/withdraw": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Withdraws a <b>scheduled</b> version — published, with an <code>effectiveFrom</code> still in the
+         *      future (D7
+         * @description Withdraws a <b>scheduled</b> version — published, with an <code>effectiveFrom</code> still in the
+         *      future (D7.11). It has governed no instant and no record cites it, so taking it back changes no
+         *      history. It becomes <code>WITHDRAWN</code>, final; to correct it, create a new draft. The version in
+         *      effect now is untouched, and exactly one version stays in effect at every instant.
+         *
+         *      <p><b>Requires <code>membership.publish</code></b> — withdrawing a scheduled publish is its inverse,
+         *      and the same authority.
+         *
+         *      <p>Refused with 422 <code>BUSINESS_RULE_VIOLATION</code>, naming why, for a version that is or has
+         *      been effective (immutable, D3.6), for a draft, and for one already withdrawn. A stale <code>
+         *      version</code> is refused with 409 <code>VERSION_CONFLICT</code> and nothing is withdrawn.
+         *
+         *     **Requires permission:** `membership.publish`.
+         *
+         *     **Concurrency** — send back the `version` you read. If the record has been changed by someone else since, this returns **409 `VERSION_CONFLICT`** with a `version` field error and writes nothing. Re-read it, show the operator what moved, and submit again with the new `version`.
+         */
+        post: operations["membershipWithdrawMembershipVersion"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/admin/membership/versions/effective": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * The version in effect at <code>at</code> — the published version with the latest <code>
+         *      effectiveFrom</code> not after it — with its ladder
+         * @description The version in effect at <code>at</code> — the published version with the latest <code>
+         *      effectiveFrom</code> not after it — with its ladder. <code>at</code> is optional and defaults to now; pass
+         *      a future instant to preview what a scheduled version will change.
+         *
+         *      <p>404 <code>NOT_FOUND</code> for an instant before the launch version took effect.
+         *
+         *     **Requires permission:** `membership.read`.
+         */
+        get: operations["membershipEffectiveMembershipVersion"];
         put?: never;
         post?: never;
         delete?: never;
@@ -1240,7 +1485,7 @@ export interface paths {
          *
          *     **Requires permission:** `team.read`.
          */
-        get: operations["list_13"];
+        get: operations["permissionList"];
         put?: never;
         post?: never;
         delete?: never;
@@ -1257,12 +1502,20 @@ export interface paths {
             cookie?: never;
         };
         /**
-         * Every filter is optional.
-         * @description Every filter is optional. With none, this is the whole catalog by name.
+         * Lists products by name
+         * @description Lists products by name. Every filter is optional; with none, this is the whole catalog.
+         *
+         *      <p><b><code>search</code> matches the product's name, its slug, or the SKU code of any of its
+         *      variants</b> — case-insensitive, as a literal substring (<code>%</code> and <code>_</code> are not
+         *      wildcards). An operator holding a label can type the code on it and find the product; a product
+         *      matching through several variants is still listed once.
+         *
+         *      <p>Each row carries its brand's name, its primary category and its variant count, so a list
+         *      needs no further calls.
          *
          *     **Requires permission:** `catalog.product.read`.
          */
-        get: operations["list_6"];
+        get: operations["productList"];
         put?: never;
         /**
          * Creates a product, in <code>DRAFT</code> and not live, together with its default variant
@@ -1281,7 +1534,7 @@ export interface paths {
          *
          *     **Requires permission:** `catalog.product.write`.
          */
-        post: operations["create_6"];
+        post: operations["productCreate"];
         delete?: never;
         options?: never;
         head?: never;
@@ -1304,7 +1557,7 @@ export interface paths {
          *
          *     **Requires permission:** `catalog.product.read`.
          */
-        get: operations["get_7"];
+        get: operations["productGet"];
         /**
          * Edits the product's content
          * @description Edits the product's content.
@@ -1322,7 +1575,7 @@ export interface paths {
          *
          *     **Concurrency** — send back the `version` you read. If the record has been changed by someone else since, this returns **409 `VERSION_CONFLICT`** with a `version` field error and writes nothing. Re-read it, show the operator what moved, and submit again with the new `version`.
          */
-        put: operations["update_7"];
+        put: operations["productUpdate"];
         post?: never;
         delete?: never;
         options?: never;
@@ -1345,7 +1598,7 @@ export interface paths {
          *
          *     **Requires permission:** `catalog.product.approve`.
          */
-        post: operations["approve_1"];
+        post: operations["productApprove"];
         delete?: never;
         options?: never;
         head?: never;
@@ -1373,7 +1626,7 @@ export interface paths {
          *
          *     **Requires permission:** `catalog.product.publish`.
          */
-        post: operations["archive"];
+        post: operations["productArchive"];
         delete?: never;
         options?: never;
         head?: never;
@@ -1396,7 +1649,7 @@ export interface paths {
          *
          *     **Concurrency** — send back the `version` you read. If the record has been changed by someone else since, this returns **409 `VERSION_CONFLICT`** with a `version` field error and writes nothing. Re-read it, show the operator what moved, and submit again with the new `version`.
          */
-        put: operations["setCategories"];
+        put: operations["productSetCategories"];
         post?: never;
         delete?: never;
         options?: never;
@@ -1419,7 +1672,7 @@ export interface paths {
          *
          *     **Requires permission:** `catalog.product.publish`.
          */
-        post: operations["publish"];
+        post: operations["productPublish"];
         delete?: never;
         options?: never;
         head?: never;
@@ -1444,7 +1697,7 @@ export interface paths {
          *
          *     **Requires permission:** `catalog.product.approve`.
          */
-        post: operations["reject"];
+        post: operations["productReject"];
         delete?: never;
         options?: never;
         head?: never;
@@ -1468,7 +1721,7 @@ export interface paths {
          *
          *     **Requires permission:** `catalog.product.write`.
          */
-        post: operations["submitForReview"];
+        post: operations["productSubmitForReview"];
         delete?: never;
         options?: never;
         head?: never;
@@ -1493,7 +1746,7 @@ export interface paths {
          *
          *     **Requires permission:** `catalog.product.publish`.
          */
-        post: operations["unpublish"];
+        post: operations["productUnpublish"];
         delete?: never;
         options?: never;
         head?: never;
@@ -1517,7 +1770,7 @@ export interface paths {
          *
          *     **Requires permission:** `catalog.product.read`.
          */
-        get: operations["productImages"];
+        get: operations["productContentProductImages"];
         put?: never;
         /**
          * Adds an image to the product, appended to the end of the order
@@ -1528,7 +1781,7 @@ export interface paths {
          *
          *     **Requires permission:** `catalog.product.write`.
          */
-        post: operations["addProductImage"];
+        post: operations["productContentAddProductImage"];
         delete?: never;
         options?: never;
         head?: never;
@@ -1555,7 +1808,7 @@ export interface paths {
          *
          *     **Concurrency** — send back the `version` you read. If the record has been changed by someone else since, this returns **409 `VERSION_CONFLICT`** with a `version` field error and writes nothing. Re-read it, show the operator what moved, and submit again with the new `version`.
          */
-        put: operations["updateProductImage"];
+        put: operations["productContentUpdateProductImage"];
         post?: never;
         /**
          * Removes an image from the product
@@ -1569,7 +1822,7 @@ export interface paths {
          *
          *     **Requires permission:** `catalog.product.write`.
          */
-        delete: operations["removeProductImage"];
+        delete: operations["productContentRemoveProductImage"];
         options?: never;
         head?: never;
         patch?: never;
@@ -1594,7 +1847,7 @@ export interface paths {
          *
          *     **Requires permission:** `catalog.product.write`.
          */
-        post: operations["reorderProductImages"];
+        post: operations["productContentReorderProductImages"];
         delete?: never;
         options?: never;
         head?: never;
@@ -1617,7 +1870,7 @@ export interface paths {
          *
          *     **Requires permission:** `catalog.product.read`.
          */
-        get: operations["listOptions"];
+        get: operations["productListOptions"];
         put?: never;
         /**
          * Declares an option axis
@@ -1628,7 +1881,7 @@ export interface paths {
          *
          *     **Requires permission:** `catalog.product.write`.
          */
-        post: operations["addOption"];
+        post: operations["productAddOption"];
         delete?: never;
         options?: never;
         head?: never;
@@ -1651,7 +1904,7 @@ export interface paths {
          *
          *     **Requires permission:** `catalog.product.write`.
          */
-        delete: operations["removeOption"];
+        delete: operations["productRemoveOption"];
         options?: never;
         head?: never;
         patch?: never;
@@ -1672,7 +1925,7 @@ export interface paths {
          *
          *     **Requires permission:** `catalog.product.write`.
          */
-        post: operations["reorderOptions"];
+        post: operations["productReorderOptions"];
         delete?: never;
         options?: never;
         head?: never;
@@ -1696,7 +1949,7 @@ export interface paths {
          *
          *     **Requires permission:** `catalog.product.read`.
          */
-        get: operations["productSpecs"];
+        get: operations["productContentProductSpecs"];
         /**
          * Sets a product-level spec value
          * @description Sets a product-level spec value.
@@ -1720,7 +1973,7 @@ export interface paths {
          *
          *     **Requires permission:** `catalog.product.write`.
          */
-        put: operations["setProductSpec"];
+        put: operations["productContentSetProductSpec"];
         post?: never;
         delete?: never;
         options?: never;
@@ -1747,7 +2000,7 @@ export interface paths {
          *
          *     **Requires permission:** `catalog.product.write`.
          */
-        delete: operations["clearProductSpec"];
+        delete: operations["productContentClearProductSpec"];
         options?: never;
         head?: never;
         patch?: never;
@@ -1770,7 +2023,7 @@ export interface paths {
          *
          *     **Requires permission:** `catalog.product.read`.
          */
-        get: operations["listVariants"];
+        get: operations["productListVariants"];
         put?: never;
         /**
          * Creates an additional variant from a combination
@@ -1781,7 +2034,7 @@ export interface paths {
          *
          *     **Requires permission:** `catalog.product.write`.
          */
-        post: operations["createVariant"];
+        post: operations["productCreateVariant"];
         delete?: never;
         options?: never;
         head?: never;
@@ -1820,7 +2073,7 @@ export interface paths {
          *
          *     **Concurrency** — send back the `version` you read. If the record has been changed by someone else since, this returns **409 `VERSION_CONFLICT`** with a `version` field error and writes nothing. Re-read it, show the operator what moved, and submit again with the new `version`.
          */
-        put: operations["updateVariant"];
+        put: operations["productUpdateVariant"];
         post?: never;
         delete?: never;
         options?: never;
@@ -1843,7 +2096,7 @@ export interface paths {
          *
          *     **Requires permission:** `catalog.product.write`.
          */
-        post: operations["makeVariantDefault"];
+        post: operations["productMakeVariantDefault"];
         delete?: never;
         options?: never;
         head?: never;
@@ -1865,7 +2118,7 @@ export interface paths {
          *
          *     **Requires permission:** `catalog.product.write`.
          */
-        post: operations["discontinueVariant"];
+        post: operations["productDiscontinueVariant"];
         delete?: never;
         options?: never;
         head?: never;
@@ -1888,7 +2141,7 @@ export interface paths {
          *
          *     **Requires permission:** `catalog.product.read`.
          */
-        get: operations["resolvedVariantImages"];
+        get: operations["productContentResolvedVariantImages"];
         put?: never;
         /**
          * Adds an image to a variant, appended to the end of its order
@@ -1899,7 +2152,7 @@ export interface paths {
          *
          *     **Requires permission:** `catalog.product.write`.
          */
-        post: operations["addVariantImage"];
+        post: operations["productContentAddVariantImage"];
         delete?: never;
         options?: never;
         head?: never;
@@ -1925,7 +2178,7 @@ export interface paths {
          *
          *     **Concurrency** — send back the `version` you read. If the record has been changed by someone else since, this returns **409 `VERSION_CONFLICT`** with a `version` field error and writes nothing. Re-read it, show the operator what moved, and submit again with the new `version`.
          */
-        put: operations["updateVariantImage"];
+        put: operations["productContentUpdateVariantImage"];
         post?: never;
         /**
          * Removing the last one is not a loss — the variant falls back to the product's images.
@@ -1933,7 +2186,7 @@ export interface paths {
          *
          *     **Requires permission:** `catalog.product.write`.
          */
-        delete: operations["removeVariantImage"];
+        delete: operations["productContentRemoveVariantImage"];
         options?: never;
         head?: never;
         patch?: never;
@@ -1957,7 +2210,7 @@ export interface paths {
          *
          *     **Requires permission:** `catalog.product.write`.
          */
-        post: operations["reorderVariantImages"];
+        post: operations["productContentReorderVariantImages"];
         delete?: never;
         options?: never;
         head?: never;
@@ -1982,7 +2235,7 @@ export interface paths {
          *
          *     **Requires permission:** `catalog.product.write`.
          */
-        post: operations["reinstateVariant"];
+        post: operations["productReinstateVariant"];
         delete?: never;
         options?: never;
         head?: never;
@@ -2008,7 +2261,7 @@ export interface paths {
          *
          *     **Requires permission:** `catalog.product.read`.
          */
-        get: operations["variantSpecs"];
+        get: operations["productContentVariantSpecs"];
         /**
          * Sets a variant-level spec value
          * @description Sets a variant-level spec value.
@@ -2032,7 +2285,7 @@ export interface paths {
          *
          *     **Requires permission:** `catalog.product.write`.
          */
-        put: operations["setVariantSpec"];
+        put: operations["productContentSetVariantSpec"];
         post?: never;
         delete?: never;
         options?: never;
@@ -2058,7 +2311,7 @@ export interface paths {
          *
          *     **Requires permission:** `catalog.product.write`.
          */
-        delete: operations["clearVariantSpec"];
+        delete: operations["productContentClearVariantSpec"];
         options?: never;
         head?: never;
         patch?: never;
@@ -2082,7 +2335,7 @@ export interface paths {
          *
          *     **Requires permission:** `catalog.product.write`.
          */
-        post: operations["reorderVariants"];
+        post: operations["productReorderVariants"];
         delete?: never;
         options?: never;
         head?: never;
@@ -2108,7 +2361,7 @@ export interface paths {
          *
          *     **Requires authentication.** No specific permission beyond a live session.
          */
-        get: operations["get_6"];
+        get: operations["profileGet"];
         /**
          * Edits the caller's own name and phone
          * @description Edits the caller's own name and phone.
@@ -2121,7 +2374,7 @@ export interface paths {
          *
          *     **Concurrency** — send back the `version` you read. If the record has been changed by someone else since, this returns **409 `VERSION_CONFLICT`** with a `version` field error and writes nothing. Re-read it, show the operator what moved, and submit again with the new `version`.
          */
-        put: operations["update_6"];
+        put: operations["profileUpdate"];
         post?: never;
         delete?: never;
         options?: never;
@@ -2157,7 +2410,7 @@ export interface paths {
          *
          *     **Requires authentication.** No specific permission beyond a live session.
          */
-        post: operations["changePassword"];
+        post: operations["profileChangePassword"];
         delete?: never;
         options?: never;
         head?: never;
@@ -2183,7 +2436,7 @@ export interface paths {
          *
          *     **Requires permission:** `procurement.po.read`.
          */
-        get: operations["list_5"];
+        get: operations["purchaseOrderList"];
         put?: never;
         /**
          * Raises a purchase order in <code>DRAFT</code>
@@ -2197,7 +2450,7 @@ export interface paths {
          *
          *     **Requires permission:** `procurement.po.write`.
          */
-        post: operations["create_5"];
+        post: operations["purchaseOrderCreate"];
         delete?: never;
         options?: never;
         head?: never;
@@ -2217,7 +2470,7 @@ export interface paths {
          *
          *     **Requires permission:** `procurement.po.read`.
          */
-        get: operations["get_5"];
+        get: operations["purchaseOrderGet"];
         /**
          * Edits a draft: destination, expected date, notes and the whole set of lines
          * @description Edits a draft: destination, expected date, notes and the whole set of lines.
@@ -2235,7 +2488,7 @@ export interface paths {
          *
          *     **Concurrency** — send back the `version` you read. If the record has been changed by someone else since, this returns **409 `VERSION_CONFLICT`** with a `version` field error and writes nothing. Re-read it, show the operator what moved, and submit again with the new `version`.
          */
-        put: operations["update_5"];
+        put: operations["purchaseOrderUpdate"];
         post?: never;
         delete?: never;
         options?: never;
@@ -2264,7 +2517,7 @@ export interface paths {
          *
          *     **Requires permission:** `procurement.po.approve`.
          */
-        post: operations["approve"];
+        post: operations["purchaseOrderApprove"];
         delete?: never;
         options?: never;
         head?: never;
@@ -2292,7 +2545,7 @@ export interface paths {
          *
          *     **Requires permission:** `procurement.po.write`.
          */
-        post: operations["cancel"];
+        post: operations["purchaseOrderCancel"];
         delete?: never;
         options?: never;
         head?: never;
@@ -2316,7 +2569,7 @@ export interface paths {
          *
          *     **Requires permission:** `procurement.grn.read`.
          */
-        get: operations["receipts"];
+        get: operations["purchaseOrderReceipts"];
         put?: never;
         post?: never;
         delete?: never;
@@ -2342,7 +2595,7 @@ export interface paths {
          *
          *     **Requires permission:** `procurement.po.read`.
          */
-        get: operations["open"];
+        get: operations["purchaseOrderOpen"];
         put?: never;
         post?: never;
         delete?: never;
@@ -2368,7 +2621,7 @@ export interface paths {
          *
          *     **Requires permission:** `team.read`.
          */
-        get: operations["list_4"];
+        get: operations["roleList"];
         put?: never;
         /**
          * Creates a role
@@ -2380,7 +2633,7 @@ export interface paths {
          *
          *     **Requires permission:** `team.manage`.
          */
-        post: operations["create_4"];
+        post: operations["roleCreate"];
         delete?: never;
         options?: never;
         head?: never;
@@ -2400,7 +2653,7 @@ export interface paths {
          *
          *     **Requires permission:** `team.read`.
          */
-        get: operations["get_4"];
+        get: operations["roleGet"];
         /**
          * Replaces a role's name, description and whole permission set
          * @description Replaces a role's name, description and whole permission set.
@@ -2417,7 +2670,7 @@ export interface paths {
          *
          *     **Concurrency** — send back the `version` you read. If the record has been changed by someone else since, this returns **409 `VERSION_CONFLICT`** with a `version` field error and writes nothing. Re-read it, show the operator what moved, and submit again with the new `version`.
          */
-        put: operations["update_4"];
+        put: operations["roleUpdate"];
         post?: never;
         /**
          * Deletes a role
@@ -2432,7 +2685,7 @@ export interface paths {
          *
          *     **Requires permission:** `team.manage`.
          */
-        delete: operations["delete"];
+        delete: operations["roleDelete"];
         options?: never;
         head?: never;
         patch?: never;
@@ -2455,7 +2708,7 @@ export interface paths {
          *
          *     **Requires permission:** `inventory.adjust`.
          */
-        post: operations["adjust"];
+        post: operations["stockAdjust"];
         delete?: never;
         options?: never;
         head?: never;
@@ -2479,7 +2732,7 @@ export interface paths {
          *
          *     **Requires permission:** `inventory.read`.
          */
-        get: operations["expiringSoon"];
+        get: operations["stockExpiringSoon"];
         put?: never;
         post?: never;
         delete?: never;
@@ -2501,7 +2754,7 @@ export interface paths {
          *
          *     **Requires permission:** `inventory.read`.
          */
-        get: operations["levels"];
+        get: operations["stockLevels"];
         put?: never;
         post?: never;
         delete?: never;
@@ -2530,7 +2783,7 @@ export interface paths {
          *
          *     **Requires permission:** `inventory.read`.
          */
-        get: operations["lowStock"];
+        get: operations["stockLowStock"];
         put?: never;
         post?: never;
         delete?: never;
@@ -2556,7 +2809,7 @@ export interface paths {
          *
          *     **Requires permission:** `inventory.read`.
          */
-        get: operations["movements"];
+        get: operations["stockMovements"];
         put?: never;
         post?: never;
         delete?: never;
@@ -2584,7 +2837,7 @@ export interface paths {
          *
          *     **Requires permission:** `inventory.adjust`.
          */
-        post: operations["rebuild"];
+        post: operations["stockRebuild"];
         delete?: never;
         options?: never;
         head?: never;
@@ -2608,7 +2861,7 @@ export interface paths {
          *
          *     **Requires permission:** `inventory.read`.
          */
-        get: operations["reconcile"];
+        get: operations["stockReconcile"];
         put?: never;
         post?: never;
         delete?: never;
@@ -2630,7 +2883,7 @@ export interface paths {
          *
          *     **Requires permission:** `inventory.read`.
          */
-        get: operations["totals"];
+        get: operations["stockTotals"];
         put?: never;
         post?: never;
         delete?: never;
@@ -2658,7 +2911,7 @@ export interface paths {
          *
          *     **Requires permission:** `inventory.transfer`.
          */
-        post: operations["transfer"];
+        post: operations["stockTransfer"];
         delete?: never;
         options?: never;
         head?: never;
@@ -2678,7 +2931,7 @@ export interface paths {
          *
          *     **Requires permission:** `inventory.read`.
          */
-        get: operations["transfer_1"];
+        get: operations["stockGetTransfer"];
         put?: never;
         post?: never;
         delete?: never;
@@ -2703,7 +2956,7 @@ export interface paths {
          *
          *     **Requires permission:** `procurement.supplier.read`.
          */
-        get: operations["list_3"];
+        get: operations["supplierList"];
         put?: never;
         /**
          * Creates a supplier, active
@@ -2718,7 +2971,7 @@ export interface paths {
          *
          *     **Requires permission:** `procurement.supplier.write`.
          */
-        post: operations["create_3"];
+        post: operations["supplierCreate"];
         delete?: never;
         options?: never;
         head?: never;
@@ -2738,7 +2991,7 @@ export interface paths {
          *
          *     **Requires permission:** `procurement.supplier.read`.
          */
-        get: operations["get_3"];
+        get: operations["supplierGet"];
         /**
          * Edits a supplier's name, address, GSTIN, contact and payment terms
          * @description Edits a supplier's name, address, GSTIN, contact and payment terms.
@@ -2753,7 +3006,7 @@ export interface paths {
          *
          *     **Concurrency** — send back the `version` you read. If the record has been changed by someone else since, this returns **409 `VERSION_CONFLICT`** with a `version` field error and writes nothing. Re-read it, show the operator what moved, and submit again with the new `version`.
          */
-        put: operations["update_3"];
+        put: operations["supplierUpdate"];
         post?: never;
         delete?: never;
         options?: never;
@@ -2781,7 +3034,7 @@ export interface paths {
          *
          *     **Requires permission:** `procurement.supplier.write`.
          */
-        post: operations["deactivate_2"];
+        post: operations["supplierDeactivate"];
         delete?: never;
         options?: never;
         head?: never;
@@ -2803,7 +3056,7 @@ export interface paths {
          *
          *     **Requires permission:** `procurement.supplier.write`.
          */
-        post: operations["reactivate_1"];
+        post: operations["supplierReactivate"];
         delete?: never;
         options?: never;
         head?: never;
@@ -2818,18 +3071,22 @@ export interface paths {
             cookie?: never;
         };
         /**
-         * Lists team members with their roles
-         * @description Lists team members with their roles.
+         * Lists team members with their roles, newest first
+         * @description Lists team members with their roles, newest first.
+         *
+         *      <p>Every filter is optional. <code>roleId</code> lists members holding that role; <code>search</code>
+         *      matches the name or email as a literal, case-insensitive substring.
          *
          *      <p>Team members are a separate identity from consumers and partners — a different table, a
          *      different auth mechanism, a different lifecycle. Nothing here reaches either of the others.
          *
          *      <p>Never includes password hashes, token hashes or invite tokens. <code>locked</code> reflects the
-         *      lockout window as of now and clears itself when it expires.
+         *      lockout window as of now and clears itself when it expires. <code>lastActiveAt</code> is the last
+         *      request on any of the member's sessions.
          *
          *     **Requires permission:** `team.read`.
          */
-        get: operations["list_2"];
+        get: operations["teamMemberList"];
         put?: never;
         /**
          * Creates a member and returns their invite link
@@ -2841,7 +3098,7 @@ export interface paths {
          *
          *     **Requires permission:** `team.manage`.
          */
-        post: operations["create_2"];
+        post: operations["teamMemberCreate"];
         delete?: never;
         options?: never;
         head?: never;
@@ -2861,7 +3118,7 @@ export interface paths {
          *
          *     **Requires permission:** `team.read`.
          */
-        get: operations["get_2"];
+        get: operations["teamMemberGet"];
         /**
          * Edits a member's name and phone
          * @description Edits a member's name and phone.
@@ -2875,7 +3132,7 @@ export interface paths {
          *
          *     **Concurrency** — send back the `version` you read. If the record has been changed by someone else since, this returns **409 `VERSION_CONFLICT`** with a `version` field error and writes nothing. Re-read it, show the operator what moved, and submit again with the new `version`.
          */
-        put: operations["update_2"];
+        put: operations["teamMemberUpdate"];
         post?: never;
         delete?: never;
         options?: never;
@@ -2902,7 +3159,7 @@ export interface paths {
          *
          *     **Requires permission:** `team.manage`.
          */
-        post: operations["activate"];
+        post: operations["teamMemberActivate"];
         delete?: never;
         options?: never;
         head?: never;
@@ -2932,7 +3189,7 @@ export interface paths {
          *
          *     **Requires permission:** `team.manage`.
          */
-        post: operations["deactivate_1"];
+        post: operations["teamMemberDeactivate"];
         delete?: never;
         options?: never;
         head?: never;
@@ -2959,7 +3216,7 @@ export interface paths {
          *
          *     **Requires permission:** `team.manage`.
          */
-        post: operations["forceLogout"];
+        post: operations["teamMemberForceLogout"];
         delete?: never;
         options?: never;
         head?: never;
@@ -2987,7 +3244,7 @@ export interface paths {
          *
          *     **Requires permission:** `team.manage`.
          */
-        post: operations["resendInvite"];
+        post: operations["teamMemberResendInvite"];
         delete?: never;
         options?: never;
         head?: never;
@@ -3012,7 +3269,7 @@ export interface paths {
          *
          *     **Requires permission:** `team.manage`.
          */
-        post: operations["resetPassword"];
+        post: operations["teamMemberResetPassword"];
         delete?: never;
         options?: never;
         head?: never;
@@ -3038,7 +3295,7 @@ export interface paths {
          *
          *     **Concurrency** — send back the `version` you read. If the record has been changed by someone else since, this returns **409 `VERSION_CONFLICT`** with a `version` field error and writes nothing. Re-read it, show the operator what moved, and submit again with the new `version`.
          */
-        put: operations["assignRoles"];
+        put: operations["teamMemberAssignRoles"];
         post?: never;
         delete?: never;
         options?: never;
@@ -3065,7 +3322,7 @@ export interface paths {
          *
          *     **Requires permission:** `team.manage`.
          */
-        post: operations["suspend_1"];
+        post: operations["teamMemberSuspend"];
         delete?: never;
         options?: never;
         head?: never;
@@ -3092,7 +3349,7 @@ export interface paths {
          *
          *     **Requires permission:** `identity.user.read`.
          */
-        get: operations["list_1"];
+        get: operations["userList"];
         put?: never;
         /**
          * Starts an account for a person: <code>INVITED</code>, holding <code>CONSUMER</code>
@@ -3103,13 +3360,16 @@ export interface paths {
          *      the invite is not part of this endpoint yet — that arrives with invite management.
          *
          *      <p><b>Refused with 409 <code>CONFLICT</code></b> when the mobile number, or the email if given,
-         *      already belongs to another account. One person has one account: a consumer who is to become a
-         *      partner is granted the role on the account they have, not given a second one. Mobile numbers
-         *      are compared normalised, so <code>09876543210</code> collides with <code>+919876543210</code>.
+         *      already belongs to another account — and the error carries <code>existingId</code>, the id of that
+         *      account, so a client can link straight to it. One person has one account: a consumer who is to
+         *      become a partner is granted the role on the account they have, not given a second one. Mobile
+         *      numbers are compared normalised, so <code>09876543210</code> collides with <code>+919876543210</code>.
+         *
+         *      <p><code>name</code> is optional; the person gives it when they claim the account.
          *
          *     **Requires permission:** `identity.user.write`.
          */
-        post: operations["create_1"];
+        post: operations["userCreate"];
         delete?: never;
         options?: never;
         head?: never;
@@ -3130,13 +3390,18 @@ export interface paths {
          *
          *     **Requires permission:** `identity.user.read`.
          */
-        get: operations["get_1"];
+        get: operations["userGet"];
         /**
-         * Edits an account's mobile, email and name
-         * @description Edits an account's mobile, email and name.
+         * Edits an account's email and name
+         * @description Edits an account's email and name. A full replacement: a null, omitted or blank <code>email</code>
+         *      or <code>name</code> clears it.
          *
-         *      <p>Mobile and email stay unique — a clash is 409 <code>CONFLICT</code> naming the value. Status and
-         *      roles are not editable here; each has its own endpoint.
+         *      <p><b>The mobile cannot be changed here</b> (D5.13). Send back the stored one; a different
+         *      number is refused with 400 <code>VALIDATION_FAILED</code> on <code>mobile</code>, never silently ignored.
+         *      Changing a customer's number is a separate, verified operation, not built yet.
+         *
+         *      <p>An email held by another account is 409 <code>CONFLICT</code> naming it, with <code>existingId</code>
+         *      set to that account. Status and roles are not editable here; each has its own endpoint.
          *
          *      <p>A stale <code>version</code> is refused with 409 <code>VERSION_CONFLICT</code> and nothing is written.
          *
@@ -3144,7 +3409,7 @@ export interface paths {
          *
          *     **Concurrency** — send back the `version` you read. If the record has been changed by someone else since, this returns **409 `VERSION_CONFLICT`** with a `version` field error and writes nothing. Re-read it, show the operator what moved, and submit again with the new `version`.
          */
-        put: operations["update_1"];
+        put: operations["userUpdate"];
         post?: never;
         delete?: never;
         options?: never;
@@ -3167,11 +3432,14 @@ export interface paths {
          *
          *      <p>The same account gains the role — the person stays one user (D5.1). <b>Takes no body</b>:
          *      the grant is a bare flag and captures no KYC, bank or commission detail, all of which belongs
-         *      to payouts. Refused with 422 when the account already holds <code>PARTNER</code>.
+         *      to payouts — the body carries only the <code>version</code> you read. Refused with 422 when the
+         *      account already holds <code>PARTNER</code>. The account's <code>version</code> moves.
          *
          *     **Requires permission:** `identity.user.write`.
+         *
+         *     **Concurrency** — send back the `version` you read. If the record has been changed by someone else since, this returns **409 `VERSION_CONFLICT`** with a `version` field error and writes nothing. Re-read it, show the operator what moved, and submit again with the new `version`.
          */
-        post: operations["grantPartner"];
+        post: operations["userGrantPartner"];
         delete?: never;
         options?: never;
         head?: never;
@@ -3196,8 +3464,10 @@ export interface paths {
          *      <p>Requires <code>identity.user.suspend</code>. Refused with 422 when the account is not suspended.
          *
          *     **Requires permission:** `identity.user.suspend`.
+         *
+         *     **Concurrency** — send back the `version` you read. If the record has been changed by someone else since, this returns **409 `VERSION_CONFLICT`** with a `version` field error and writes nothing. Re-read it, show the operator what moved, and submit again with the new `version`.
          */
-        post: operations["reinstate"];
+        post: operations["userReinstate"];
         delete?: never;
         options?: never;
         head?: never;
@@ -3219,8 +3489,10 @@ export interface paths {
          *      stays in <code>roleHistory</code>. Refused with 422 when the account does not hold <code>PARTNER</code>.
          *
          *     **Requires permission:** `identity.user.write`.
+         *
+         *     **Concurrency** — send back the `version` you read. If the record has been changed by someone else since, this returns **409 `VERSION_CONFLICT`** with a `version` field error and writes nothing. Re-read it, show the operator what moved, and submit again with the new `version`.
          */
-        post: operations["revokePartner"];
+        post: operations["userRevokePartner"];
         delete?: never;
         options?: never;
         head?: never;
@@ -3245,8 +3517,10 @@ export interface paths {
          *      Refused with 422 when the account is already suspended.
          *
          *     **Requires permission:** `identity.user.suspend`.
+         *
+         *     **Concurrency** — send back the `version` you read. If the record has been changed by someone else since, this returns **409 `VERSION_CONFLICT`** with a `version` field error and writes nothing. Re-read it, show the operator what moved, and submit again with the new `version`.
          */
-        post: operations["suspend"];
+        post: operations["userSuspend"];
         delete?: never;
         options?: never;
         head?: never;
@@ -3268,7 +3542,7 @@ export interface paths {
          *
          *     **Requires permission:** `warehouse.read`.
          */
-        get: operations["list"];
+        get: operations["warehouseList"];
         put?: never;
         /**
          * Creates a warehouse, active
@@ -3283,7 +3557,7 @@ export interface paths {
          *
          *     **Requires permission:** `warehouse.write`.
          */
-        post: operations["create"];
+        post: operations["warehouseCreate"];
         delete?: never;
         options?: never;
         head?: never;
@@ -3303,7 +3577,7 @@ export interface paths {
          *
          *     **Requires permission:** `warehouse.read`.
          */
-        get: operations["get"];
+        get: operations["warehouseGet"];
         /**
          * Edits a warehouse's name, type, address and GSTIN
          * @description Edits a warehouse's name, type, address and GSTIN.
@@ -3319,7 +3593,7 @@ export interface paths {
          *
          *     **Concurrency** — send back the `version` you read. If the record has been changed by someone else since, this returns **409 `VERSION_CONFLICT`** with a `version` field error and writes nothing. Re-read it, show the operator what moved, and submit again with the new `version`.
          */
-        put: operations["update"];
+        put: operations["warehouseUpdate"];
         post?: never;
         delete?: never;
         options?: never;
@@ -3342,7 +3616,7 @@ export interface paths {
          *
          *     **Requires permission:** `warehouse.write`.
          */
-        post: operations["deactivate"];
+        post: operations["warehouseDeactivate"];
         delete?: never;
         options?: never;
         head?: never;
@@ -3367,7 +3641,7 @@ export interface paths {
          *
          *     **Requires permission:** `warehouse.write`.
          */
-        post: operations["reactivate"];
+        post: operations["warehouseReactivate"];
         delete?: never;
         options?: never;
         head?: never;
@@ -3482,7 +3756,8 @@ export interface components {
             /** @enum {string} */
             kind?: "OPTION" | "SPEC";
             name?: string;
-            unit?: string;
+            /** @enum {string} */
+            unit?: "g" | "mg" | "kg" | "ml" | "l" | "kcal" | "iu" | "mcg" | "servings" | "days" | "pieces";
             /** Format: date-time */
             updatedAt?: string;
             /** Format: int64 */
@@ -3658,8 +3933,11 @@ export interface components {
             /** @enum {string} */
             kind: "OPTION" | "SPEC";
             name: string;
-            /** @description accepted only when <code>dataType</code> is <code>NUMBER</code>. */
-            unit?: string;
+            /**
+             * @description accepted only when <code>dataType</code> is <code>NUMBER</code>.
+             * @enum {string}
+             */
+            unit?: "g" | "mg" | "kg" | "ml" | "l" | "kcal" | "iu" | "mcg" | "servings" | "days" | "pieces";
         };
         CreateBatchRequest: {
             batchNumber: string;
@@ -3794,7 +4072,11 @@ export interface components {
              *          spaces or hyphens; stored and returned as <code>+91</code> followed by ten digits
              */
             mobile: string;
-            name: string;
+            /**
+             * @description optional — mobile is the identity, and the person gives their name when they claim
+             *          the account. Blank is stored as absent
+             */
+            name?: string;
         };
         /** @description Adding a value. */
         CreateValueRequest: {
@@ -3811,6 +4093,13 @@ export interface components {
         CreateVariantRequest: {
             optionValues: components["schemas"]["OptionValuePayload"][];
             skuCode: string;
+        };
+        /** @description A new draft version with its complete ladder. */
+        CreateVersionRequest: {
+            name: string;
+            notes?: string;
+            /** @description the ladder, lowest tier first. At least one, at most 20 */
+            tiers: components["schemas"]["TierRequest"][];
         };
         CreateWarehouseRequest: {
             addressLine1: string;
@@ -3848,9 +4137,11 @@ export interface components {
          * @description The machine-readable error code. Branch on this, never on `message`. The catalog in the API description says what each one means and which fields it populates.
          * @enum {unknown}
          */
-        ErrorCode: "NOT_FOUND" | "VALIDATION_FAILED" | "VERSION_CONFLICT" | "CONFLICT" | "BUSINESS_RULE_VIOLATION" | "AUTHENTICATION_FAILED" | "ACCESS_DENIED" | "INTERNAL_ERROR";
+        ErrorCode: "NOT_FOUND" | "VALIDATION_FAILED" | "VERSION_CONFLICT" | "CONFLICT" | "BUSINESS_RULE_VIOLATION" | "AUTHENTICATION_FAILED" | "ACCESS_DENIED" | "UNSUPPORTED_MEDIA_TYPE" | "RATE_LIMITED" | "INTERNAL_ERROR";
         ErrorResponse: {
             code?: components["schemas"]["ErrorCode"];
+            /** Format: uuid */
+            existingId?: string;
             fieldErrors?: components["schemas"]["FieldError"][];
             message?: string;
             traceId?: string;
@@ -4320,8 +4611,8 @@ export interface components {
          *      exposes internals — <code>pageable</code>, <code>sort</code>, <code>numberOfElements</code> — that no client
          *      should be reading.
          */
-        PageResponseProductResponse: {
-            content?: components["schemas"]["ProductResponse"][];
+        PageResponseProductListItemResponse: {
+            content?: components["schemas"]["ProductListItemResponse"][];
             /** Format: int32 */
             page?: number;
             /** Format: int32 */
@@ -4552,6 +4843,35 @@ export interface components {
          *      exposes internals — <code>pageable</code>, <code>sort</code>, <code>numberOfElements</code> — that no client
          *      should be reading.
          */
+        PageResponseVersionResponse: {
+            content?: components["schemas"]["VersionResponse"][];
+            /** Format: int32 */
+            page?: number;
+            /** Format: int32 */
+            size?: number;
+            /** Format: int64 */
+            totalElements?: number;
+            /** Format: int32 */
+            totalPages?: number;
+        };
+        /**
+         * @description The paging envelope every paginated response uses.
+         *
+         *      <p>Lives in <code>platform</code> rather than in one domain's DTO folder. It carries no domain meaning
+         *      and every module needs it, so putting it in <code>team/dto/admin</code> — where it started, when team
+         *      was the only module — would make <code>catalog</code> import <code>team</code> to return a page of brands.
+         *      Domain packages depend on <code>platform</code> and never on each other; a shared envelope has to sit
+         *      where both can reach it.
+         *
+         *      <p>It is not an exception to "never share DTOs across surfaces". That rule is about
+         *      <i>representations</i> — the fields of a brand, of a member, of an order — where a shared type
+         *      leaks an admin-only field into an app-facing response. This type has no fields of its own; the
+         *      content it wraps is a per-surface DTO and stays one.
+         *
+         *      <p>Deliberately not Spring Data's <code>Page</code>, whose JSON form is unstable across versions and
+         *      exposes internals — <code>pageable</code>, <code>sort</code>, <code>numberOfElements</code> — that no client
+         *      should be reading.
+         */
         PageResponseWarehouseResponse: {
             content?: components["schemas"]["WarehouseResponse"][];
             /** Format: int32 */
@@ -4605,6 +4925,48 @@ export interface components {
             options?: components["schemas"]["ProductOptionResponse"][];
             product?: components["schemas"]["ProductResponse"];
             variants?: components["schemas"]["VariantResponse"][];
+        };
+        /** @description A row of the product list: the product, plus what a list column needs from around it (0.8). */
+        ProductListItemResponse: {
+            /** @enum {string} */
+            audience?: "PUBLIC" | "TIER_RESTRICTED" | "CUSTOMER_RESTRICTED";
+            /** Format: uuid */
+            brandId?: string;
+            /** @description the brand's name — every product has a brand */
+            brandName?: string;
+            /** Format: date-time */
+            createdAt?: string;
+            /** Format: date-time */
+            firstActivatedAt?: string;
+            /** Format: uuid */
+            id?: string;
+            /** @enum {string} */
+            listingVisibility?: "LISTED" | "UNLISTED";
+            live?: boolean;
+            /** @enum {string} */
+            lockedDisplay?: "SHOW_LOCKED" | "HIDE";
+            name?: string;
+            /**
+             * Format: uuid
+             * @description the product's primary category; null when it is in none
+             */
+            primaryCategoryId?: string;
+            /** @description null when it is in no category */
+            primaryCategoryName?: string;
+            shortDescription?: string;
+            skuCodesEditable?: boolean;
+            slug?: string;
+            /** @enum {string} */
+            status?: "DRAFT" | "IN_REVIEW" | "ACTIVE" | "ARCHIVED";
+            /** Format: date-time */
+            updatedAt?: string;
+            /**
+             * Format: int64
+             * @description every variant the product has, discontinued included; at least 1
+             */
+            variantCount?: number;
+            /** Format: int64 */
+            version?: number;
         };
         ProductOptionResponse: {
             /** Format: uuid */
@@ -4664,6 +5026,22 @@ export interface components {
             status?: "INVITED" | "ACTIVE" | "SUSPENDED" | "DEACTIVATED";
             /** Format: int64 */
             version?: number;
+        };
+        /** @description Publishing a draft. */
+        PublishVersionRequest: {
+            /**
+             * Format: date-time
+             * @description when the version takes effect. Omit for immediately; a future instant
+             *          schedules it. Never in the past
+             */
+            effectiveFrom?: string;
+            /**
+             * Format: int64
+             * @description the <code>version</code> of the draft you reviewed. If it has been edited since, the
+             *          publish is refused with 409 <code>VERSION_CONFLICT</code> rather than putting a ladder live that
+             *          you have not seen
+             */
+            version: number;
         };
         /** @description One line on the way in. */
         PurchaseOrderLineRequest: {
@@ -4791,6 +5169,14 @@ export interface components {
             /** Format: int32 */
             displayOrder?: number;
             /**
+             * Format: uuid
+             * @description the image's own id (0.8). When <code>inherited</code> is false it is the variant image's —
+             *          use it with the variant image endpoints to edit, remove or reorder it. When <code>
+             *          inherited</code> is true it is the <i>product</i> image's, editable only through the product
+             *          image endpoints
+             */
+            id?: string;
+            /**
              * @description true when these are the product's images rather than the variant's own. On the
              *          response so an operator can see a variant is borrowing rather than owning its pictures —
              *          without it, "has images" and "is showing the product's" look identical and nobody notices
@@ -4798,6 +5184,46 @@ export interface components {
              */
             inherited?: boolean;
             url?: string;
+            /**
+             * Format: int64
+             * @description that image's <code>version</code>, to send back on an edit
+             */
+            version?: number;
+        };
+        /** @description The tier a points figure resolves to. */
+        ResolvedTierResponse: {
+            /** Format: int32 */
+            activeInviteLimit?: number;
+            freeShipping?: boolean;
+            /** @enum {string} */
+            pricingLevel?: "MEMBER" | "LOWEST";
+            /**
+             * Format: int64
+             * @description the points figure that was resolved
+             */
+            qualifyingPoints?: number;
+            /** Format: int32 */
+            rank?: number;
+            /**
+             * Format: date-time
+             * @description the instant whose effective version was used
+             */
+            resolvedAt?: string;
+            /** Format: int64 */
+            thresholdPoints12mo?: number;
+            /** @description the tier's stable code */
+            tierCode?: string;
+            /**
+             * Format: uuid
+             * @description the published tier row
+             */
+            tierId?: string;
+            tierName?: string;
+            /**
+             * Format: uuid
+             * @description the version that produced it — what a record depending on this tier stamps
+             */
+            versionId?: string;
         };
         /** @description One grant of a role. */
         RoleGrantResponse: {
@@ -4821,11 +5247,17 @@ export interface components {
             /** @enum {string} */
             role?: "CONSUMER" | "PARTNER";
         };
+        /** @description A role. */
         RoleResponse: {
             description?: string;
             grantsEveryPermission?: boolean;
             /** Format: uuid */
             id?: string;
+            /**
+             * Format: int64
+             * @description how many team members hold the role, whatever their status (0.8)
+             */
+            memberCount?: number;
             name?: string;
             permissions?: string[];
             systemRole?: boolean;
@@ -4965,11 +5397,22 @@ export interface components {
             /** Format: int64 */
             version?: number;
         };
+        /** @description A team member. */
         TeamMemberResponse: {
             email?: string;
             /** Format: uuid */
             id?: string;
-            /** Format: date-time */
+            /**
+             * Format: date-time
+             * @description the last request made on any of the member's sessions (0.8) — later than
+             *          <code>lastLoginAt</code> for anyone who stays signed in. Null for a member who has never signed
+             *          in
+             */
+            lastActiveAt?: string;
+            /**
+             * Format: date-time
+             * @description the last successful sign-in
+             */
             lastLoginAt?: string;
             locked?: boolean;
             mustChangePassword?: boolean;
@@ -4980,6 +5423,59 @@ export interface components {
             status?: "INVITED" | "ACTIVE" | "SUSPENDED" | "DEACTIVATED";
             /** Format: int64 */
             version?: number;
+        };
+        /** @description One rung of a ladder as submitted. Its rank is its position in the list. */
+        TierRequest: {
+            /**
+             * Format: int32
+             * @description declared for invites to enforce — not enforced by membership; 0 to
+             *          10000
+             */
+            activeInviteLimit: number;
+            /**
+             * @description stable machine key, unique within the version — 2–30 characters of A–Z, 0–9 and
+             *          <code>_</code>, starting with a letter; lowercase is uppercased. Names the tier across versions,
+             *          where the display name is free to change
+             */
+            code: string;
+            /** @description declared for orders to apply — not applied by membership */
+            freeShipping: boolean;
+            /** @description display name, unique within the version (case-insensitively) */
+            name: string;
+            /**
+             * @description declared for pricing to apply — not applied by membership
+             * @enum {string}
+             */
+            pricingLevel: "MEMBER" | "LOWEST";
+            /**
+             * Format: int64
+             * @description points earned in the trailing twelve months needed to hold the tier.
+             *          <code>0</code> for the first tier and only the first; strictly increasing down the list
+             */
+            thresholdPoints12mo: number;
+        };
+        /** @description One rung of a version's ladder. */
+        TierResponse: {
+            /** Format: int32 */
+            activeInviteLimit?: number;
+            code?: string;
+            freeShipping?: boolean;
+            /**
+             * Format: uuid
+             * @description stable for a published version. A draft's tiers are replaced on every save, so their
+             *          ids change with it
+             */
+            id?: string;
+            name?: string;
+            /** @enum {string} */
+            pricingLevel?: "MEMBER" | "LOWEST";
+            /**
+             * Format: int32
+             * @description 1 is the lowest tier
+             */
+            rank?: number;
+            /** Format: int64 */
+            thresholdPoints12mo?: number;
         };
         /** @description Both halves of a transfer. */
         TransferResponse: {
@@ -5047,7 +5543,8 @@ export interface components {
             /** @enum {string} */
             kind: "OPTION" | "SPEC";
             name: string;
-            unit?: string;
+            /** @enum {string} */
+            unit?: "g" | "mg" | "kg" | "ml" | "l" | "kcal" | "iu" | "mcg" | "servings" | "days" | "pieces";
             /**
              * Format: int64
              * @description the <code>version</code> from the attribute you read. A mismatch is refused with 409
@@ -5252,17 +5749,29 @@ export interface components {
             version: number;
         };
         /**
-         * @description Editing a profile: mobile, email and name.
+         * @description Editing a profile: email and name. A full replacement, like every <code>PUT</code> here.
          *
          *      <p><code>status</code> and roles are absent — each has its own endpoint, because each has its own
          *      rule and its own permission. <code>legacyRef</code> is absent because it is never admin-editable:
          *      only legacy import writes it.
          */
         UpdateUserRequest: {
-            /** Format: email */
+            /**
+             * Format: email
+             * @description <b>null, omitted or blank clears the email.</b> To keep it, send it back. Unique
+             *          among accounts when present
+             */
             email?: string;
+            /**
+             * @description <b>must match the stored mobile</b> — send back the one you read. It is carried
+             *          so a changed number is refused with 400 <code>VALIDATION_FAILED</code> on <code>mobile</code> rather
+             *          than silently ignored (D5.13): the mobile is the account's identity and login, and changing
+             *          it is not a profile edit. Compared normalised, so any typed form of the stored number
+             *          passes
+             */
             mobile: string;
-            name: string;
+            /** @description null, omitted or blank clears the name */
+            name?: string;
             /**
              * Format: int64
              * @description the <code>version</code> from the user you read. A mismatch is refused with 409
@@ -5313,6 +5822,18 @@ export interface components {
             weightGrams?: number;
             /** Format: int32 */
             widthMm?: number;
+        };
+        /** @description Editing a draft. <code>tiers</code> <b>replaces</b> the draft's ladder — send all of it. */
+        UpdateVersionRequest: {
+            name: string;
+            notes?: string;
+            tiers: components["schemas"]["TierRequest"][];
+            /**
+             * Format: int64
+             * @description the <code>version</code> from the draft you read. A mismatch is refused with 409
+             *          <code>VERSION_CONFLICT</code> and nothing is written
+             */
+            version: number;
         };
         /**
          * @description Editing a warehouse.
@@ -5372,6 +5893,16 @@ export interface components {
             /** Format: int64 */
             version?: number;
         };
+        /** @description A state change on an account — grant or revoke PARTNER, suspend, reinstate. */
+        UserStateChangeRequest: {
+            /**
+             * Format: int64
+             * @description the <code>version</code> from the user you read. If another operator has changed the
+             *          account since — including its roles — the change is refused with 409 <code>
+             *          VERSION_CONFLICT</code> and nothing is written (D2.24)
+             */
+            version: number;
+        };
         /** @description A row in the user list. */
         UserSummaryResponse: {
             /** Format: date-time */
@@ -5382,6 +5913,7 @@ export interface components {
             /** @description the legacy system's id for a migrated account, else null */
             legacyRef?: string;
             mobile?: string;
+            /** @description null until given — it is optional */
             name?: string;
             /**
              * @description the roles currently held. Every user holds <code>CONSUMER</code>; <code>PARTNER</code> is
@@ -5394,6 +5926,27 @@ export interface components {
             updatedAt?: string;
             /** Format: int64 */
             version?: number;
+        };
+        /** @description A user's current tier. */
+        UserTierResponse: {
+            /**
+             * @description the resolved tier; <code>tier.qualifyingPoints</code> is what the user earned in the
+             *          window
+             */
+            tier?: components["schemas"]["ResolvedTierResponse"];
+            /** Format: uuid */
+            userId?: string;
+            /**
+             * Format: date-time
+             * @description start of the qualifying window, inclusive — twelve months before <code>
+             *          windowTo</code>, in the business zone
+             */
+            windowFrom?: string;
+            /**
+             * Format: date-time
+             * @description end of the qualifying window, exclusive: the moment of resolution
+             */
+            windowTo?: string;
         };
         VariantOptionValueResponse: {
             /** Format: uuid */
@@ -5438,6 +5991,57 @@ export interface components {
             /** Format: int32 */
             widthMm?: number;
         };
+        /** @description A version with its ladder. */
+        VersionResponse: {
+            /** Format: date-time */
+            createdAt?: string;
+            /**
+             * Format: date-time
+             * @description when it takes or took effect; null for a draft
+             */
+            effectiveFrom?: string;
+            /** Format: uuid */
+            id?: string;
+            name?: string;
+            notes?: string;
+            /** Format: date-time */
+            publishedAt?: string;
+            /**
+             * Format: uuid
+             * @description the team member who published it; null for a draft, and for the launch
+             *          version, which the migration seeded
+             */
+            publishedBy?: string;
+            /**
+             * @description where the version stands now — <code>DRAFT</code>, <code>SCHEDULED</code>, <code>EFFECTIVE</code>
+             *          (exactly one version), <code>SUPERSEDED</code> or <code>WITHDRAWN</code>. Derived on every read,
+             *          never stored
+             * @enum {string}
+             */
+            state?: "DRAFT" | "SCHEDULED" | "EFFECTIVE" | "SUPERSEDED" | "WITHDRAWN";
+            /**
+             * @description what is stored: <code>DRAFT</code> (editable), <code>PUBLISHED</code> (immutable once in
+             *          effect) or <code>WITHDRAWN</code> (scheduled, then taken back before it took effect)
+             * @enum {string}
+             */
+            status?: "DRAFT" | "PUBLISHED" | "WITHDRAWN";
+            /** @description the ladder, lowest rank first */
+            tiers?: components["schemas"]["TierResponse"][];
+            /** Format: date-time */
+            updatedAt?: string;
+            /** Format: int64 */
+            version?: number;
+            /**
+             * Format: date-time
+             * @description when it was withdrawn; null unless <code>WITHDRAWN</code>
+             */
+            withdrawnAt?: string;
+            /**
+             * Format: uuid
+             * @description the team member who withdrew it; null unless <code>WITHDRAWN</code>
+             */
+            withdrawnBy?: string;
+        };
         WarehouseResponse: {
             active?: boolean;
             addressLine1?: string;
@@ -5459,6 +6063,15 @@ export interface components {
             /** Format: int64 */
             version?: number;
         };
+        /** @description Withdrawing a scheduled version. */
+        WithdrawVersionRequest: {
+            /**
+             * Format: int64
+             * @description the <code>version</code> of the version you read. A mismatch is refused with 409
+             *          <code>VERSION_CONFLICT</code> and nothing is withdrawn
+             */
+            version: number;
+        };
     };
     responses: never;
     parameters: never;
@@ -5468,7 +6081,7 @@ export interface components {
 }
 export type $defs = Record<string, never>;
 export interface operations {
-    list_12: {
+    attributeGroupList: {
         parameters: {
             query?: {
                 active?: boolean;
@@ -5526,7 +6139,7 @@ export interface operations {
             };
         };
     };
-    create_11: {
+    attributeGroupCreate: {
         parameters: {
             query?: never;
             header?: never;
@@ -5584,6 +6197,15 @@ export interface operations {
                     "application/json": components["schemas"]["ErrorResponse"];
                 };
             };
+            /** @description `UNSUPPORTED_MEDIA_TYPE` — The request body was sent with a `Content-Type` the endpoint does not read. Every endpoint that takes a body reads `application/json`. */
+            415: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
             /** @description `BUSINESS_RULE_VIOLATION` — The request was well-formed and the entities exist, but a domain rule forbids it — publishing a product with no price, archiving a brand products still reference, issuing more stock than a location holds. Distinct from 400: nothing about the request is malformed. */
             422: {
                 headers: {
@@ -5604,7 +6226,7 @@ export interface operations {
             };
         };
     };
-    update_11: {
+    attributeGroupUpdate: {
         parameters: {
             query?: never;
             header?: never;
@@ -5673,6 +6295,15 @@ export interface operations {
                     "application/json": components["schemas"]["ErrorResponse"];
                 };
             };
+            /** @description `UNSUPPORTED_MEDIA_TYPE` — The request body was sent with a `Content-Type` the endpoint does not read. Every endpoint that takes a body reads `application/json`. */
+            415: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
             /** @description `BUSINESS_RULE_VIOLATION` — The request was well-formed and the entities exist, but a domain rule forbids it — publishing a product with no price, archiving a brand products still reference, issuing more stock than a location holds. Distinct from 400: nothing about the request is malformed. */
             422: {
                 headers: {
@@ -5693,7 +6324,7 @@ export interface operations {
             };
         };
     };
-    deactivate_4: {
+    attributeGroupDeactivate: {
         parameters: {
             query?: never;
             header?: never;
@@ -5778,7 +6409,7 @@ export interface operations {
             };
         };
     };
-    reactivate_3: {
+    attributeGroupReactivate: {
         parameters: {
             query?: never;
             header?: never;
@@ -5863,7 +6494,7 @@ export interface operations {
             };
         };
     };
-    reorder_3: {
+    attributeGroupReorder: {
         parameters: {
             query?: never;
             header?: never;
@@ -5921,6 +6552,15 @@ export interface operations {
                     "application/json": components["schemas"]["ErrorResponse"];
                 };
             };
+            /** @description `UNSUPPORTED_MEDIA_TYPE` — The request body was sent with a `Content-Type` the endpoint does not read. Every endpoint that takes a body reads `application/json`. */
+            415: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
             /** @description `BUSINESS_RULE_VIOLATION` — The request was well-formed and the entities exist, but a domain rule forbids it — publishing a product with no price, archiving a brand products still reference, issuing more stock than a location holds. Distinct from 400: nothing about the request is malformed. */
             422: {
                 headers: {
@@ -5941,7 +6581,7 @@ export interface operations {
             };
         };
     };
-    list_11: {
+    attributeList: {
         parameters: {
             query: {
                 active?: boolean;
@@ -6003,7 +6643,7 @@ export interface operations {
             };
         };
     };
-    create_10: {
+    attributeCreate: {
         parameters: {
             query?: never;
             header?: never;
@@ -6061,6 +6701,15 @@ export interface operations {
                     "application/json": components["schemas"]["ErrorResponse"];
                 };
             };
+            /** @description `UNSUPPORTED_MEDIA_TYPE` — The request body was sent with a `Content-Type` the endpoint does not read. Every endpoint that takes a body reads `application/json`. */
+            415: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
             /** @description `BUSINESS_RULE_VIOLATION` — The request was well-formed and the entities exist, but a domain rule forbids it — publishing a product with no price, archiving a brand products still reference, issuing more stock than a location holds. Distinct from 400: nothing about the request is malformed. */
             422: {
                 headers: {
@@ -6081,7 +6730,7 @@ export interface operations {
             };
         };
     };
-    listValues: {
+    attributeListValues: {
         parameters: {
             query?: never;
             header?: never;
@@ -6148,7 +6797,7 @@ export interface operations {
             };
         };
     };
-    addValue: {
+    attributeAddValue: {
         parameters: {
             query?: never;
             header?: never;
@@ -6217,6 +6866,15 @@ export interface operations {
                     "application/json": components["schemas"]["ErrorResponse"];
                 };
             };
+            /** @description `UNSUPPORTED_MEDIA_TYPE` — The request body was sent with a `Content-Type` the endpoint does not read. Every endpoint that takes a body reads `application/json`. */
+            415: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
             /** @description `BUSINESS_RULE_VIOLATION` — The request was well-formed and the entities exist, but a domain rule forbids it — publishing a product with no price, archiving a brand products still reference, issuing more stock than a location holds. Distinct from 400: nothing about the request is malformed. */
             422: {
                 headers: {
@@ -6237,7 +6895,7 @@ export interface operations {
             };
         };
     };
-    updateValue: {
+    attributeUpdateValue: {
         parameters: {
             query?: never;
             header?: never;
@@ -6307,6 +6965,15 @@ export interface operations {
                     "application/json": components["schemas"]["ErrorResponse"];
                 };
             };
+            /** @description `UNSUPPORTED_MEDIA_TYPE` — The request body was sent with a `Content-Type` the endpoint does not read. Every endpoint that takes a body reads `application/json`. */
+            415: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
             /** @description `BUSINESS_RULE_VIOLATION` — The request was well-formed and the entities exist, but a domain rule forbids it — publishing a product with no price, archiving a brand products still reference, issuing more stock than a location holds. Distinct from 400: nothing about the request is malformed. */
             422: {
                 headers: {
@@ -6327,7 +6994,7 @@ export interface operations {
             };
         };
     };
-    deactivateValue: {
+    attributeDeactivateValue: {
         parameters: {
             query?: never;
             header?: never;
@@ -6413,7 +7080,7 @@ export interface operations {
             };
         };
     };
-    reactivateValue: {
+    attributeReactivateValue: {
         parameters: {
             query?: never;
             header?: never;
@@ -6499,7 +7166,7 @@ export interface operations {
             };
         };
     };
-    reorderValues: {
+    attributeReorderValues: {
         parameters: {
             query?: never;
             header?: never;
@@ -6568,6 +7235,15 @@ export interface operations {
                     "application/json": components["schemas"]["ErrorResponse"];
                 };
             };
+            /** @description `UNSUPPORTED_MEDIA_TYPE` — The request body was sent with a `Content-Type` the endpoint does not read. Every endpoint that takes a body reads `application/json`. */
+            415: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
             /** @description `BUSINESS_RULE_VIOLATION` — The request was well-formed and the entities exist, but a domain rule forbids it — publishing a product with no price, archiving a brand products still reference, issuing more stock than a location holds. Distinct from 400: nothing about the request is malformed. */
             422: {
                 headers: {
@@ -6588,7 +7264,7 @@ export interface operations {
             };
         };
     };
-    get_10: {
+    attributeGet: {
         parameters: {
             query?: never;
             header?: never;
@@ -6655,7 +7331,7 @@ export interface operations {
             };
         };
     };
-    update_10: {
+    attributeUpdate: {
         parameters: {
             query?: never;
             header?: never;
@@ -6724,6 +7400,15 @@ export interface operations {
                     "application/json": components["schemas"]["ErrorResponse"];
                 };
             };
+            /** @description `UNSUPPORTED_MEDIA_TYPE` — The request body was sent with a `Content-Type` the endpoint does not read. Every endpoint that takes a body reads `application/json`. */
+            415: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
             /** @description `BUSINESS_RULE_VIOLATION` — The request was well-formed and the entities exist, but a domain rule forbids it — publishing a product with no price, archiving a brand products still reference, issuing more stock than a location holds. Distinct from 400: nothing about the request is malformed. */
             422: {
                 headers: {
@@ -6744,7 +7429,7 @@ export interface operations {
             };
         };
     };
-    deactivate_3: {
+    attributeDeactivate: {
         parameters: {
             query?: never;
             header?: never;
@@ -6829,7 +7514,7 @@ export interface operations {
             };
         };
     };
-    reactivate_2: {
+    attributeReactivate: {
         parameters: {
             query?: never;
             header?: never;
@@ -6914,7 +7599,7 @@ export interface operations {
             };
         };
     };
-    reorder_2: {
+    attributeReorder: {
         parameters: {
             query?: never;
             header?: never;
@@ -6972,6 +7657,15 @@ export interface operations {
                     "application/json": components["schemas"]["ErrorResponse"];
                 };
             };
+            /** @description `UNSUPPORTED_MEDIA_TYPE` — The request body was sent with a `Content-Type` the endpoint does not read. Every endpoint that takes a body reads `application/json`. */
+            415: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
             /** @description `BUSINESS_RULE_VIOLATION` — The request was well-formed and the entities exist, but a domain rule forbids it — publishing a product with no price, archiving a brand products still reference, issuing more stock than a location holds. Distinct from 400: nothing about the request is malformed. */
             422: {
                 headers: {
@@ -6992,13 +7686,13 @@ export interface operations {
             };
         };
     };
-    list_15: {
+    auditList: {
         parameters: {
             query: {
-                action?: string;
+                action?: "catalog.attribute.created" | "catalog.attribute.deactivated" | "catalog.attribute.reactivated" | "catalog.attribute.reordered" | "catalog.attribute.updated" | "catalog.attribute_group.created" | "catalog.attribute_group.deactivated" | "catalog.attribute_group.reactivated" | "catalog.attribute_group.reordered" | "catalog.attribute_group.updated" | "catalog.attribute_value.created" | "catalog.attribute_value.deactivated" | "catalog.attribute_value.reactivated" | "catalog.attribute_value.reordered" | "catalog.attribute_value.updated" | "catalog.brand.activated" | "catalog.brand.archived" | "catalog.brand.created" | "catalog.brand.published" | "catalog.brand.reordered" | "catalog.brand.unpublished" | "catalog.brand.updated" | "catalog.category.activated" | "catalog.category.archived" | "catalog.category.created" | "catalog.category.moved" | "catalog.category.published" | "catalog.category.reordered" | "catalog.category.unpublished" | "catalog.category.updated" | "catalog.product.approved" | "catalog.product.archived" | "catalog.product.categories_changed" | "catalog.product.created" | "catalog.product.image_added" | "catalog.product.image_removed" | "catalog.product.image_updated" | "catalog.product.images_reordered" | "catalog.product.option_added" | "catalog.product.option_removed" | "catalog.product.options_reordered" | "catalog.product.published" | "catalog.product.rejected" | "catalog.product.spec_cleared" | "catalog.product.spec_set" | "catalog.product.submitted" | "catalog.product.unpublished" | "catalog.product.updated" | "catalog.variant.created" | "catalog.variant.default_changed" | "catalog.variant.discontinued" | "catalog.variant.image_added" | "catalog.variant.image_removed" | "catalog.variant.image_updated" | "catalog.variant.images_reordered" | "catalog.variant.reinstated" | "catalog.variant.reordered" | "catalog.variant.spec_cleared" | "catalog.variant.spec_set" | "catalog.variant.updated" | "identity.user.created" | "identity.user.reinstated" | "identity.user.role_granted" | "identity.user.role_revoked" | "identity.user.suspended" | "identity.user.updated" | "inventory.batch.created" | "inventory.movement.recorded" | "inventory.projection.rebuilt" | "inventory.stock.transferred" | "inventory.warehouse.created" | "inventory.warehouse.deactivated" | "inventory.warehouse.reactivated" | "inventory.warehouse.updated" | "membership.version.created" | "membership.version.published" | "membership.version.updated" | "membership.version.withdrawn" | "procurement.goods_receipt.posted" | "procurement.purchase_order.approved" | "procurement.purchase_order.cancelled" | "procurement.purchase_order.created" | "procurement.purchase_order.updated" | "procurement.supplier.created" | "procurement.supplier.deactivated" | "procurement.supplier.reactivated" | "procurement.supplier.updated" | "team.member.created" | "team.member.forced_logout" | "team.member.invite.accepted" | "team.member.invite.resent" | "team.member.password.changed" | "team.member.password_reset.completed" | "team.member.password_reset.requested" | "team.member.password_reset.triggered" | "team.member.profile.updated" | "team.member.roles.assigned" | "team.member.status.changed" | "team.member.updated" | "team.role.created" | "team.role.deleted" | "team.role.updated";
                 actorId?: string;
                 entityId?: string;
-                entityType?: string;
+                entityType?: "attribute" | "attribute_group" | "attribute_value" | "batch" | "brand" | "category" | "goods_receipt" | "membership_version" | "product" | "purchase_order" | "role" | "stock_level" | "stock_movement" | "stock_transfer" | "supplier" | "team_member" | "user" | "variant" | "warehouse";
                 from?: string;
                 pageable: components["schemas"]["Pageable"];
                 to?: string;
@@ -7056,7 +7750,7 @@ export interface operations {
             };
         };
     };
-    acceptInvite: {
+    authAcceptInvite: {
         parameters: {
             query?: never;
             header?: never;
@@ -7094,6 +7788,15 @@ export interface operations {
                     "application/json": components["schemas"]["ErrorResponse"];
                 };
             };
+            /** @description `UNSUPPORTED_MEDIA_TYPE` — The request body was sent with a `Content-Type` the endpoint does not read. Every endpoint that takes a body reads `application/json`. */
+            415: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
             /** @description `BUSINESS_RULE_VIOLATION` — The request was well-formed and the entities exist, but a domain rule forbids it — publishing a product with no price, archiving a brand products still reference, issuing more stock than a location holds. Distinct from 400: nothing about the request is malformed. */
             422: {
                 headers: {
@@ -7114,7 +7817,7 @@ export interface operations {
             };
         };
     };
-    completePasswordReset: {
+    authCompletePasswordReset: {
         parameters: {
             query?: never;
             header?: never;
@@ -7152,6 +7855,15 @@ export interface operations {
                     "application/json": components["schemas"]["ErrorResponse"];
                 };
             };
+            /** @description `UNSUPPORTED_MEDIA_TYPE` — The request body was sent with a `Content-Type` the endpoint does not read. Every endpoint that takes a body reads `application/json`. */
+            415: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
             /** @description `BUSINESS_RULE_VIOLATION` — The request was well-formed and the entities exist, but a domain rule forbids it — publishing a product with no price, archiving a brand products still reference, issuing more stock than a location holds. Distinct from 400: nothing about the request is malformed. */
             422: {
                 headers: {
@@ -7172,7 +7884,7 @@ export interface operations {
             };
         };
     };
-    login: {
+    authLogin: {
         parameters: {
             query?: never;
             header?: never;
@@ -7212,6 +7924,15 @@ export interface operations {
                     "application/json": components["schemas"]["ErrorResponse"];
                 };
             };
+            /** @description `UNSUPPORTED_MEDIA_TYPE` — The request body was sent with a `Content-Type` the endpoint does not read. Every endpoint that takes a body reads `application/json`. */
+            415: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
             /** @description `BUSINESS_RULE_VIOLATION` — The request was well-formed and the entities exist, but a domain rule forbids it — publishing a product with no price, archiving a brand products still reference, issuing more stock than a location holds. Distinct from 400: nothing about the request is malformed. */
             422: {
                 headers: {
@@ -7232,7 +7953,7 @@ export interface operations {
             };
         };
     };
-    logout: {
+    authLogout: {
         parameters: {
             query?: never;
             header?: never;
@@ -7304,7 +8025,7 @@ export interface operations {
             };
         };
     };
-    requestPasswordReset: {
+    authRequestPasswordReset: {
         parameters: {
             query?: never;
             header?: never;
@@ -7344,6 +8065,15 @@ export interface operations {
                     "application/json": components["schemas"]["ErrorResponse"];
                 };
             };
+            /** @description `UNSUPPORTED_MEDIA_TYPE` — The request body was sent with a `Content-Type` the endpoint does not read. Every endpoint that takes a body reads `application/json`. */
+            415: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
             /** @description `BUSINESS_RULE_VIOLATION` — The request was well-formed and the entities exist, but a domain rule forbids it — publishing a product with no price, archiving a brand products still reference, issuing more stock than a location holds. Distinct from 400: nothing about the request is malformed. */
             422: {
                 headers: {
@@ -7364,7 +8094,7 @@ export interface operations {
             };
         };
     };
-    list_10: {
+    batchList: {
         parameters: {
             query: {
                 expiringWithinDays?: number;
@@ -7425,7 +8155,7 @@ export interface operations {
             };
         };
     };
-    create_9: {
+    batchCreate: {
         parameters: {
             query?: never;
             header?: never;
@@ -7483,6 +8213,15 @@ export interface operations {
                     "application/json": components["schemas"]["ErrorResponse"];
                 };
             };
+            /** @description `UNSUPPORTED_MEDIA_TYPE` — The request body was sent with a `Content-Type` the endpoint does not read. Every endpoint that takes a body reads `application/json`. */
+            415: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
             /** @description `BUSINESS_RULE_VIOLATION` — The request was well-formed and the entities exist, but a domain rule forbids it — publishing a product with no price, archiving a brand products still reference, issuing more stock than a location holds. Distinct from 400: nothing about the request is malformed. */
             422: {
                 headers: {
@@ -7503,7 +8242,7 @@ export interface operations {
             };
         };
     };
-    get_12: {
+    batchGet: {
         parameters: {
             query?: never;
             header?: never;
@@ -7570,7 +8309,7 @@ export interface operations {
             };
         };
     };
-    list_9: {
+    brandList: {
         parameters: {
             query: {
                 /**
@@ -7637,7 +8376,7 @@ export interface operations {
             };
         };
     };
-    create_8: {
+    brandCreate: {
         parameters: {
             query?: never;
             header?: never;
@@ -7695,6 +8434,15 @@ export interface operations {
                     "application/json": components["schemas"]["ErrorResponse"];
                 };
             };
+            /** @description `UNSUPPORTED_MEDIA_TYPE` — The request body was sent with a `Content-Type` the endpoint does not read. Every endpoint that takes a body reads `application/json`. */
+            415: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
             /** @description `BUSINESS_RULE_VIOLATION` — The request was well-formed and the entities exist, but a domain rule forbids it — publishing a product with no price, archiving a brand products still reference, issuing more stock than a location holds. Distinct from 400: nothing about the request is malformed. */
             422: {
                 headers: {
@@ -7715,7 +8463,7 @@ export interface operations {
             };
         };
     };
-    get_9: {
+    brandGet: {
         parameters: {
             query?: never;
             header?: never;
@@ -7782,7 +8530,7 @@ export interface operations {
             };
         };
     };
-    update_9: {
+    brandUpdate: {
         parameters: {
             query?: never;
             header?: never;
@@ -7851,6 +8599,15 @@ export interface operations {
                     "application/json": components["schemas"]["ErrorResponse"];
                 };
             };
+            /** @description `UNSUPPORTED_MEDIA_TYPE` — The request body was sent with a `Content-Type` the endpoint does not read. Every endpoint that takes a body reads `application/json`. */
+            415: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
             /** @description `BUSINESS_RULE_VIOLATION` — The request was well-formed and the entities exist, but a domain rule forbids it — publishing a product with no price, archiving a brand products still reference, issuing more stock than a location holds. Distinct from 400: nothing about the request is malformed. */
             422: {
                 headers: {
@@ -7871,7 +8628,7 @@ export interface operations {
             };
         };
     };
-    activate_2: {
+    brandActivate: {
         parameters: {
             query?: never;
             header?: never;
@@ -7956,7 +8713,7 @@ export interface operations {
             };
         };
     };
-    archive_2: {
+    brandArchive: {
         parameters: {
             query?: never;
             header?: never;
@@ -8041,7 +8798,7 @@ export interface operations {
             };
         };
     };
-    publish_2: {
+    brandPublish: {
         parameters: {
             query?: never;
             header?: never;
@@ -8126,7 +8883,7 @@ export interface operations {
             };
         };
     };
-    unpublish_2: {
+    brandUnpublish: {
         parameters: {
             query?: never;
             header?: never;
@@ -8211,7 +8968,7 @@ export interface operations {
             };
         };
     };
-    reorder_1: {
+    brandReorder: {
         parameters: {
             query?: never;
             header?: never;
@@ -8269,6 +9026,15 @@ export interface operations {
                     "application/json": components["schemas"]["ErrorResponse"];
                 };
             };
+            /** @description `UNSUPPORTED_MEDIA_TYPE` — The request body was sent with a `Content-Type` the endpoint does not read. Every endpoint that takes a body reads `application/json`. */
+            415: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
             /** @description `BUSINESS_RULE_VIOLATION` — The request was well-formed and the entities exist, but a domain rule forbids it — publishing a product with no price, archiving a brand products still reference, issuing more stock than a location holds. Distinct from 400: nothing about the request is malformed. */
             422: {
                 headers: {
@@ -8289,7 +9055,7 @@ export interface operations {
             };
         };
     };
-    list_8: {
+    categoryList: {
         parameters: {
             query: {
                 live?: boolean;
@@ -8351,7 +9117,7 @@ export interface operations {
             };
         };
     };
-    create_7: {
+    categoryCreate: {
         parameters: {
             query?: never;
             header?: never;
@@ -8409,6 +9175,15 @@ export interface operations {
                     "application/json": components["schemas"]["ErrorResponse"];
                 };
             };
+            /** @description `UNSUPPORTED_MEDIA_TYPE` — The request body was sent with a `Content-Type` the endpoint does not read. Every endpoint that takes a body reads `application/json`. */
+            415: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
             /** @description `BUSINESS_RULE_VIOLATION` — The request was well-formed and the entities exist, but a domain rule forbids it — publishing a product with no price, archiving a brand products still reference, issuing more stock than a location holds. Distinct from 400: nothing about the request is malformed. */
             422: {
                 headers: {
@@ -8429,7 +9204,7 @@ export interface operations {
             };
         };
     };
-    get_8: {
+    categoryGet: {
         parameters: {
             query?: never;
             header?: never;
@@ -8496,7 +9271,7 @@ export interface operations {
             };
         };
     };
-    update_8: {
+    categoryUpdate: {
         parameters: {
             query?: never;
             header?: never;
@@ -8565,6 +9340,15 @@ export interface operations {
                     "application/json": components["schemas"]["ErrorResponse"];
                 };
             };
+            /** @description `UNSUPPORTED_MEDIA_TYPE` — The request body was sent with a `Content-Type` the endpoint does not read. Every endpoint that takes a body reads `application/json`. */
+            415: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
             /** @description `BUSINESS_RULE_VIOLATION` — The request was well-formed and the entities exist, but a domain rule forbids it — publishing a product with no price, archiving a brand products still reference, issuing more stock than a location holds. Distinct from 400: nothing about the request is malformed. */
             422: {
                 headers: {
@@ -8585,7 +9369,7 @@ export interface operations {
             };
         };
     };
-    activate_1: {
+    categoryActivate: {
         parameters: {
             query?: never;
             header?: never;
@@ -8670,7 +9454,7 @@ export interface operations {
             };
         };
     };
-    archive_1: {
+    categoryArchive: {
         parameters: {
             query?: never;
             header?: never;
@@ -8755,7 +9539,7 @@ export interface operations {
             };
         };
     };
-    move: {
+    categoryMove: {
         parameters: {
             query?: never;
             header?: never;
@@ -8824,6 +9608,15 @@ export interface operations {
                     "application/json": components["schemas"]["ErrorResponse"];
                 };
             };
+            /** @description `UNSUPPORTED_MEDIA_TYPE` — The request body was sent with a `Content-Type` the endpoint does not read. Every endpoint that takes a body reads `application/json`. */
+            415: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
             /** @description `BUSINESS_RULE_VIOLATION` — The request was well-formed and the entities exist, but a domain rule forbids it — publishing a product with no price, archiving a brand products still reference, issuing more stock than a location holds. Distinct from 400: nothing about the request is malformed. */
             422: {
                 headers: {
@@ -8844,7 +9637,7 @@ export interface operations {
             };
         };
     };
-    publish_1: {
+    categoryPublish: {
         parameters: {
             query?: never;
             header?: never;
@@ -8929,7 +9722,7 @@ export interface operations {
             };
         };
     };
-    unpublish_1: {
+    categoryUnpublish: {
         parameters: {
             query?: never;
             header?: never;
@@ -9014,7 +9807,7 @@ export interface operations {
             };
         };
     };
-    reorder: {
+    categoryReorder: {
         parameters: {
             query?: never;
             header?: never;
@@ -9072,6 +9865,15 @@ export interface operations {
                     "application/json": components["schemas"]["ErrorResponse"];
                 };
             };
+            /** @description `UNSUPPORTED_MEDIA_TYPE` — The request body was sent with a `Content-Type` the endpoint does not read. Every endpoint that takes a body reads `application/json`. */
+            415: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
             /** @description `BUSINESS_RULE_VIOLATION` — The request was well-formed and the entities exist, but a domain rule forbids it — publishing a product with no price, archiving a brand products still reference, issuing more stock than a location holds. Distinct from 400: nothing about the request is malformed. */
             422: {
                 headers: {
@@ -9092,7 +9894,7 @@ export interface operations {
             };
         };
     };
-    tree: {
+    categoryTree: {
         parameters: {
             query?: never;
             header?: never;
@@ -9148,7 +9950,7 @@ export interface operations {
             };
         };
     };
-    list_7: {
+    goodsReceiptList: {
         parameters: {
             query: {
                 pageable: components["schemas"]["Pageable"];
@@ -9209,7 +10011,7 @@ export interface operations {
             };
         };
     };
-    post: {
+    goodsReceiptPost: {
         parameters: {
             query: {
                 purchaseOrderId: string;
@@ -9271,6 +10073,15 @@ export interface operations {
                     "application/json": components["schemas"]["ErrorResponse"];
                 };
             };
+            /** @description `UNSUPPORTED_MEDIA_TYPE` — The request body was sent with a `Content-Type` the endpoint does not read. Every endpoint that takes a body reads `application/json`. */
+            415: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
             /** @description `BUSINESS_RULE_VIOLATION` — The request was well-formed and the entities exist, but a domain rule forbids it — publishing a product with no price, archiving a brand products still reference, issuing more stock than a location holds. Distinct from 400: nothing about the request is malformed. */
             422: {
                 headers: {
@@ -9291,7 +10102,7 @@ export interface operations {
             };
         };
     };
-    get_11: {
+    goodsReceiptGet: {
         parameters: {
             query?: never;
             header?: never;
@@ -9358,7 +10169,7 @@ export interface operations {
             };
         };
     };
-    list_14: {
+    loginEventList: {
         parameters: {
             query: {
                 /** @description the address as it was typed, matched case-insensitively */
@@ -9432,7 +10243,698 @@ export interface operations {
             };
         };
     };
-    list_13: {
+    membershipResolveTier: {
+        parameters: {
+            query: {
+                at?: string;
+                points: number;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "*/*": components["schemas"]["ResolvedTierResponse"];
+                };
+            };
+            /** @description `VALIDATION_FAILED` — The request body could not be read, a field failed validation, a required header was absent, or a domain validation rule rejected an input the caller can correct. */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description `AUTHENTICATION_FAILED` — No valid credential. Either none was presented, or the session behind it is expired, revoked, or belongs to a member who can no longer sign in. This status means the session is dead and nothing else does (D2.23) — a wrong *current* password on change-password is a 400 with a `currentPassword` field error, not this. */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description `ACCESS_DENIED` — Authenticated, but lacking the permission the endpoint declares. The session is valid; do not sign the operator out. */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description `INTERNAL_ERROR` — An unhandled failure. The message is deliberately generic; `traceId` identifies the server log line that explains it. */
+            500: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+        };
+    };
+    membershipUserTier: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                userId: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "*/*": components["schemas"]["UserTierResponse"];
+                };
+            };
+            /** @description `VALIDATION_FAILED` — The request body could not be read, a field failed validation, a required header was absent, or a domain validation rule rejected an input the caller can correct. */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description `AUTHENTICATION_FAILED` — No valid credential. Either none was presented, or the session behind it is expired, revoked, or belongs to a member who can no longer sign in. This status means the session is dead and nothing else does (D2.23) — a wrong *current* password on change-password is a 400 with a `currentPassword` field error, not this. */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description `ACCESS_DENIED` — Authenticated, but lacking the permission the endpoint declares. The session is valid; do not sign the operator out. */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description `NOT_FOUND` — A referenced entity does not exist, or the URL matches no endpoint. Also returned for a known path called with an unsupported method, as 405. */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description `INTERNAL_ERROR` — An unhandled failure. The message is deliberately generic; `traceId` identifies the server log line that explains it. */
+            500: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+        };
+    };
+    membershipListMembershipVersions: {
+        parameters: {
+            query: {
+                pageable: components["schemas"]["Pageable"];
+                status?: "DRAFT" | "PUBLISHED" | "WITHDRAWN";
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "*/*": components["schemas"]["PageResponseVersionResponse"];
+                };
+            };
+            /** @description `VALIDATION_FAILED` — The request body could not be read, a field failed validation, a required header was absent, or a domain validation rule rejected an input the caller can correct. */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description `AUTHENTICATION_FAILED` — No valid credential. Either none was presented, or the session behind it is expired, revoked, or belongs to a member who can no longer sign in. This status means the session is dead and nothing else does (D2.23) — a wrong *current* password on change-password is a 400 with a `currentPassword` field error, not this. */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description `ACCESS_DENIED` — Authenticated, but lacking the permission the endpoint declares. The session is valid; do not sign the operator out. */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description `INTERNAL_ERROR` — An unhandled failure. The message is deliberately generic; `traceId` identifies the server log line that explains it. */
+            500: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+        };
+    };
+    membershipCreateMembershipVersion: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["CreateVersionRequest"];
+            };
+        };
+        responses: {
+            /** @description Created */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "*/*": components["schemas"]["VersionResponse"];
+                };
+            };
+            /** @description `VALIDATION_FAILED` — The request body could not be read, a field failed validation, a required header was absent, or a domain validation rule rejected an input the caller can correct. */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description `AUTHENTICATION_FAILED` — No valid credential. Either none was presented, or the session behind it is expired, revoked, or belongs to a member who can no longer sign in. This status means the session is dead and nothing else does (D2.23) — a wrong *current* password on change-password is a 400 with a `currentPassword` field error, not this. */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description `ACCESS_DENIED` — Authenticated, but lacking the permission the endpoint declares. The session is valid; do not sign the operator out. */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description `CONFLICT` — The request collided with current state for a reason other than a version mismatch: a duplicate natural key (a slug, a code, an email), or a database constraint the application did not catch first. */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description `UNSUPPORTED_MEDIA_TYPE` — The request body was sent with a `Content-Type` the endpoint does not read. Every endpoint that takes a body reads `application/json`. */
+            415: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description `BUSINESS_RULE_VIOLATION` — The request was well-formed and the entities exist, but a domain rule forbids it — publishing a product with no price, archiving a brand products still reference, issuing more stock than a location holds. Distinct from 400: nothing about the request is malformed. */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description `INTERNAL_ERROR` — An unhandled failure. The message is deliberately generic; `traceId` identifies the server log line that explains it. */
+            500: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+        };
+    };
+    membershipGetMembershipVersion: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "*/*": components["schemas"]["VersionResponse"];
+                };
+            };
+            /** @description `VALIDATION_FAILED` — The request body could not be read, a field failed validation, a required header was absent, or a domain validation rule rejected an input the caller can correct. */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description `AUTHENTICATION_FAILED` — No valid credential. Either none was presented, or the session behind it is expired, revoked, or belongs to a member who can no longer sign in. This status means the session is dead and nothing else does (D2.23) — a wrong *current* password on change-password is a 400 with a `currentPassword` field error, not this. */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description `ACCESS_DENIED` — Authenticated, but lacking the permission the endpoint declares. The session is valid; do not sign the operator out. */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description `NOT_FOUND` — A referenced entity does not exist, or the URL matches no endpoint. Also returned for a known path called with an unsupported method, as 405. */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description `INTERNAL_ERROR` — An unhandled failure. The message is deliberately generic; `traceId` identifies the server log line that explains it. */
+            500: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+        };
+    };
+    membershipUpdateMembershipVersion: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["UpdateVersionRequest"];
+            };
+        };
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "*/*": components["schemas"]["VersionResponse"];
+                };
+            };
+            /** @description `VALIDATION_FAILED` — The request body could not be read, a field failed validation, a required header was absent, or a domain validation rule rejected an input the caller can correct. */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description `AUTHENTICATION_FAILED` — No valid credential. Either none was presented, or the session behind it is expired, revoked, or belongs to a member who can no longer sign in. This status means the session is dead and nothing else does (D2.23) — a wrong *current* password on change-password is a 400 with a `currentPassword` field error, not this. */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description `ACCESS_DENIED` — Authenticated, but lacking the permission the endpoint declares. The session is valid; do not sign the operator out. */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description `NOT_FOUND` — A referenced entity does not exist, or the URL matches no endpoint. Also returned for a known path called with an unsupported method, as 405. */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description `VERSION_CONFLICT` or `CONFLICT` — The `version` sent with an update is not the version stored — the record was changed by someone else since it was read. Nothing was written. Re-read the record, show the operator what changed, and submit again with the new `version`. */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description `UNSUPPORTED_MEDIA_TYPE` — The request body was sent with a `Content-Type` the endpoint does not read. Every endpoint that takes a body reads `application/json`. */
+            415: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description `BUSINESS_RULE_VIOLATION` — The request was well-formed and the entities exist, but a domain rule forbids it — publishing a product with no price, archiving a brand products still reference, issuing more stock than a location holds. Distinct from 400: nothing about the request is malformed. */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description `INTERNAL_ERROR` — An unhandled failure. The message is deliberately generic; `traceId` identifies the server log line that explains it. */
+            500: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+        };
+    };
+    membershipPublishMembershipVersion: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["PublishVersionRequest"];
+            };
+        };
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "*/*": components["schemas"]["VersionResponse"];
+                };
+            };
+            /** @description `VALIDATION_FAILED` — The request body could not be read, a field failed validation, a required header was absent, or a domain validation rule rejected an input the caller can correct. */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description `AUTHENTICATION_FAILED` — No valid credential. Either none was presented, or the session behind it is expired, revoked, or belongs to a member who can no longer sign in. This status means the session is dead and nothing else does (D2.23) — a wrong *current* password on change-password is a 400 with a `currentPassword` field error, not this. */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description `ACCESS_DENIED` — Authenticated, but lacking the permission the endpoint declares. The session is valid; do not sign the operator out. */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description `NOT_FOUND` — A referenced entity does not exist, or the URL matches no endpoint. Also returned for a known path called with an unsupported method, as 405. */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description `VERSION_CONFLICT` or `CONFLICT` — The `version` sent with an update is not the version stored — the record was changed by someone else since it was read. Nothing was written. Re-read the record, show the operator what changed, and submit again with the new `version`. */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description `UNSUPPORTED_MEDIA_TYPE` — The request body was sent with a `Content-Type` the endpoint does not read. Every endpoint that takes a body reads `application/json`. */
+            415: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description `BUSINESS_RULE_VIOLATION` — The request was well-formed and the entities exist, but a domain rule forbids it — publishing a product with no price, archiving a brand products still reference, issuing more stock than a location holds. Distinct from 400: nothing about the request is malformed. */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description `INTERNAL_ERROR` — An unhandled failure. The message is deliberately generic; `traceId` identifies the server log line that explains it. */
+            500: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+        };
+    };
+    membershipWithdrawMembershipVersion: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["WithdrawVersionRequest"];
+            };
+        };
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "*/*": components["schemas"]["VersionResponse"];
+                };
+            };
+            /** @description `VALIDATION_FAILED` — The request body could not be read, a field failed validation, a required header was absent, or a domain validation rule rejected an input the caller can correct. */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description `AUTHENTICATION_FAILED` — No valid credential. Either none was presented, or the session behind it is expired, revoked, or belongs to a member who can no longer sign in. This status means the session is dead and nothing else does (D2.23) — a wrong *current* password on change-password is a 400 with a `currentPassword` field error, not this. */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description `ACCESS_DENIED` — Authenticated, but lacking the permission the endpoint declares. The session is valid; do not sign the operator out. */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description `NOT_FOUND` — A referenced entity does not exist, or the URL matches no endpoint. Also returned for a known path called with an unsupported method, as 405. */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description `VERSION_CONFLICT` or `CONFLICT` — The `version` sent with an update is not the version stored — the record was changed by someone else since it was read. Nothing was written. Re-read the record, show the operator what changed, and submit again with the new `version`. */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description `UNSUPPORTED_MEDIA_TYPE` — The request body was sent with a `Content-Type` the endpoint does not read. Every endpoint that takes a body reads `application/json`. */
+            415: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description `BUSINESS_RULE_VIOLATION` — The request was well-formed and the entities exist, but a domain rule forbids it — publishing a product with no price, archiving a brand products still reference, issuing more stock than a location holds. Distinct from 400: nothing about the request is malformed. */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description `INTERNAL_ERROR` — An unhandled failure. The message is deliberately generic; `traceId` identifies the server log line that explains it. */
+            500: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+        };
+    };
+    membershipEffectiveMembershipVersion: {
+        parameters: {
+            query?: {
+                at?: string;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "*/*": components["schemas"]["VersionResponse"];
+                };
+            };
+            /** @description `VALIDATION_FAILED` — The request body could not be read, a field failed validation, a required header was absent, or a domain validation rule rejected an input the caller can correct. */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description `AUTHENTICATION_FAILED` — No valid credential. Either none was presented, or the session behind it is expired, revoked, or belongs to a member who can no longer sign in. This status means the session is dead and nothing else does (D2.23) — a wrong *current* password on change-password is a 400 with a `currentPassword` field error, not this. */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description `ACCESS_DENIED` — Authenticated, but lacking the permission the endpoint declares. The session is valid; do not sign the operator out. */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description `INTERNAL_ERROR` — An unhandled failure. The message is deliberately generic; `traceId` identifies the server log line that explains it. */
+            500: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+        };
+    };
+    permissionList: {
         parameters: {
             query?: never;
             header?: never;
@@ -9488,7 +10990,7 @@ export interface operations {
             };
         };
     };
-    list_6: {
+    productList: {
         parameters: {
             query: {
                 audience?: "PUBLIC" | "TIER_RESTRICTED" | "CUSTOMER_RESTRICTED";
@@ -9511,7 +11013,7 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "*/*": components["schemas"]["PageResponseProductResponse"];
+                    "*/*": components["schemas"]["PageResponseProductListItemResponse"];
                 };
             };
             /** @description `VALIDATION_FAILED` — The request body could not be read, a field failed validation, a required header was absent, or a domain validation rule rejected an input the caller can correct. */
@@ -9552,7 +11054,7 @@ export interface operations {
             };
         };
     };
-    create_6: {
+    productCreate: {
         parameters: {
             query?: never;
             header?: never;
@@ -9610,6 +11112,15 @@ export interface operations {
                     "application/json": components["schemas"]["ErrorResponse"];
                 };
             };
+            /** @description `UNSUPPORTED_MEDIA_TYPE` — The request body was sent with a `Content-Type` the endpoint does not read. Every endpoint that takes a body reads `application/json`. */
+            415: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
             /** @description `BUSINESS_RULE_VIOLATION` — The request was well-formed and the entities exist, but a domain rule forbids it — publishing a product with no price, archiving a brand products still reference, issuing more stock than a location holds. Distinct from 400: nothing about the request is malformed. */
             422: {
                 headers: {
@@ -9630,7 +11141,7 @@ export interface operations {
             };
         };
     };
-    get_7: {
+    productGet: {
         parameters: {
             query?: never;
             header?: never;
@@ -9697,7 +11208,7 @@ export interface operations {
             };
         };
     };
-    update_7: {
+    productUpdate: {
         parameters: {
             query?: never;
             header?: never;
@@ -9766,6 +11277,15 @@ export interface operations {
                     "application/json": components["schemas"]["ErrorResponse"];
                 };
             };
+            /** @description `UNSUPPORTED_MEDIA_TYPE` — The request body was sent with a `Content-Type` the endpoint does not read. Every endpoint that takes a body reads `application/json`. */
+            415: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
             /** @description `BUSINESS_RULE_VIOLATION` — The request was well-formed and the entities exist, but a domain rule forbids it — publishing a product with no price, archiving a brand products still reference, issuing more stock than a location holds. Distinct from 400: nothing about the request is malformed. */
             422: {
                 headers: {
@@ -9786,7 +11306,7 @@ export interface operations {
             };
         };
     };
-    approve_1: {
+    productApprove: {
         parameters: {
             query?: never;
             header?: never;
@@ -9871,7 +11391,7 @@ export interface operations {
             };
         };
     };
-    archive: {
+    productArchive: {
         parameters: {
             query?: never;
             header?: never;
@@ -9956,7 +11476,7 @@ export interface operations {
             };
         };
     };
-    setCategories: {
+    productSetCategories: {
         parameters: {
             query?: never;
             header?: never;
@@ -10025,6 +11545,15 @@ export interface operations {
                     "application/json": components["schemas"]["ErrorResponse"];
                 };
             };
+            /** @description `UNSUPPORTED_MEDIA_TYPE` — The request body was sent with a `Content-Type` the endpoint does not read. Every endpoint that takes a body reads `application/json`. */
+            415: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
             /** @description `BUSINESS_RULE_VIOLATION` — The request was well-formed and the entities exist, but a domain rule forbids it — publishing a product with no price, archiving a brand products still reference, issuing more stock than a location holds. Distinct from 400: nothing about the request is malformed. */
             422: {
                 headers: {
@@ -10045,7 +11574,7 @@ export interface operations {
             };
         };
     };
-    publish: {
+    productPublish: {
         parameters: {
             query?: never;
             header?: never;
@@ -10130,7 +11659,7 @@ export interface operations {
             };
         };
     };
-    reject: {
+    productReject: {
         parameters: {
             query?: never;
             header?: never;
@@ -10215,7 +11744,7 @@ export interface operations {
             };
         };
     };
-    submitForReview: {
+    productSubmitForReview: {
         parameters: {
             query?: never;
             header?: never;
@@ -10300,7 +11829,7 @@ export interface operations {
             };
         };
     };
-    unpublish: {
+    productUnpublish: {
         parameters: {
             query?: never;
             header?: never;
@@ -10385,7 +11914,7 @@ export interface operations {
             };
         };
     };
-    productImages: {
+    productContentProductImages: {
         parameters: {
             query?: never;
             header?: never;
@@ -10452,7 +11981,7 @@ export interface operations {
             };
         };
     };
-    addProductImage: {
+    productContentAddProductImage: {
         parameters: {
             query?: never;
             header?: never;
@@ -10521,6 +12050,15 @@ export interface operations {
                     "application/json": components["schemas"]["ErrorResponse"];
                 };
             };
+            /** @description `UNSUPPORTED_MEDIA_TYPE` — The request body was sent with a `Content-Type` the endpoint does not read. Every endpoint that takes a body reads `application/json`. */
+            415: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
             /** @description `BUSINESS_RULE_VIOLATION` — The request was well-formed and the entities exist, but a domain rule forbids it — publishing a product with no price, archiving a brand products still reference, issuing more stock than a location holds. Distinct from 400: nothing about the request is malformed. */
             422: {
                 headers: {
@@ -10541,7 +12079,7 @@ export interface operations {
             };
         };
     };
-    updateProductImage: {
+    productContentUpdateProductImage: {
         parameters: {
             query?: never;
             header?: never;
@@ -10611,6 +12149,15 @@ export interface operations {
                     "application/json": components["schemas"]["ErrorResponse"];
                 };
             };
+            /** @description `UNSUPPORTED_MEDIA_TYPE` — The request body was sent with a `Content-Type` the endpoint does not read. Every endpoint that takes a body reads `application/json`. */
+            415: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
             /** @description `BUSINESS_RULE_VIOLATION` — The request was well-formed and the entities exist, but a domain rule forbids it — publishing a product with no price, archiving a brand products still reference, issuing more stock than a location holds. Distinct from 400: nothing about the request is malformed. */
             422: {
                 headers: {
@@ -10631,7 +12178,7 @@ export interface operations {
             };
         };
     };
-    removeProductImage: {
+    productContentRemoveProductImage: {
         parameters: {
             query?: never;
             header?: never;
@@ -10715,7 +12262,7 @@ export interface operations {
             };
         };
     };
-    reorderProductImages: {
+    productContentReorderProductImages: {
         parameters: {
             query?: never;
             header?: never;
@@ -10784,6 +12331,15 @@ export interface operations {
                     "application/json": components["schemas"]["ErrorResponse"];
                 };
             };
+            /** @description `UNSUPPORTED_MEDIA_TYPE` — The request body was sent with a `Content-Type` the endpoint does not read. Every endpoint that takes a body reads `application/json`. */
+            415: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
             /** @description `BUSINESS_RULE_VIOLATION` — The request was well-formed and the entities exist, but a domain rule forbids it — publishing a product with no price, archiving a brand products still reference, issuing more stock than a location holds. Distinct from 400: nothing about the request is malformed. */
             422: {
                 headers: {
@@ -10804,7 +12360,7 @@ export interface operations {
             };
         };
     };
-    listOptions: {
+    productListOptions: {
         parameters: {
             query?: never;
             header?: never;
@@ -10871,7 +12427,7 @@ export interface operations {
             };
         };
     };
-    addOption: {
+    productAddOption: {
         parameters: {
             query?: never;
             header?: never;
@@ -10940,6 +12496,15 @@ export interface operations {
                     "application/json": components["schemas"]["ErrorResponse"];
                 };
             };
+            /** @description `UNSUPPORTED_MEDIA_TYPE` — The request body was sent with a `Content-Type` the endpoint does not read. Every endpoint that takes a body reads `application/json`. */
+            415: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
             /** @description `BUSINESS_RULE_VIOLATION` — The request was well-formed and the entities exist, but a domain rule forbids it — publishing a product with no price, archiving a brand products still reference, issuing more stock than a location holds. Distinct from 400: nothing about the request is malformed. */
             422: {
                 headers: {
@@ -10960,7 +12525,7 @@ export interface operations {
             };
         };
     };
-    removeOption: {
+    productRemoveOption: {
         parameters: {
             query?: never;
             header?: never;
@@ -11046,7 +12611,7 @@ export interface operations {
             };
         };
     };
-    reorderOptions: {
+    productReorderOptions: {
         parameters: {
             query?: never;
             header?: never;
@@ -11115,6 +12680,15 @@ export interface operations {
                     "application/json": components["schemas"]["ErrorResponse"];
                 };
             };
+            /** @description `UNSUPPORTED_MEDIA_TYPE` — The request body was sent with a `Content-Type` the endpoint does not read. Every endpoint that takes a body reads `application/json`. */
+            415: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
             /** @description `BUSINESS_RULE_VIOLATION` — The request was well-formed and the entities exist, but a domain rule forbids it — publishing a product with no price, archiving a brand products still reference, issuing more stock than a location holds. Distinct from 400: nothing about the request is malformed. */
             422: {
                 headers: {
@@ -11135,7 +12709,7 @@ export interface operations {
             };
         };
     };
-    productSpecs: {
+    productContentProductSpecs: {
         parameters: {
             query?: never;
             header?: never;
@@ -11202,7 +12776,7 @@ export interface operations {
             };
         };
     };
-    setProductSpec: {
+    productContentSetProductSpec: {
         parameters: {
             query?: never;
             header?: never;
@@ -11271,6 +12845,15 @@ export interface operations {
                     "application/json": components["schemas"]["ErrorResponse"];
                 };
             };
+            /** @description `UNSUPPORTED_MEDIA_TYPE` — The request body was sent with a `Content-Type` the endpoint does not read. Every endpoint that takes a body reads `application/json`. */
+            415: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
             /** @description `BUSINESS_RULE_VIOLATION` — The request was well-formed and the entities exist, but a domain rule forbids it — publishing a product with no price, archiving a brand products still reference, issuing more stock than a location holds. Distinct from 400: nothing about the request is malformed. */
             422: {
                 headers: {
@@ -11291,7 +12874,7 @@ export interface operations {
             };
         };
     };
-    clearProductSpec: {
+    productContentClearProductSpec: {
         parameters: {
             query?: never;
             header?: never;
@@ -11375,7 +12958,7 @@ export interface operations {
             };
         };
     };
-    listVariants: {
+    productListVariants: {
         parameters: {
             query?: never;
             header?: never;
@@ -11442,7 +13025,7 @@ export interface operations {
             };
         };
     };
-    createVariant: {
+    productCreateVariant: {
         parameters: {
             query?: never;
             header?: never;
@@ -11511,6 +13094,15 @@ export interface operations {
                     "application/json": components["schemas"]["ErrorResponse"];
                 };
             };
+            /** @description `UNSUPPORTED_MEDIA_TYPE` — The request body was sent with a `Content-Type` the endpoint does not read. Every endpoint that takes a body reads `application/json`. */
+            415: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
             /** @description `BUSINESS_RULE_VIOLATION` — The request was well-formed and the entities exist, but a domain rule forbids it — publishing a product with no price, archiving a brand products still reference, issuing more stock than a location holds. Distinct from 400: nothing about the request is malformed. */
             422: {
                 headers: {
@@ -11531,7 +13123,7 @@ export interface operations {
             };
         };
     };
-    updateVariant: {
+    productUpdateVariant: {
         parameters: {
             query?: never;
             header?: never;
@@ -11601,6 +13193,15 @@ export interface operations {
                     "application/json": components["schemas"]["ErrorResponse"];
                 };
             };
+            /** @description `UNSUPPORTED_MEDIA_TYPE` — The request body was sent with a `Content-Type` the endpoint does not read. Every endpoint that takes a body reads `application/json`. */
+            415: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
             /** @description `BUSINESS_RULE_VIOLATION` — The request was well-formed and the entities exist, but a domain rule forbids it — publishing a product with no price, archiving a brand products still reference, issuing more stock than a location holds. Distinct from 400: nothing about the request is malformed. */
             422: {
                 headers: {
@@ -11621,7 +13222,7 @@ export interface operations {
             };
         };
     };
-    makeVariantDefault: {
+    productMakeVariantDefault: {
         parameters: {
             query?: never;
             header?: never;
@@ -11707,7 +13308,7 @@ export interface operations {
             };
         };
     };
-    discontinueVariant: {
+    productDiscontinueVariant: {
         parameters: {
             query?: never;
             header?: never;
@@ -11793,7 +13394,7 @@ export interface operations {
             };
         };
     };
-    resolvedVariantImages: {
+    productContentResolvedVariantImages: {
         parameters: {
             query?: never;
             header?: never;
@@ -11861,7 +13462,7 @@ export interface operations {
             };
         };
     };
-    addVariantImage: {
+    productContentAddVariantImage: {
         parameters: {
             query?: never;
             header?: never;
@@ -11931,6 +13532,15 @@ export interface operations {
                     "application/json": components["schemas"]["ErrorResponse"];
                 };
             };
+            /** @description `UNSUPPORTED_MEDIA_TYPE` — The request body was sent with a `Content-Type` the endpoint does not read. Every endpoint that takes a body reads `application/json`. */
+            415: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
             /** @description `BUSINESS_RULE_VIOLATION` — The request was well-formed and the entities exist, but a domain rule forbids it — publishing a product with no price, archiving a brand products still reference, issuing more stock than a location holds. Distinct from 400: nothing about the request is malformed. */
             422: {
                 headers: {
@@ -11951,7 +13561,7 @@ export interface operations {
             };
         };
     };
-    updateVariantImage: {
+    productContentUpdateVariantImage: {
         parameters: {
             query?: never;
             header?: never;
@@ -12022,6 +13632,15 @@ export interface operations {
                     "application/json": components["schemas"]["ErrorResponse"];
                 };
             };
+            /** @description `UNSUPPORTED_MEDIA_TYPE` — The request body was sent with a `Content-Type` the endpoint does not read. Every endpoint that takes a body reads `application/json`. */
+            415: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
             /** @description `BUSINESS_RULE_VIOLATION` — The request was well-formed and the entities exist, but a domain rule forbids it — publishing a product with no price, archiving a brand products still reference, issuing more stock than a location holds. Distinct from 400: nothing about the request is malformed. */
             422: {
                 headers: {
@@ -12042,7 +13661,7 @@ export interface operations {
             };
         };
     };
-    removeVariantImage: {
+    productContentRemoveVariantImage: {
         parameters: {
             query?: never;
             header?: never;
@@ -12127,7 +13746,7 @@ export interface operations {
             };
         };
     };
-    reorderVariantImages: {
+    productContentReorderVariantImages: {
         parameters: {
             query?: never;
             header?: never;
@@ -12197,6 +13816,15 @@ export interface operations {
                     "application/json": components["schemas"]["ErrorResponse"];
                 };
             };
+            /** @description `UNSUPPORTED_MEDIA_TYPE` — The request body was sent with a `Content-Type` the endpoint does not read. Every endpoint that takes a body reads `application/json`. */
+            415: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
             /** @description `BUSINESS_RULE_VIOLATION` — The request was well-formed and the entities exist, but a domain rule forbids it — publishing a product with no price, archiving a brand products still reference, issuing more stock than a location holds. Distinct from 400: nothing about the request is malformed. */
             422: {
                 headers: {
@@ -12217,7 +13845,7 @@ export interface operations {
             };
         };
     };
-    reinstateVariant: {
+    productReinstateVariant: {
         parameters: {
             query?: never;
             header?: never;
@@ -12303,7 +13931,7 @@ export interface operations {
             };
         };
     };
-    variantSpecs: {
+    productContentVariantSpecs: {
         parameters: {
             query?: never;
             header?: never;
@@ -12371,7 +13999,7 @@ export interface operations {
             };
         };
     };
-    setVariantSpec: {
+    productContentSetVariantSpec: {
         parameters: {
             query?: never;
             header?: never;
@@ -12441,6 +14069,15 @@ export interface operations {
                     "application/json": components["schemas"]["ErrorResponse"];
                 };
             };
+            /** @description `UNSUPPORTED_MEDIA_TYPE` — The request body was sent with a `Content-Type` the endpoint does not read. Every endpoint that takes a body reads `application/json`. */
+            415: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
             /** @description `BUSINESS_RULE_VIOLATION` — The request was well-formed and the entities exist, but a domain rule forbids it — publishing a product with no price, archiving a brand products still reference, issuing more stock than a location holds. Distinct from 400: nothing about the request is malformed. */
             422: {
                 headers: {
@@ -12461,7 +14098,7 @@ export interface operations {
             };
         };
     };
-    clearVariantSpec: {
+    productContentClearVariantSpec: {
         parameters: {
             query?: never;
             header?: never;
@@ -12546,7 +14183,7 @@ export interface operations {
             };
         };
     };
-    reorderVariants: {
+    productReorderVariants: {
         parameters: {
             query?: never;
             header?: never;
@@ -12615,6 +14252,15 @@ export interface operations {
                     "application/json": components["schemas"]["ErrorResponse"];
                 };
             };
+            /** @description `UNSUPPORTED_MEDIA_TYPE` — The request body was sent with a `Content-Type` the endpoint does not read. Every endpoint that takes a body reads `application/json`. */
+            415: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
             /** @description `BUSINESS_RULE_VIOLATION` — The request was well-formed and the entities exist, but a domain rule forbids it — publishing a product with no price, archiving a brand products still reference, issuing more stock than a location holds. Distinct from 400: nothing about the request is malformed. */
             422: {
                 headers: {
@@ -12635,7 +14281,7 @@ export interface operations {
             };
         };
     };
-    get_6: {
+    profileGet: {
         parameters: {
             query?: never;
             header?: never;
@@ -12691,7 +14337,7 @@ export interface operations {
             };
         };
     };
-    update_6: {
+    profileUpdate: {
         parameters: {
             query?: never;
             header?: never;
@@ -12749,6 +14395,15 @@ export interface operations {
                     "application/json": components["schemas"]["ErrorResponse"];
                 };
             };
+            /** @description `UNSUPPORTED_MEDIA_TYPE` — The request body was sent with a `Content-Type` the endpoint does not read. Every endpoint that takes a body reads `application/json`. */
+            415: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
             /** @description `BUSINESS_RULE_VIOLATION` — The request was well-formed and the entities exist, but a domain rule forbids it — publishing a product with no price, archiving a brand products still reference, issuing more stock than a location holds. Distinct from 400: nothing about the request is malformed. */
             422: {
                 headers: {
@@ -12769,7 +14424,7 @@ export interface operations {
             };
         };
     };
-    changePassword: {
+    profileChangePassword: {
         parameters: {
             query?: never;
             header?: never;
@@ -12827,6 +14482,15 @@ export interface operations {
                     "application/json": components["schemas"]["ErrorResponse"];
                 };
             };
+            /** @description `UNSUPPORTED_MEDIA_TYPE` — The request body was sent with a `Content-Type` the endpoint does not read. Every endpoint that takes a body reads `application/json`. */
+            415: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
             /** @description `BUSINESS_RULE_VIOLATION` — The request was well-formed and the entities exist, but a domain rule forbids it — publishing a product with no price, archiving a brand products still reference, issuing more stock than a location holds. Distinct from 400: nothing about the request is malformed. */
             422: {
                 headers: {
@@ -12847,7 +14511,7 @@ export interface operations {
             };
         };
     };
-    list_5: {
+    purchaseOrderList: {
         parameters: {
             query: {
                 expectedFrom?: string;
@@ -12911,7 +14575,7 @@ export interface operations {
             };
         };
     };
-    create_5: {
+    purchaseOrderCreate: {
         parameters: {
             query?: never;
             header?: never;
@@ -12969,6 +14633,15 @@ export interface operations {
                     "application/json": components["schemas"]["ErrorResponse"];
                 };
             };
+            /** @description `UNSUPPORTED_MEDIA_TYPE` — The request body was sent with a `Content-Type` the endpoint does not read. Every endpoint that takes a body reads `application/json`. */
+            415: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
             /** @description `BUSINESS_RULE_VIOLATION` — The request was well-formed and the entities exist, but a domain rule forbids it — publishing a product with no price, archiving a brand products still reference, issuing more stock than a location holds. Distinct from 400: nothing about the request is malformed. */
             422: {
                 headers: {
@@ -12989,7 +14662,7 @@ export interface operations {
             };
         };
     };
-    get_5: {
+    purchaseOrderGet: {
         parameters: {
             query?: never;
             header?: never;
@@ -13056,7 +14729,7 @@ export interface operations {
             };
         };
     };
-    update_5: {
+    purchaseOrderUpdate: {
         parameters: {
             query?: never;
             header?: never;
@@ -13125,6 +14798,15 @@ export interface operations {
                     "application/json": components["schemas"]["ErrorResponse"];
                 };
             };
+            /** @description `UNSUPPORTED_MEDIA_TYPE` — The request body was sent with a `Content-Type` the endpoint does not read. Every endpoint that takes a body reads `application/json`. */
+            415: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
             /** @description `BUSINESS_RULE_VIOLATION` — The request was well-formed and the entities exist, but a domain rule forbids it — publishing a product with no price, archiving a brand products still reference, issuing more stock than a location holds. Distinct from 400: nothing about the request is malformed. */
             422: {
                 headers: {
@@ -13145,7 +14827,7 @@ export interface operations {
             };
         };
     };
-    approve: {
+    purchaseOrderApprove: {
         parameters: {
             query?: never;
             header?: never;
@@ -13230,7 +14912,7 @@ export interface operations {
             };
         };
     };
-    cancel: {
+    purchaseOrderCancel: {
         parameters: {
             query?: never;
             header?: never;
@@ -13299,6 +14981,15 @@ export interface operations {
                     "application/json": components["schemas"]["ErrorResponse"];
                 };
             };
+            /** @description `UNSUPPORTED_MEDIA_TYPE` — The request body was sent with a `Content-Type` the endpoint does not read. Every endpoint that takes a body reads `application/json`. */
+            415: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
             /** @description `BUSINESS_RULE_VIOLATION` — The request was well-formed and the entities exist, but a domain rule forbids it — publishing a product with no price, archiving a brand products still reference, issuing more stock than a location holds. Distinct from 400: nothing about the request is malformed. */
             422: {
                 headers: {
@@ -13319,7 +15010,7 @@ export interface operations {
             };
         };
     };
-    receipts: {
+    purchaseOrderReceipts: {
         parameters: {
             query?: never;
             header?: never;
@@ -13386,7 +15077,7 @@ export interface operations {
             };
         };
     };
-    open: {
+    purchaseOrderOpen: {
         parameters: {
             query: {
                 pageable: components["schemas"]["Pageable"];
@@ -13446,7 +15137,7 @@ export interface operations {
             };
         };
     };
-    list_4: {
+    roleList: {
         parameters: {
             query?: never;
             header?: never;
@@ -13502,7 +15193,7 @@ export interface operations {
             };
         };
     };
-    create_4: {
+    roleCreate: {
         parameters: {
             query?: never;
             header?: never;
@@ -13560,6 +15251,15 @@ export interface operations {
                     "application/json": components["schemas"]["ErrorResponse"];
                 };
             };
+            /** @description `UNSUPPORTED_MEDIA_TYPE` — The request body was sent with a `Content-Type` the endpoint does not read. Every endpoint that takes a body reads `application/json`. */
+            415: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
             /** @description `BUSINESS_RULE_VIOLATION` — The request was well-formed and the entities exist, but a domain rule forbids it — publishing a product with no price, archiving a brand products still reference, issuing more stock than a location holds. Distinct from 400: nothing about the request is malformed. */
             422: {
                 headers: {
@@ -13580,7 +15280,7 @@ export interface operations {
             };
         };
     };
-    get_4: {
+    roleGet: {
         parameters: {
             query?: never;
             header?: never;
@@ -13647,7 +15347,7 @@ export interface operations {
             };
         };
     };
-    update_4: {
+    roleUpdate: {
         parameters: {
             query?: never;
             header?: never;
@@ -13716,6 +15416,15 @@ export interface operations {
                     "application/json": components["schemas"]["ErrorResponse"];
                 };
             };
+            /** @description `UNSUPPORTED_MEDIA_TYPE` — The request body was sent with a `Content-Type` the endpoint does not read. Every endpoint that takes a body reads `application/json`. */
+            415: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
             /** @description `BUSINESS_RULE_VIOLATION` — The request was well-formed and the entities exist, but a domain rule forbids it — publishing a product with no price, archiving a brand products still reference, issuing more stock than a location holds. Distinct from 400: nothing about the request is malformed. */
             422: {
                 headers: {
@@ -13736,7 +15445,7 @@ export interface operations {
             };
         };
     };
-    delete: {
+    roleDelete: {
         parameters: {
             query?: never;
             header?: never;
@@ -13819,7 +15528,7 @@ export interface operations {
             };
         };
     };
-    adjust: {
+    stockAdjust: {
         parameters: {
             query?: never;
             header: {
@@ -13879,6 +15588,15 @@ export interface operations {
                     "application/json": components["schemas"]["ErrorResponse"];
                 };
             };
+            /** @description `UNSUPPORTED_MEDIA_TYPE` — The request body was sent with a `Content-Type` the endpoint does not read. Every endpoint that takes a body reads `application/json`. */
+            415: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
             /** @description `BUSINESS_RULE_VIOLATION` — The request was well-formed and the entities exist, but a domain rule forbids it — publishing a product with no price, archiving a brand products still reference, issuing more stock than a location holds. Distinct from 400: nothing about the request is malformed. */
             422: {
                 headers: {
@@ -13899,7 +15617,7 @@ export interface operations {
             };
         };
     };
-    expiringSoon: {
+    stockExpiringSoon: {
         parameters: {
             query: {
                 pageable: components["schemas"]["Pageable"];
@@ -13959,7 +15677,7 @@ export interface operations {
             };
         };
     };
-    levels: {
+    stockLevels: {
         parameters: {
             query: {
                 batchId?: string;
@@ -14021,7 +15739,7 @@ export interface operations {
             };
         };
     };
-    lowStock: {
+    stockLowStock: {
         parameters: {
             query: {
                 pageable: components["schemas"]["Pageable"];
@@ -14081,7 +15799,7 @@ export interface operations {
             };
         };
     };
-    movements: {
+    stockMovements: {
         parameters: {
             query: {
                 batchId?: string;
@@ -14145,7 +15863,7 @@ export interface operations {
             };
         };
     };
-    rebuild: {
+    stockRebuild: {
         parameters: {
             query?: never;
             header?: never;
@@ -14219,7 +15937,7 @@ export interface operations {
             };
         };
     };
-    reconcile: {
+    stockReconcile: {
         parameters: {
             query?: never;
             header?: never;
@@ -14275,7 +15993,7 @@ export interface operations {
             };
         };
     };
-    totals: {
+    stockTotals: {
         parameters: {
             query: {
                 pageable: components["schemas"]["Pageable"];
@@ -14334,7 +16052,7 @@ export interface operations {
             };
         };
     };
-    transfer: {
+    stockTransfer: {
         parameters: {
             query?: never;
             header: {
@@ -14394,6 +16112,15 @@ export interface operations {
                     "application/json": components["schemas"]["ErrorResponse"];
                 };
             };
+            /** @description `UNSUPPORTED_MEDIA_TYPE` — The request body was sent with a `Content-Type` the endpoint does not read. Every endpoint that takes a body reads `application/json`. */
+            415: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
             /** @description `BUSINESS_RULE_VIOLATION` — The request was well-formed and the entities exist, but a domain rule forbids it — publishing a product with no price, archiving a brand products still reference, issuing more stock than a location holds. Distinct from 400: nothing about the request is malformed. */
             422: {
                 headers: {
@@ -14414,7 +16141,7 @@ export interface operations {
             };
         };
     };
-    transfer_1: {
+    stockGetTransfer: {
         parameters: {
             query?: never;
             header?: never;
@@ -14481,7 +16208,7 @@ export interface operations {
             };
         };
     };
-    list_3: {
+    supplierList: {
         parameters: {
             query: {
                 active?: boolean;
@@ -14541,7 +16268,7 @@ export interface operations {
             };
         };
     };
-    create_3: {
+    supplierCreate: {
         parameters: {
             query?: never;
             header?: never;
@@ -14599,6 +16326,15 @@ export interface operations {
                     "application/json": components["schemas"]["ErrorResponse"];
                 };
             };
+            /** @description `UNSUPPORTED_MEDIA_TYPE` — The request body was sent with a `Content-Type` the endpoint does not read. Every endpoint that takes a body reads `application/json`. */
+            415: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
             /** @description `BUSINESS_RULE_VIOLATION` — The request was well-formed and the entities exist, but a domain rule forbids it — publishing a product with no price, archiving a brand products still reference, issuing more stock than a location holds. Distinct from 400: nothing about the request is malformed. */
             422: {
                 headers: {
@@ -14619,7 +16355,7 @@ export interface operations {
             };
         };
     };
-    get_3: {
+    supplierGet: {
         parameters: {
             query?: never;
             header?: never;
@@ -14686,7 +16422,7 @@ export interface operations {
             };
         };
     };
-    update_3: {
+    supplierUpdate: {
         parameters: {
             query?: never;
             header?: never;
@@ -14755,6 +16491,15 @@ export interface operations {
                     "application/json": components["schemas"]["ErrorResponse"];
                 };
             };
+            /** @description `UNSUPPORTED_MEDIA_TYPE` — The request body was sent with a `Content-Type` the endpoint does not read. Every endpoint that takes a body reads `application/json`. */
+            415: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
             /** @description `BUSINESS_RULE_VIOLATION` — The request was well-formed and the entities exist, but a domain rule forbids it — publishing a product with no price, archiving a brand products still reference, issuing more stock than a location holds. Distinct from 400: nothing about the request is malformed. */
             422: {
                 headers: {
@@ -14775,7 +16520,7 @@ export interface operations {
             };
         };
     };
-    deactivate_2: {
+    supplierDeactivate: {
         parameters: {
             query?: never;
             header?: never;
@@ -14860,7 +16605,7 @@ export interface operations {
             };
         };
     };
-    reactivate_1: {
+    supplierReactivate: {
         parameters: {
             query?: never;
             header?: never;
@@ -14945,10 +16690,12 @@ export interface operations {
             };
         };
     };
-    list_2: {
+    teamMemberList: {
         parameters: {
             query: {
                 pageable: components["schemas"]["Pageable"];
+                roleId?: string;
+                search?: string;
                 status?: "INVITED" | "ACTIVE" | "SUSPENDED" | "DEACTIVATED";
             };
             header?: never;
@@ -15004,7 +16751,7 @@ export interface operations {
             };
         };
     };
-    create_2: {
+    teamMemberCreate: {
         parameters: {
             query?: never;
             header?: never;
@@ -15062,6 +16809,15 @@ export interface operations {
                     "application/json": components["schemas"]["ErrorResponse"];
                 };
             };
+            /** @description `UNSUPPORTED_MEDIA_TYPE` — The request body was sent with a `Content-Type` the endpoint does not read. Every endpoint that takes a body reads `application/json`. */
+            415: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
             /** @description `BUSINESS_RULE_VIOLATION` — The request was well-formed and the entities exist, but a domain rule forbids it — publishing a product with no price, archiving a brand products still reference, issuing more stock than a location holds. Distinct from 400: nothing about the request is malformed. */
             422: {
                 headers: {
@@ -15082,7 +16838,7 @@ export interface operations {
             };
         };
     };
-    get_2: {
+    teamMemberGet: {
         parameters: {
             query?: never;
             header?: never;
@@ -15149,7 +16905,7 @@ export interface operations {
             };
         };
     };
-    update_2: {
+    teamMemberUpdate: {
         parameters: {
             query?: never;
             header?: never;
@@ -15218,6 +16974,15 @@ export interface operations {
                     "application/json": components["schemas"]["ErrorResponse"];
                 };
             };
+            /** @description `UNSUPPORTED_MEDIA_TYPE` — The request body was sent with a `Content-Type` the endpoint does not read. Every endpoint that takes a body reads `application/json`. */
+            415: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
             /** @description `BUSINESS_RULE_VIOLATION` — The request was well-formed and the entities exist, but a domain rule forbids it — publishing a product with no price, archiving a brand products still reference, issuing more stock than a location holds. Distinct from 400: nothing about the request is malformed. */
             422: {
                 headers: {
@@ -15238,7 +17003,7 @@ export interface operations {
             };
         };
     };
-    activate: {
+    teamMemberActivate: {
         parameters: {
             query?: never;
             header?: never;
@@ -15323,7 +17088,7 @@ export interface operations {
             };
         };
     };
-    deactivate_1: {
+    teamMemberDeactivate: {
         parameters: {
             query?: never;
             header?: never;
@@ -15408,7 +17173,7 @@ export interface operations {
             };
         };
     };
-    forceLogout: {
+    teamMemberForceLogout: {
         parameters: {
             query?: never;
             header?: never;
@@ -15493,7 +17258,7 @@ export interface operations {
             };
         };
     };
-    resendInvite: {
+    teamMemberResendInvite: {
         parameters: {
             query?: never;
             header?: never;
@@ -15578,7 +17343,7 @@ export interface operations {
             };
         };
     };
-    resetPassword: {
+    teamMemberResetPassword: {
         parameters: {
             query?: never;
             header?: never;
@@ -15663,7 +17428,7 @@ export interface operations {
             };
         };
     };
-    assignRoles: {
+    teamMemberAssignRoles: {
         parameters: {
             query?: never;
             header?: never;
@@ -15732,6 +17497,15 @@ export interface operations {
                     "application/json": components["schemas"]["ErrorResponse"];
                 };
             };
+            /** @description `UNSUPPORTED_MEDIA_TYPE` — The request body was sent with a `Content-Type` the endpoint does not read. Every endpoint that takes a body reads `application/json`. */
+            415: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
             /** @description `BUSINESS_RULE_VIOLATION` — The request was well-formed and the entities exist, but a domain rule forbids it — publishing a product with no price, archiving a brand products still reference, issuing more stock than a location holds. Distinct from 400: nothing about the request is malformed. */
             422: {
                 headers: {
@@ -15752,7 +17526,7 @@ export interface operations {
             };
         };
     };
-    suspend_1: {
+    teamMemberSuspend: {
         parameters: {
             query?: never;
             header?: never;
@@ -15837,7 +17611,7 @@ export interface operations {
             };
         };
     };
-    list_1: {
+    userList: {
         parameters: {
             query: {
                 pageable: components["schemas"]["Pageable"];
@@ -15898,7 +17672,7 @@ export interface operations {
             };
         };
     };
-    create_1: {
+    userCreate: {
         parameters: {
             query?: never;
             header?: never;
@@ -15956,6 +17730,15 @@ export interface operations {
                     "application/json": components["schemas"]["ErrorResponse"];
                 };
             };
+            /** @description `UNSUPPORTED_MEDIA_TYPE` — The request body was sent with a `Content-Type` the endpoint does not read. Every endpoint that takes a body reads `application/json`. */
+            415: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
             /** @description `BUSINESS_RULE_VIOLATION` — The request was well-formed and the entities exist, but a domain rule forbids it — publishing a product with no price, archiving a brand products still reference, issuing more stock than a location holds. Distinct from 400: nothing about the request is malformed. */
             422: {
                 headers: {
@@ -15976,7 +17759,7 @@ export interface operations {
             };
         };
     };
-    get_1: {
+    userGet: {
         parameters: {
             query?: never;
             header?: never;
@@ -16043,7 +17826,7 @@ export interface operations {
             };
         };
     };
-    update_1: {
+    userUpdate: {
         parameters: {
             query?: never;
             header?: never;
@@ -16112,6 +17895,15 @@ export interface operations {
                     "application/json": components["schemas"]["ErrorResponse"];
                 };
             };
+            /** @description `UNSUPPORTED_MEDIA_TYPE` — The request body was sent with a `Content-Type` the endpoint does not read. Every endpoint that takes a body reads `application/json`. */
+            415: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
             /** @description `BUSINESS_RULE_VIOLATION` — The request was well-formed and the entities exist, but a domain rule forbids it — publishing a product with no price, archiving a brand products still reference, issuing more stock than a location holds. Distinct from 400: nothing about the request is malformed. */
             422: {
                 headers: {
@@ -16132,7 +17924,7 @@ export interface operations {
             };
         };
     };
-    grantPartner: {
+    userGrantPartner: {
         parameters: {
             query?: never;
             header?: never;
@@ -16141,7 +17933,11 @@ export interface operations {
             };
             cookie?: never;
         };
-        requestBody?: never;
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["UserStateChangeRequest"];
+            };
+        };
         responses: {
             /** @description OK */
             200: {
@@ -16188,8 +17984,17 @@ export interface operations {
                     "application/json": components["schemas"]["ErrorResponse"];
                 };
             };
-            /** @description `CONFLICT` — The request collided with current state for a reason other than a version mismatch: a duplicate natural key (a slug, a code, an email), or a database constraint the application did not catch first. */
+            /** @description `VERSION_CONFLICT` or `CONFLICT` — The `version` sent with an update is not the version stored — the record was changed by someone else since it was read. Nothing was written. Re-read the record, show the operator what changed, and submit again with the new `version`. */
             409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description `UNSUPPORTED_MEDIA_TYPE` — The request body was sent with a `Content-Type` the endpoint does not read. Every endpoint that takes a body reads `application/json`. */
+            415: {
                 headers: {
                     [name: string]: unknown;
                 };
@@ -16217,7 +18022,7 @@ export interface operations {
             };
         };
     };
-    reinstate: {
+    userReinstate: {
         parameters: {
             query?: never;
             header?: never;
@@ -16226,7 +18031,11 @@ export interface operations {
             };
             cookie?: never;
         };
-        requestBody?: never;
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["UserStateChangeRequest"];
+            };
+        };
         responses: {
             /** @description OK */
             200: {
@@ -16273,8 +18082,17 @@ export interface operations {
                     "application/json": components["schemas"]["ErrorResponse"];
                 };
             };
-            /** @description `CONFLICT` — The request collided with current state for a reason other than a version mismatch: a duplicate natural key (a slug, a code, an email), or a database constraint the application did not catch first. */
+            /** @description `VERSION_CONFLICT` or `CONFLICT` — The `version` sent with an update is not the version stored — the record was changed by someone else since it was read. Nothing was written. Re-read the record, show the operator what changed, and submit again with the new `version`. */
             409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description `UNSUPPORTED_MEDIA_TYPE` — The request body was sent with a `Content-Type` the endpoint does not read. Every endpoint that takes a body reads `application/json`. */
+            415: {
                 headers: {
                     [name: string]: unknown;
                 };
@@ -16302,7 +18120,7 @@ export interface operations {
             };
         };
     };
-    revokePartner: {
+    userRevokePartner: {
         parameters: {
             query?: never;
             header?: never;
@@ -16311,7 +18129,11 @@ export interface operations {
             };
             cookie?: never;
         };
-        requestBody?: never;
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["UserStateChangeRequest"];
+            };
+        };
         responses: {
             /** @description OK */
             200: {
@@ -16358,8 +18180,17 @@ export interface operations {
                     "application/json": components["schemas"]["ErrorResponse"];
                 };
             };
-            /** @description `CONFLICT` — The request collided with current state for a reason other than a version mismatch: a duplicate natural key (a slug, a code, an email), or a database constraint the application did not catch first. */
+            /** @description `VERSION_CONFLICT` or `CONFLICT` — The `version` sent with an update is not the version stored — the record was changed by someone else since it was read. Nothing was written. Re-read the record, show the operator what changed, and submit again with the new `version`. */
             409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description `UNSUPPORTED_MEDIA_TYPE` — The request body was sent with a `Content-Type` the endpoint does not read. Every endpoint that takes a body reads `application/json`. */
+            415: {
                 headers: {
                     [name: string]: unknown;
                 };
@@ -16387,7 +18218,7 @@ export interface operations {
             };
         };
     };
-    suspend: {
+    userSuspend: {
         parameters: {
             query?: never;
             header?: never;
@@ -16396,7 +18227,11 @@ export interface operations {
             };
             cookie?: never;
         };
-        requestBody?: never;
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["UserStateChangeRequest"];
+            };
+        };
         responses: {
             /** @description OK */
             200: {
@@ -16443,8 +18278,17 @@ export interface operations {
                     "application/json": components["schemas"]["ErrorResponse"];
                 };
             };
-            /** @description `CONFLICT` — The request collided with current state for a reason other than a version mismatch: a duplicate natural key (a slug, a code, an email), or a database constraint the application did not catch first. */
+            /** @description `VERSION_CONFLICT` or `CONFLICT` — The `version` sent with an update is not the version stored — the record was changed by someone else since it was read. Nothing was written. Re-read the record, show the operator what changed, and submit again with the new `version`. */
             409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description `UNSUPPORTED_MEDIA_TYPE` — The request body was sent with a `Content-Type` the endpoint does not read. Every endpoint that takes a body reads `application/json`. */
+            415: {
                 headers: {
                     [name: string]: unknown;
                 };
@@ -16472,7 +18316,7 @@ export interface operations {
             };
         };
     };
-    list: {
+    warehouseList: {
         parameters: {
             query: {
                 active?: boolean;
@@ -16533,7 +18377,7 @@ export interface operations {
             };
         };
     };
-    create: {
+    warehouseCreate: {
         parameters: {
             query?: never;
             header?: never;
@@ -16591,6 +18435,15 @@ export interface operations {
                     "application/json": components["schemas"]["ErrorResponse"];
                 };
             };
+            /** @description `UNSUPPORTED_MEDIA_TYPE` — The request body was sent with a `Content-Type` the endpoint does not read. Every endpoint that takes a body reads `application/json`. */
+            415: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
             /** @description `BUSINESS_RULE_VIOLATION` — The request was well-formed and the entities exist, but a domain rule forbids it — publishing a product with no price, archiving a brand products still reference, issuing more stock than a location holds. Distinct from 400: nothing about the request is malformed. */
             422: {
                 headers: {
@@ -16611,7 +18464,7 @@ export interface operations {
             };
         };
     };
-    get: {
+    warehouseGet: {
         parameters: {
             query?: never;
             header?: never;
@@ -16678,7 +18531,7 @@ export interface operations {
             };
         };
     };
-    update: {
+    warehouseUpdate: {
         parameters: {
             query?: never;
             header?: never;
@@ -16747,6 +18600,15 @@ export interface operations {
                     "application/json": components["schemas"]["ErrorResponse"];
                 };
             };
+            /** @description `UNSUPPORTED_MEDIA_TYPE` — The request body was sent with a `Content-Type` the endpoint does not read. Every endpoint that takes a body reads `application/json`. */
+            415: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
             /** @description `BUSINESS_RULE_VIOLATION` — The request was well-formed and the entities exist, but a domain rule forbids it — publishing a product with no price, archiving a brand products still reference, issuing more stock than a location holds. Distinct from 400: nothing about the request is malformed. */
             422: {
                 headers: {
@@ -16767,7 +18629,7 @@ export interface operations {
             };
         };
     };
-    deactivate: {
+    warehouseDeactivate: {
         parameters: {
             query?: never;
             header?: never;
@@ -16852,7 +18714,7 @@ export interface operations {
             };
         };
     };
-    reactivate: {
+    warehouseReactivate: {
         parameters: {
             query?: never;
             header?: never;

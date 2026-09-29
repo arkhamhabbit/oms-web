@@ -1,2 +1,3 @@
 * text=auto
 src/api/schema.gen.ts text eol=lf
+src/api/enums.gen.ts text eol=lf

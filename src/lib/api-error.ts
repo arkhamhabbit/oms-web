@@ -12,6 +12,8 @@ export interface ApiError {
   message: string
   traceId: string
   fieldErrors: ApiFieldError[]
+  /** On a duplicate-key `CONFLICT` (0.8): the id of the record already holding the key. */
+  existingId?: string
 }
 
 /** D2.24 — branch on the error **code**, never on `message`, to tell "reload and retry" apart
@@ -40,6 +42,7 @@ export class ApiClientError extends Error implements ApiError {
   readonly code: string
   readonly traceId: string
   readonly fieldErrors: ApiFieldError[]
+  readonly existingId?: string
   readonly status: number
 
   constructor(apiError: ApiError, status: number) {
@@ -48,6 +51,7 @@ export class ApiClientError extends Error implements ApiError {
     this.code = apiError.code
     this.traceId = apiError.traceId
     this.fieldErrors = apiError.fieldErrors
+    this.existingId = apiError.existingId
     this.status = status
   }
 }

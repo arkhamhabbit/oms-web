@@ -13,7 +13,9 @@ import {
   useAddVariantImageMutation,
   useProductImagesQuery,
   useRemoveProductImageMutation,
+  useRemoveVariantImageMutation,
   useReorderProductImagesMutation,
+  useReorderVariantImagesMutation,
   useVariantImagesQuery,
   type Variant,
 } from '@/api/products'
@@ -47,7 +49,11 @@ function ProductLevelImages({ productId }: { productId: string }) {
         <div className="flex flex-col divide-y rounded-md border bg-background">
           {images.map((image, index) => (
             <div key={image.id} className="flex items-center gap-3 px-3 py-2">
-              <img src={image.url} alt={image.altText ?? ''} className="size-12 rounded object-cover" />
+              <img
+                src={image.url}
+                alt={image.altText ?? ''}
+                className="size-12 rounded object-cover"
+              />
               <span className="flex-1 truncate text-sm">{image.url}</span>
               {index === 0 && <Badge variant="secondary">Primary</Badge>}
               <Button
@@ -72,7 +78,9 @@ function ProductLevelImages({ productId }: { productId: string }) {
                 variant="ghost"
                 size="icon"
                 title="Remove"
-                onClick={() => removeImage.mutateAsync(image.id!).catch((error) => toastApiError(error))}
+                onClick={() =>
+                  removeImage.mutateAsync(image.id!).catch((error) => toastApiError(error))
+                }
               >
                 <TrashIcon />
               </Button>
@@ -114,6 +122,8 @@ function ProductLevelImages({ productId }: { productId: string }) {
 function VariantLevelImages({ productId, variant }: { productId: string; variant: Variant }) {
   const imagesQuery = useVariantImagesQuery(productId, variant.id)
   const addImage = useAddVariantImageMutation(productId, variant.id!)
+  const removeImage = useRemoveVariantImageMutation(productId, variant.id!)
+  const reorder = useReorderVariantImagesMutation(productId, variant.id!)
 
   const [url, setUrl] = React.useState('')
   const [altText, setAltText] = React.useState('')
@@ -121,12 +131,22 @@ function VariantLevelImages({ productId, variant }: { productId: string; variant
   const images = imagesQuery.data ?? []
   const anyInherited = images.some((i) => i.inherited)
 
+  function move(index: number, direction: -1 | 1) {
+    const reordered = moveItem(images, index, direction)
+    if (reordered === images) {
+      return
+    }
+    reorder
+      .mutateAsync({ orderedIds: reordered.map((i) => i.id!) })
+      .catch((error) => toastApiError(error))
+  }
+
   return (
     <div className="flex flex-col gap-3">
       {anyInherited && (
         <p className="rounded-md border border-blue-200 bg-blue-50 p-2 text-sm text-blue-900">
-          Showing the product's images — this item has none of its own yet, so there is nothing
-          to delete here. Add an image below to give it its own set (D4.14).
+          Showing the product's images — this item has none of its own yet, so there is nothing to
+          delete here. Add an image below to give it its own set (D4.14).
         </p>
       )}
       {images.length === 0 ? (
@@ -134,20 +154,52 @@ function VariantLevelImages({ productId, variant }: { productId: string; variant
       ) : (
         <div className="flex flex-col divide-y rounded-md border bg-background">
           {images.map((image, index) => (
-            <div key={`${image.url}-${index}`} className="flex items-center gap-3 px-3 py-2">
-              <img src={image.url} alt={image.altText ?? ''} className="size-12 rounded object-cover" />
+            <div key={image.id} className="flex items-center gap-3 px-3 py-2">
+              <img
+                src={image.url}
+                alt={image.altText ?? ''}
+                className="size-12 rounded object-cover"
+              />
               <span className="flex-1 truncate text-sm">{image.url}</span>
-              {image.inherited && <Badge variant="outline">Inherited from product</Badge>}
+              {image.inherited ? (
+                <Badge variant="outline">Inherited from product</Badge>
+              ) : (
+                <>
+                  {index === 0 && <Badge variant="secondary">Primary</Badge>}
+                  <Button
+                    variant="ghost"
+                    size="icon"
+                    disabled={index === 0}
+                    title="Move up"
+                    onClick={() => move(index, -1)}
+                  >
+                    <ArrowUpIcon />
+                  </Button>
+                  <Button
+                    variant="ghost"
+                    size="icon"
+                    disabled={index === images.length - 1}
+                    title="Move down"
+                    onClick={() => move(index, 1)}
+                  >
+                    <ArrowDownIcon />
+                  </Button>
+                  <Button
+                    variant="ghost"
+                    size="icon"
+                    title="Remove"
+                    onClick={() =>
+                      removeImage.mutateAsync(image.id!).catch((error) => toastApiError(error))
+                    }
+                  >
+                    <TrashIcon />
+                  </Button>
+                </>
+              )}
             </div>
           ))}
         </div>
       )}
-      <p className="text-xs text-muted-foreground">
-        **Contract gap** (flagged in the task's Status block): the resolved images endpoint returns
-        no image id, so an existing own image can't be reordered or removed from here — only added.
-        Removing or reordering an own image today requires the product's own image being new enough
-        that you added it in this session, or going through a fresh add/replace.
-      </p>
       <div className="flex items-end gap-2">
         <div className="flex-1">
           <ImageUrlField value={url} onChange={(e) => setUrl(e.target.value)} />

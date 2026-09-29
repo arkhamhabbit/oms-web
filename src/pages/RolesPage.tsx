@@ -12,10 +12,6 @@ import { errorSentence } from '@/components/team/role-errors'
 import { useBreadcrumb } from '@/layouts/breadcrumb-context'
 import { usePermissions } from '@/auth/usePermissions'
 import { useDeleteRoleMutation, useRolesQuery, type Role } from '@/api/roles'
-import { useTeamMembersQuery } from '@/api/team'
-
-/** A team is tens of people; the role list has no member count, so it is derived from this. */
-const FETCH_ALL_SIZE = 500
 
 function RolesPage() {
   useBreadcrumb([{ label: 'Roles' }])
@@ -23,9 +19,6 @@ function RolesPage() {
   const canManage = has('team.manage')
 
   const roles = useRolesQuery()
-  // Contract gap (recorded in the W1.3 Status): RoleResponse carries no member count, so the
-  // "in use" count is derived from the member list.
-  const members = useTeamMembersQuery({ page: 0, size: FETCH_ALL_SIZE })
   const deleteRole = useDeleteRoleMutation()
 
   const [editorOpen, setEditorOpen] = React.useState(false)
@@ -33,22 +26,12 @@ function RolesPage() {
   const [deleting, setDeleting] = React.useState<Role | undefined>()
   const [deleteError, setDeleteError] = React.useState<string | undefined>()
 
-  const holderCount = React.useMemo(() => {
-    const counts = new Map<string, number>()
-    for (const member of members.data?.content ?? []) {
-      for (const r of member.roles ?? []) {
-        counts.set(r.id!, (counts.get(r.id!) ?? 0) + 1)
-      }
-    }
-    return counts
-  }, [members.data])
-
   function open(role?: Role) {
     setEditing(role)
     setEditorOpen(true)
   }
 
-  const deletingCount = deleting ? (holderCount.get(deleting.id!) ?? 0) : 0
+  const deletingCount = deleting?.memberCount ?? 0
 
   const columns: ColumnDef<Role, unknown>[] = [
     {
@@ -77,7 +60,7 @@ function RolesPage() {
     {
       id: 'members',
       header: 'Members',
-      cell: ({ row }) => (members.data ? (holderCount.get(row.original.id!) ?? 0) : '…'),
+      cell: ({ row }) => row.original.memberCount ?? 0,
     },
     {
       id: 'actions',
