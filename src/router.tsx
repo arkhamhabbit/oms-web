@@ -14,6 +14,7 @@ import ProductsPage from '@/pages/ProductsPage'
 import ProductDetailPage from '@/pages/ProductDetailPage'
 import TeamPage from '@/pages/TeamPage'
 import RolesPage from '@/pages/RolesPage'
+import TeamMemberPage from '@/pages/TeamMemberPage'
 import AuditPage from '@/pages/AuditPage'
 import ProfilePage from '@/pages/ProfilePage'
 import RequireAuth from '@/auth/RequireAuth'
@@ -85,6 +86,14 @@ export const router = createBrowserRouter([
             element: (
               <RequirePermission permission="team.read">
                 <TeamPage />
+              </RequirePermission>
+            ),
+          },
+          {
+            path: '/team/:id',
+            element: (
+              <RequirePermission permission="team.read">
+                <TeamMemberPage />
               </RequirePermission>
             ),
           },
