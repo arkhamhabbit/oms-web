@@ -9,7 +9,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { MultiSelect } from '@/components/form/MultiSelect'
-import { ConfirmDialog } from '@/components/team/ConfirmDialog'
+import { ConfirmDialog } from '@/components/common/ConfirmDialog'
 import { LinkDialog } from '@/components/team/LinkDialog'
 import { MemberStatusBadge } from '@/components/team/MemberStatusBadge'
 import { useBreadcrumb } from '@/layouts/breadcrumb-context'

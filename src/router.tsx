@@ -16,6 +16,8 @@ import TeamPage from '@/pages/TeamPage'
 import RolesPage from '@/pages/RolesPage'
 import TeamMemberPage from '@/pages/TeamMemberPage'
 import AuditPage from '@/pages/AuditPage'
+import UsersPage from '@/pages/UsersPage'
+import UserDetailPage from '@/pages/UserDetailPage'
 import ProfilePage from '@/pages/ProfilePage'
 import RequireAuth from '@/auth/RequireAuth'
 import RequirePermission from '@/auth/RequirePermission'
@@ -78,6 +80,22 @@ export const router = createBrowserRouter([
             element: (
               <RequirePermission permission="catalog.product.read">
                 <ProductDetailPage />
+              </RequirePermission>
+            ),
+          },
+          {
+            path: '/users',
+            element: (
+              <RequirePermission permission="identity.user.read">
+                <UsersPage />
+              </RequirePermission>
+            ),
+          },
+          {
+            path: '/users/:id',
+            element: (
+              <RequirePermission permission="identity.user.read">
+                <UserDetailPage />
               </RequirePermission>
             ),
           },
