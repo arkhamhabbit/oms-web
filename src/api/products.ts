@@ -554,3 +554,53 @@ export function useClearVariantSpecMutation(productId: string, variantId: string
       queryClient.invalidateQueries({ queryKey: variantSpecsQueryKey(productId, variantId) }),
   })
 }
+
+// ---- Customer allowlist (1.0d) ------------------------------------------------------------
+
+export type AllowedCustomer = components['schemas']['AllowedCustomerResponse']
+
+export const allowedCustomersQueryKey = (productId: string, page: number) =>
+  [PRODUCTS_KEY, 'allowed-customers', productId, page] as const
+
+/** Kept for any audience, but only read while the product is `CUSTOMER_RESTRICTED`. */
+export function useAllowedCustomersQuery(productId: string, page: number, size: number) {
+  return useQuery({
+    queryKey: allowedCustomersQueryKey(productId, page),
+    queryFn: () =>
+      unwrap(
+        api.GET('/api/admin/products/{productId}/allowed-customers', {
+          params: { path: { productId }, query: { pageable: { page, size } } },
+        })
+      ),
+    placeholderData: (previous) => previous,
+  })
+}
+
+/** Both idempotent: allowing a listed customer or removing an unlisted one changes nothing. */
+export function useAllowCustomerMutation(productId: string) {
+  const queryClient = useQueryClient()
+  return useMutation({
+    mutationFn: (userId: string) =>
+      unwrap<AllowedCustomer>(
+        api.PUT('/api/admin/products/{productId}/allowed-customers/{userId}', {
+          params: { path: { productId, userId } },
+        })
+      ),
+    onSuccess: () =>
+      queryClient.invalidateQueries({ queryKey: [PRODUCTS_KEY, 'allowed-customers', productId] }),
+  })
+}
+
+export function useDisallowCustomerMutation(productId: string) {
+  const queryClient = useQueryClient()
+  return useMutation({
+    mutationFn: (userId: string) =>
+      unwrap<void>(
+        api.DELETE('/api/admin/products/{productId}/allowed-customers/{userId}', {
+          params: { path: { productId, userId } },
+        })
+      ),
+    onSuccess: () =>
+      queryClient.invalidateQueries({ queryKey: [PRODUCTS_KEY, 'allowed-customers', productId] }),
+  })
+}

@@ -9,6 +9,8 @@ import {
   ShieldCheck,
   UserRound,
   ScrollText,
+  IndianRupee,
+  Send,
 } from 'lucide-react'
 
 export interface NavItem {
@@ -25,7 +27,9 @@ export const navItems: NavItem[] = [
   { label: 'Categories', to: '/categories', icon: FolderTree, permission: 'catalog.category.read' },
   { label: 'Attributes', to: '/attributes', icon: ListTree, permission: 'catalog.attribute.read' },
   { label: 'Products', to: '/products', icon: Package, permission: 'catalog.product.read' },
+  { label: 'Pricing', to: '/pricing', icon: IndianRupee, permission: 'pricing.read' },
   { label: 'Users', to: '/users', icon: UserRound, permission: 'identity.user.read' },
+  { label: 'Invites', to: '/invites', icon: Send, permission: 'invite.read' },
   { label: 'Team', to: '/team', icon: Users, permission: 'team.read' },
   { label: 'Roles', to: '/roles', icon: ShieldCheck, permission: 'team.read' },
   { label: 'Audit', to: '/audit', icon: ScrollText, permission: 'audit.read' },

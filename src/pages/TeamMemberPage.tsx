@@ -1,6 +1,6 @@
 import * as React from 'react'
 import { Link, useParams } from 'react-router-dom'
-import { AlertTriangleIcon, ArrowLeftIcon, InfoIcon } from 'lucide-react'
+import { ArrowLeftIcon, InfoIcon } from 'lucide-react'
 import { toast } from 'sonner'
 
 import { Badge } from '@/components/ui/badge'
@@ -10,6 +10,7 @@ import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { MultiSelect } from '@/components/form/MultiSelect'
 import { ConfirmDialog } from '@/components/common/ConfirmDialog'
+import { NoticeBanner, noticeFromError, type Notice } from '@/components/common/NoticeBanner'
 import { LinkDialog } from '@/components/team/LinkDialog'
 import { MemberStatusBadge } from '@/components/team/MemberStatusBadge'
 import { useBreadcrumb } from '@/layouts/breadcrumb-context'
@@ -27,61 +28,7 @@ import {
   type MemberStatusAction,
   type TeamMember,
 } from '@/api/team'
-import { isApiError, isVersionConflict } from '@/lib/api-error'
-
-/** A guardrail refusal (own account, last Super Admin, …) — the server's sentence, shown inline. */
-interface Notice {
-  tone: 'error' | 'info'
-  text: string
-  traceId?: string
-}
-
-function noticeFromError(error: unknown): Notice {
-  if (isVersionConflict(error)) {
-    return {
-      tone: 'error',
-      text: 'This member was changed by someone else — reload to see the latest, then try again.',
-      traceId: isApiError(error) ? error.traceId : undefined,
-    }
-  }
-  if (isApiError(error)) {
-    return { tone: 'error', text: error.message, traceId: error.traceId }
-  }
-  return { tone: 'error', text: error instanceof Error ? error.message : 'Something went wrong' }
-}
-
-function NoticeBanner({
-  notice,
-  onReload,
-  onDismiss,
-}: {
-  notice: Notice
-  onReload?: () => void
-  onDismiss: () => void
-}) {
-  return (
-    <div
-      role="alert"
-      className="flex items-start gap-2 rounded-md border border-destructive/40 bg-destructive/5 p-3 text-sm"
-    >
-      <AlertTriangleIcon className="mt-0.5 size-4 shrink-0 text-destructive" />
-      <div className="flex-1">
-        <p>{notice.text}</p>
-        {notice.traceId && (
-          <p className="text-xs text-muted-foreground">Trace ID: {notice.traceId}</p>
-        )}
-      </div>
-      {onReload && (
-        <Button size="sm" variant="outline" onClick={onReload}>
-          Reload
-        </Button>
-      )}
-      <Button size="sm" variant="ghost" onClick={onDismiss}>
-        Dismiss
-      </Button>
-    </div>
-  )
-}
+import { isApiError } from '@/lib/api-error'
 
 function ReadOnlyReason({ children }: { children: React.ReactNode }) {
   return (
@@ -142,15 +89,12 @@ function TeamMemberPage() {
   useBreadcrumb([{ label: 'Team', to: '/team' }, { label: member?.name ?? 'Member' }])
 
   const [notice, setNotice] = React.useState<Notice | undefined>()
-  const [stale, setStale] = React.useState(false)
 
   function fail(error: unknown) {
-    setNotice(noticeFromError(error))
-    setStale(isVersionConflict(error))
+    setNotice(noticeFromError(error, 'This member'))
   }
   function reload() {
     setNotice(undefined)
-    setStale(false)
     void memberQuery.refetch()
   }
 
@@ -184,7 +128,7 @@ function TeamMemberPage() {
       {notice && (
         <NoticeBanner
           notice={notice}
-          onReload={stale ? reload : undefined}
+          onReload={reload}
           onDismiss={() => setNotice(undefined)}
         />
       )}
