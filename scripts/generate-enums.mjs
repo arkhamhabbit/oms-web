@@ -32,6 +32,10 @@ const entries = [
   ['ATTRIBUTE_UNITS', schemaEnum('AttributeResponse', 'unit')],
   ['AUDIT_ENTITY_TYPES', queryEnum('/api/admin/audit-entries', 'entityType')],
   ['AUDIT_ACTIONS', queryEnum('/api/admin/audit-entries', 'action')],
+  ['PRICING_VERSION_STATUSES', queryEnum('/api/admin/pricing/versions', 'status')],
+  ['PRICING_LEVELS', schemaEnum('LevelOverrideResponse', 'level')],
+  ['INVITE_STATUSES', queryEnum('/api/admin/invites', 'status')],
+  ['PRODUCT_AUDIENCES', schemaEnum('UpdateProductRequest', 'audience')],
 ]
 
 const body =
