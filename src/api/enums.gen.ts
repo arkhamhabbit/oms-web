@@ -21,10 +21,15 @@ export const AUDIT_ENTITY_TYPES = [
   "batch",
   "brand",
   "category",
+  "claim_intake",
   "goods_receipt",
+  "invite",
+  "invite_intake",
   "membership_version",
+  "pricing_version",
   "product",
   "purchase_order",
+  "referral",
   "role",
   "stock_level",
   "stock_movement",
@@ -71,6 +76,8 @@ export const AUDIT_ACTIONS = [
   "catalog.product.archived",
   "catalog.product.categories_changed",
   "catalog.product.created",
+  "catalog.product.customer_allowed",
+  "catalog.product.customer_disallowed",
   "catalog.product.image_added",
   "catalog.product.image_removed",
   "catalog.product.image_updated",
@@ -85,6 +92,7 @@ export const AUDIT_ACTIONS = [
   "catalog.product.submitted",
   "catalog.product.unpublished",
   "catalog.product.updated",
+  "catalog.product.visibility_changed",
   "catalog.variant.created",
   "catalog.variant.default_changed",
   "catalog.variant.discontinued",
@@ -97,6 +105,7 @@ export const AUDIT_ACTIONS = [
   "catalog.variant.spec_cleared",
   "catalog.variant.spec_set",
   "catalog.variant.updated",
+  "identity.user.claimed",
   "identity.user.created",
   "identity.user.reinstated",
   "identity.user.role_granted",
@@ -111,10 +120,27 @@ export const AUDIT_ACTIONS = [
   "inventory.warehouse.deactivated",
   "inventory.warehouse.reactivated",
   "inventory.warehouse.updated",
+  "invite.claim.processed",
+  "invite.claim.rejected",
+  "invite.intake.processed",
+  "invite.intake.rejected",
+  "invite.invite.added",
+  "invite.invite.expired",
+  "invite.invite.invalidated",
+  "invite.invite.issued",
+  "invite.invite.visited",
+  "invite.referral.attributed",
+  "invite.referral.blocked",
   "membership.version.created",
   "membership.version.published",
   "membership.version.updated",
   "membership.version.withdrawn",
+  "pricing.price.cleared",
+  "pricing.price.set",
+  "pricing.version.created",
+  "pricing.version.published",
+  "pricing.version.updated",
+  "pricing.version.withdrawn",
   "procurement.goods_receipt.posted",
   "procurement.purchase_order.approved",
   "procurement.purchase_order.cancelled",
@@ -139,4 +165,29 @@ export const AUDIT_ACTIONS = [
   "team.role.created",
   "team.role.deleted",
   "team.role.updated",
+] as const
+
+export const PRICING_VERSION_STATUSES = [
+  "DRAFT",
+  "PUBLISHED",
+  "WITHDRAWN",
+] as const
+
+export const PRICING_LEVELS = [
+  "MEMBER",
+  "LOWEST",
+] as const
+
+export const INVITE_STATUSES = [
+  "PENDING",
+  "VISITED",
+  "ADDED",
+  "EXPIRED",
+  "INVALID",
+] as const
+
+export const PRODUCT_AUDIENCES = [
+  "PUBLIC",
+  "TIER_RESTRICTED",
+  "CUSTOMER_RESTRICTED",
 ] as const

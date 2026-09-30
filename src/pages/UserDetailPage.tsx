@@ -1,6 +1,6 @@
 import * as React from 'react'
 import { Link, useParams } from 'react-router-dom'
-import { AlertTriangleIcon, ArrowLeftIcon, InfoIcon } from 'lucide-react'
+import { ArrowLeftIcon, InfoIcon } from 'lucide-react'
 import { toast } from 'sonner'
 
 import { Button } from '@/components/ui/button'
@@ -8,10 +8,11 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { ConfirmDialog } from '@/components/common/ConfirmDialog'
+import { NoticeBanner, noticeFromError, type Notice } from '@/components/common/NoticeBanner'
 import { UserRoleBadges, UserStatusBadge } from '@/components/users/UserStatusBadge'
 import { useBreadcrumb } from '@/layouts/breadcrumb-context'
 import { usePermissions } from '@/auth/usePermissions'
-import { isApiError, isVersionConflict } from '@/lib/api-error'
+import { isApiError } from '@/lib/api-error'
 import {
   useUpdateUserMutation,
   useUserActionMutation,
@@ -19,24 +20,6 @@ import {
   type RoleGrant,
   type User,
 } from '@/api/users'
-
-interface Notice {
-  text: string
-  traceId?: string
-}
-
-function noticeFromError(error: unknown): Notice {
-  if (isVersionConflict(error)) {
-    return {
-      text: 'This user was changed by someone else — reload to see the latest, then try again.',
-      traceId: isApiError(error) ? error.traceId : undefined,
-    }
-  }
-  if (isApiError(error)) {
-    return { text: error.message, traceId: error.traceId }
-  }
-  return { text: error instanceof Error ? error.message : 'Something went wrong' }
-}
 
 function formatDate(value: string | undefined) {
   return value ? new Date(value).toLocaleString() : ''
@@ -71,15 +54,12 @@ function UserDetailPage() {
   useBreadcrumb([{ label: 'Users', to: '/users' }, { label: user?.name ?? 'User' }])
 
   const [notice, setNotice] = React.useState<Notice | undefined>()
-  const [stale, setStale] = React.useState(false)
 
   function fail(error: unknown) {
-    setNotice(noticeFromError(error))
-    setStale(isVersionConflict(error))
+    setNotice(noticeFromError(error, 'This user'))
   }
   function reload() {
     setNotice(undefined)
-    setStale(false)
     void userQuery.refetch()
   }
 
@@ -113,26 +93,7 @@ function UserDetailPage() {
       </p>
 
       {notice && (
-        <div
-          role="alert"
-          className="flex items-start gap-2 rounded-md border border-destructive/40 bg-destructive/5 p-3 text-sm"
-        >
-          <AlertTriangleIcon className="mt-0.5 size-4 shrink-0 text-destructive" />
-          <div className="flex-1">
-            <p>{notice.text}</p>
-            {notice.traceId && (
-              <p className="text-xs text-muted-foreground">Trace ID: {notice.traceId}</p>
-            )}
-          </div>
-          {stale && (
-            <Button size="sm" variant="outline" onClick={reload}>
-              Reload
-            </Button>
-          )}
-          <Button size="sm" variant="ghost" onClick={() => setNotice(undefined)}>
-            Dismiss
-          </Button>
-        </div>
+        <NoticeBanner notice={notice} onReload={reload} onDismiss={() => setNotice(undefined)} />
       )}
       {!canWrite && (
         <Explainer>

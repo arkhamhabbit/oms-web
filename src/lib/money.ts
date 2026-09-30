@@ -48,3 +48,13 @@ export function majorStringToMinor(input: string): number | null {
 export function sellingPriceExceedsMrp(baseSellingPriceMinor: number, mrpMinor: number): boolean {
   return baseSellingPriceMinor > mrpMinor
 }
+
+/** A wire amount for display, as the variant table already shows it ("INR 799.00"); "—" if none. */
+export function formatMoney(
+  money: { amountMinor?: number; currency?: string } | null | undefined
+): string {
+  if (!money || money.amountMinor === undefined) {
+    return '—'
+  }
+  return `${money.currency ?? ''} ${minorToMajorString(money.amountMinor)}`.trim()
+}

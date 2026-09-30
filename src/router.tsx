@@ -19,6 +19,9 @@ import AuditPage from '@/pages/AuditPage'
 import UsersPage from '@/pages/UsersPage'
 import UserDetailPage from '@/pages/UserDetailPage'
 import ProfilePage from '@/pages/ProfilePage'
+import PricingPage from '@/pages/PricingPage'
+import PricingVersionPage from '@/pages/PricingVersionPage'
+import InvitesPage from '@/pages/InvitesPage'
 import RequireAuth from '@/auth/RequireAuth'
 import RequirePermission from '@/auth/RequirePermission'
 import { onUnauthorized } from '@/api/client'
@@ -84,6 +87,22 @@ export const router = createBrowserRouter([
             ),
           },
           {
+            path: '/pricing',
+            element: (
+              <RequirePermission permission="pricing.read">
+                <PricingPage />
+              </RequirePermission>
+            ),
+          },
+          {
+            path: '/pricing/:id',
+            element: (
+              <RequirePermission permission="pricing.read">
+                <PricingVersionPage />
+              </RequirePermission>
+            ),
+          },
+          {
             path: '/users',
             element: (
               <RequirePermission permission="identity.user.read">
@@ -96,6 +115,14 @@ export const router = createBrowserRouter([
             element: (
               <RequirePermission permission="identity.user.read">
                 <UserDetailPage />
+              </RequirePermission>
+            ),
+          },
+          {
+            path: '/invites',
+            element: (
+              <RequirePermission permission="invite.read">
+                <InvitesPage />
               </RequirePermission>
             ),
           },

@@ -104,6 +104,8 @@ function ProductDetailsTab({ product, categories, canWrite }: ProductDetailsTabP
         audience: product.audience,
         listingVisibility: product.listingVisibility,
         lockedDisplay: product.lockedDisplay,
+        // D4.17(4): a TIER_RESTRICTED product must send its tier back on every edit, or 400.
+        requiredTierCode: product.requiredTierCode ?? undefined,
         status: product.status!,
         live: product.live ?? false,
         version: product.version!,
