@@ -39,6 +39,31 @@ function PriceMatrixCard({
     { id: 'level', header: 'Level', cell: ({ row }) => row.original.pricingLevel },
     { id: 'price', header: 'Pays', cell: ({ row }) => formatMoney(row.original.price) },
     {
+      id: 'bits',
+      header: 'Bits option',
+      cell: ({ row }) => {
+        const option = row.original.bitsOption
+        if (option) {
+          return (
+            <span>
+              <strong>{(option.pointsAmount ?? 0).toLocaleString('en-IN')} Bits</strong> +{' '}
+              {formatMoney(option.price)}
+            </span>
+          )
+        }
+        return row.original.bitsSource === 'BITS_NOT_BELOW_PRICE' ? (
+          <span className="flex items-center gap-1.5">
+            <Badge variant="destructive">BITS_NOT_BELOW_PRICE</Badge>
+            <span className="text-xs text-muted-foreground">
+              set, but the tier price is now at or below it — not offered
+            </span>
+          </span>
+        ) : (
+          <span className="text-muted-foreground">No Bits option</span>
+        )
+      },
+    },
+    {
       id: 'source',
       header: 'From',
       cell: ({ row }) => {

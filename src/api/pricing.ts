@@ -8,41 +8,13 @@ type Schemas = components['schemas']
 /** Money on the wire (D3.2): integer minor units plus an ISO currency. */
 export type Money = Schemas['MoneyPayload']
 
-/**
- * **Contract defect (raised in the W2.1 Status block).** The pricing DTOs reference OMS's
- * internal `Money` class instead of `MoneyPayload`, so the contract publishes their money
- * fields as `{negative, positive, zero}` — the getters of the Java type — while every pricing
- * endpoint actually sends and accepts `{amountMinor, currency}` (observed against the running
- * OMS). This rewires exactly the contract's `Money` shape to `MoneyPayload`, which the contract
- * does describe, and leaves every other field as generated — so a field removed in OMS still
- * breaks this build (D2.15). Delete it once OMS publishes `MoneyPayload` on these DTOs.
- */
-type ContractMoney = Schemas['Money']
-type IsContractMoney<T> = [keyof T] extends [keyof ContractMoney]
-  ? [keyof ContractMoney] extends [keyof T]
-    ? true
-    : false
-  : false
-type Rewire<T> = T extends readonly (infer U)[]
-  ? Rewire<U>[]
-  : T extends object
-    ? IsContractMoney<T> extends true
-      ? Money
-      : { [K in keyof T]: Rewire<T[K]> }
-    : T
-
-/** The one place a wire `Money` is handed to a request typed with the defective shape. */
-function toContractMoney(money: Money): ContractMoney {
-  return money as unknown as ContractMoney
-}
-
 export type PricingVersion = Schemas['PricingVersionResponse']
 export type PricingVersionState = NonNullable<PricingVersion['state']>
 export type PricingVersionStatus = NonNullable<PricingVersion['status']>
-export type LevelPrice = Rewire<Schemas['LevelPriceResponse']>
-export type VariantPrices = Rewire<Schemas['VariantPricesResponse']>
+export type LevelPrice = Schemas['LevelPriceResponse']
+export type VariantPrices = Schemas['VariantPricesResponse']
 export type PricingLevel = NonNullable<Schemas['LevelOverrideResponse']['level']>
-export type PriceMatrix = Rewire<Schemas['PriceMatrixResponse']>
+export type PriceMatrix = Schemas['PriceMatrixResponse']
 export type TierPrice = NonNullable<PriceMatrix['tiers']>[number]
 
 type CreatePricingVersionRequest = Schemas['CreatePricingVersionRequest']
@@ -83,14 +55,12 @@ export function usePricingVersionQuery(id: string) {
 export function usePricingVersionPricesQuery(id: string, page: number, size: number) {
   return useQuery({
     queryKey: [PRICING_KEY, 'prices', id, page, size],
-    queryFn: async () => {
-      const data = await unwrap(
+    queryFn: () =>
+      unwrap(
         api.GET('/api/admin/pricing/versions/{id}/prices', {
           params: { path: { id }, query: { pageable: { page, size } } },
         })
-      )
-      return data as Rewire<typeof data>
-    },
+      ),
     placeholderData: (previous) => previous,
   })
 }
@@ -99,12 +69,12 @@ export function useVariantPricesQuery(versionId: string, variantId: string | und
   return useQuery({
     queryKey: [PRICING_KEY, 'variant-prices', versionId, variantId],
     enabled: !!variantId,
-    queryFn: async () =>
-      (await unwrap(
+    queryFn: () =>
+      unwrap(
         api.GET('/api/admin/pricing/versions/{id}/variants/{variantId}/prices', {
           params: { path: { id: versionId, variantId: variantId! } },
         })
-      )) as VariantPrices,
+      ),
   })
 }
 
@@ -116,12 +86,12 @@ export function usePriceMatrixQuery(variantId: string | undefined, at?: string) 
   return useQuery({
     queryKey: [PRICING_KEY, 'matrix', variantId, at ?? 'now'],
     enabled: !!variantId,
-    queryFn: async () =>
-      (await unwrap(
+    queryFn: () =>
+      unwrap(
         api.GET('/api/admin/pricing/variants/{variantId}/matrix', {
           params: { path: { variantId: variantId! }, query: { at } },
         })
-      )) as PriceMatrix,
+      ),
   })
 }
 
@@ -183,22 +153,63 @@ export function useWithdrawPricingVersionMutation(id: string) {
 export function useSetVariantPricesMutation(versionId: string, variantId: string) {
   const invalidate = useInvalidatePricing()
   return useMutation({
-    mutationFn: async ({
+    mutationFn: ({
       prices,
       version,
     }: {
       prices: { level: PricingLevel; price: Money }[]
       version: number
     }) =>
-      (await unwrap(
+      unwrap(
         api.PUT('/api/admin/pricing/versions/{id}/variants/{variantId}/prices', {
           params: { path: { id: versionId, variantId } },
-          body: {
-            version,
-            prices: prices.map((p) => ({ level: p.level, price: toContractMoney(p.price) })),
-          },
+          body: { version, prices },
         })
-      )) as VariantPrices,
+      ),
+    onSuccess: invalidate,
+  })
+}
+
+export type TierBitsOption = Schemas['TierBitsOptionResponse']
+export type BitsOption = Schemas['BitsOptionResponse']
+export type BitsSource = NonNullable<TierPrice['bitsSource']>
+
+/**
+ * Replaces a variant's Bits options in a draft in one write — a tier left out is cleared and has
+ * no Bits option. Like a price edit it moves the draft's `version`, so the whole `pricing` cache
+ * is invalidated.
+ */
+export function useSetVariantBitsOptionsMutation(versionId: string, variantId: string) {
+  const invalidate = useInvalidatePricing()
+  return useMutation({
+    mutationFn: ({
+      bitsOptions,
+      version,
+    }: {
+      bitsOptions: Schemas['TierBitsOptionRequest'][]
+      version: number
+    }) =>
+      unwrap(
+        api.PUT('/api/admin/pricing/versions/{id}/variants/{variantId}/bits-options', {
+          params: { path: { id: versionId, variantId } },
+          body: { version, bitsOptions },
+        })
+      ),
+    onSuccess: invalidate,
+  })
+}
+
+/** The per-order Bits cap has its own endpoint, so a header edit can never clear it silently. */
+export function useSetMaxPointsPerOrderMutation(id: string) {
+  const invalidate = useInvalidatePricing()
+  return useMutation({
+    mutationFn: (body: Schemas['SetMaxPointsPerOrderRequest']) =>
+      unwrap<PricingVersion>(
+        api.PUT('/api/admin/pricing/versions/{id}/max-points-per-order', {
+          params: { path: { id } },
+          body,
+        })
+      ),
     onSuccess: invalidate,
   })
 }

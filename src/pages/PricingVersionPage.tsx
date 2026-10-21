@@ -12,6 +12,7 @@ import { Label } from '@/components/ui/label'
 import { DataTable } from '@/components/data-table/DataTable'
 import { ConfirmDialog } from '@/components/common/ConfirmDialog'
 import { NoticeBanner, noticeFromError, type Notice } from '@/components/common/NoticeBanner'
+import { parseWholeNumber } from '@/lib/membership'
 import { PricingStateBadge } from '@/components/pricing/PricingStateBadge'
 import { PriceMatrixCard } from '@/components/pricing/PriceMatrixCard'
 import { VariantPicker } from '@/components/pricing/VariantPicker'
@@ -25,6 +26,7 @@ import {
   usePricingVersionPricesQuery,
   usePricingVersionQuery,
   usePublishPricingVersionMutation,
+  useSetMaxPointsPerOrderMutation,
   useUpdatePricingVersionMutation,
   useWithdrawPricingVersionMutation,
   type LevelPrice,
@@ -125,6 +127,8 @@ function PricingVersionPage() {
           : 'Not published'}
         {' · '}
         {version.priceCount ?? 0} price{version.priceCount === 1 ? '' : 's'} set
+        {' · '}
+        {version.bitsOptionCount ?? 0} Bits option{version.bitsOptionCount === 1 ? '' : 's'}
         {version.withdrawnAt && ` · withdrawn ${formatDate(version.withdrawnAt)}`}
       </p>
 
@@ -159,6 +163,13 @@ function PricingVersionPage() {
           {version.notes}
         </p>
       )}
+
+      <MaxBitsCard
+        key={`cap-${version.version}-${version.maxPointsPerOrder ?? 'none'}`}
+        version={version}
+        editable={editable}
+        onError={fail}
+      />
 
       <PricesCard
         versionId={version.id!}
@@ -250,6 +261,90 @@ function DraftDetailsCard({
             </Button>
           </div>
         </form>
+      </CardContent>
+    </Card>
+  )
+}
+
+function MaxBitsCard({
+  version,
+  editable,
+  onError,
+}: {
+  version: PricingVersion
+  editable: boolean
+  onError: (error: unknown) => void
+}) {
+  const save = useSetMaxPointsPerOrderMutation(version.id!)
+  // OMS sends `null` for "uncapped" (the schema types it as absent), so normalise both.
+  const cap = version.maxPointsPerOrder ?? undefined
+  const [text, setText] = React.useState(cap === undefined ? '' : String(cap))
+  const [refusal, setRefusal] = React.useState<string | undefined>()
+  const parsed = parseWholeNumber(text)
+  const empty = text.trim() === ''
+  const invalid = !empty && (parsed === null || parsed <= 0)
+  const dirty = (empty ? undefined : (parsed ?? undefined)) !== cap
+
+  function submit(event: React.FormEvent) {
+    event.preventDefault()
+    setRefusal(undefined)
+    save
+      .mutateAsync({
+        version: version.version!,
+        maxPointsPerOrder: empty ? undefined : (parsed ?? undefined),
+      })
+      .then(() => toast.success(empty ? 'Bits cap removed' : 'Bits cap saved'))
+      .catch((error) => {
+        if (isApiError(error) && error.code === 'VALIDATION_FAILED') {
+          setRefusal(error.fieldErrors[0]?.message ?? error.message)
+        } else {
+          onError(error)
+        }
+      })
+  }
+
+  return (
+    <Card>
+      <CardHeader>
+        <CardTitle>Bits per order</CardTitle>
+        <CardDescription>
+          The most Bits one order may spend under this version. Empty means no cap, the default.
+        </CardDescription>
+      </CardHeader>
+      <CardContent>
+        {editable ? (
+          <form onSubmit={submit} className="flex flex-col gap-3">
+            <div className="grid max-w-xs gap-1.5">
+              <Label htmlFor="max-points">Max Bits per order</Label>
+              <Input
+                id="max-points"
+                inputMode="numeric"
+                placeholder="No cap"
+                value={text}
+                onChange={(e) => setText(e.target.value)}
+              />
+              {invalid && (
+                <p className="text-sm text-destructive">A cap is a whole number above 0.</p>
+              )}
+              {refusal && (
+                <p role="alert" className="text-sm text-destructive">
+                  {refusal}
+                </p>
+              )}
+            </div>
+            <div>
+              <Button type="submit" disabled={!dirty || invalid || save.isPending}>
+                Save cap
+              </Button>
+            </div>
+          </form>
+        ) : (
+          <p className="text-sm">
+            {cap === undefined
+              ? 'No cap — an order may spend any number of Bits.'
+              : `Max ${cap.toLocaleString('en-IN')} Bits per order.`}
+          </p>
+        )}
       </CardContent>
     </Card>
   )
