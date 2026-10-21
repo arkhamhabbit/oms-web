@@ -11,6 +11,7 @@ import {
   ScrollText,
   IndianRupee,
   Send,
+  Medal,
 } from 'lucide-react'
 
 export interface NavItem {
@@ -28,6 +29,7 @@ export const navItems: NavItem[] = [
   { label: 'Attributes', to: '/attributes', icon: ListTree, permission: 'catalog.attribute.read' },
   { label: 'Products', to: '/products', icon: Package, permission: 'catalog.product.read' },
   { label: 'Pricing', to: '/pricing', icon: IndianRupee, permission: 'pricing.read' },
+  { label: 'Membership', to: '/membership', icon: Medal, permission: 'membership.read' },
   { label: 'Users', to: '/users', icon: UserRound, permission: 'identity.user.read' },
   { label: 'Invites', to: '/invites', icon: Send, permission: 'invite.read' },
   { label: 'Team', to: '/team', icon: Users, permission: 'team.read' },
