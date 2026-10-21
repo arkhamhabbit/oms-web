@@ -9,6 +9,7 @@ import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { ConfirmDialog } from '@/components/common/ConfirmDialog'
 import { NoticeBanner, noticeFromError, type Notice } from '@/components/common/NoticeBanner'
+import { MemberTierCard } from '@/components/membership/MemberTierCard'
 import { UserRoleBadges, UserStatusBadge } from '@/components/users/UserStatusBadge'
 import { useBreadcrumb } from '@/layouts/breadcrumb-context'
 import { usePermissions } from '@/auth/usePermissions'
@@ -105,6 +106,7 @@ function UserDetailPage() {
       {/* key on version: a reload or a successful save hands the form fresh values */}
       <ProfileCard key={`profile-${user.version}`} user={user} canWrite={canWrite} onError={fail} />
       <RolesCard user={user} canWrite={canWrite} onError={fail} />
+      {has('membership.read') && <MemberTierCard userId={user.id!} />}
       {canSuspend && <LifecycleCard user={user} onError={fail} />}
     </div>
   )

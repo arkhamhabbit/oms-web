@@ -1400,6 +1400,37 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/admin/membership/cycles/run": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Runs the tier cycle evaluation now instead of waiting for the daily 00:05 IST sweep: every
+         *      member whose cycle has ended is kept or dropped one tier against the cycle that ended, members
+         *      evaluated under a superseded ladder are re-mapped, and members not yet provisioned are
+         * @description Runs the tier cycle evaluation now instead of waiting for the daily 00:05 IST sweep: every
+         *      member whose cycle has ended is kept or dropped one tier against the cycle that ended, members
+         *      evaluated under a superseded ladder are re-mapped, and members not yet provisioned are. Safe to
+         *      run at any time and any number of times — a cycle end is evaluated once.
+         *
+         *      <p><b>Its own permission</b>, <code>membership.cycles.run</code>: it can drop members a tier.
+         *      Audited as <code>membership.cycle_run.completed</code>; the transitions it writes carry you as
+         *      actor.
+         *
+         *     **Requires permission:** `membership.cycles.run`.
+         */
+        post: operations["membershipRunMembershipCycles"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/admin/membership/resolve": {
         parameters: {
             query?: never;
@@ -1408,15 +1439,15 @@ export interface paths {
             cookie?: never;
         };
         /**
-         * Resolves the tier a points figure earns: the highest tier whose threshold <code>points</code>
-         *      clears, under the version in effect at <code>at</code> (default now)
-         * @description Resolves the tier a points figure earns: the highest tier whose threshold <code>points</code>
-         *      clears, under the version in effect at <code>at</code> (default now). The same function every domain
-         *      uses; nothing is stored.
+         * Previews the tier a points figure <i>reaches</i>: the highest tier whose reach threshold <code>
+         *      points</code> clears, under the version in effect at <code>at</code> (default now)
+         * @description Previews the tier a points figure <i>reaches</i>: the highest tier whose reach threshold <code>
+         *      points</code> clears, under the version in effect at <code>at</code> (default now). The function a legacy
+         *      starting tier is read from; nothing is stored.
          *
-         *      <p><code>points</code> is points earned in the trailing twelve months — not a balance. Required, and
-         *      400 <code>VALIDATION_FAILED</code> when negative. 404 <code>NOT_FOUND</code> for an instant before the
-         *      launch version took effect.
+         *      <p>A member's tier is not this — it is state, see <code>GET /users/{userId</code>/tier}. Required,
+         *      and 400 <code>VALIDATION_FAILED</code> when negative. 404 <code>NOT_FOUND</code> for an instant before
+         *      the launch version took effect.
          *
          *     **Requires permission:** `membership.read`.
          */
@@ -1437,20 +1468,43 @@ export interface paths {
             cookie?: never;
         };
         /**
-         * A consumer's or partner's tier right now, resolved from the points they earned in the trailing
-         *      twelve months
-         * @description A consumer's or partner's tier right now, resolved from the points they earned in the trailing
-         *      twelve months. Computed on every call; the user record holds no tier.
+         * A consumer's or partner's tier (D7
+         * @description A consumer's or partner's tier (D7.15): the tier they hold, since when, their current 12-month
+         *      cycle, what they have earned in it, the maintain target and whether it is already secured, the
+         *      next tier's reach threshold and the gap — and their latest transitions.
          *
-         *      <p><b>Until the ledger exists, the earned figure is 0 for every user</b>, so every user
-         *      resolves to the base tier. That is the true figure — nobody has earned anything yet — not a
-         *      placeholder value; it becomes live when the ledger lands, with no change to this endpoint.
-         *
-         *      <p>404 <code>NOT_FOUND</code> for a user that does not exist or has been deleted.
+         *      <p>A user who is not yet a member (unclaimed, or no ledger accounts) answers <code>
+         *      provisioned: false</code> with the base tier and no cycle. 404 <code>NOT_FOUND</code> for a user that does
+         *      not exist or has been deleted.
          *
          *     **Requires permission:** `membership.read`.
          */
         get: operations["membershipUserTier"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/admin/membership/users/{userId}/tier/history": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * A member's tier history, newest first: every provisioning, promotion, cycle end (maintained or
+         *      dropped), legacy start and version re-evaluation.
+         * @description A member's tier history, newest first: every provisioning, promotion, cycle end (maintained or
+         *      dropped), legacy start and version re-evaluation. Append-only. 404 <code>NOT_FOUND</code> for a user
+         *      that does not exist or has been deleted.
+         *
+         *     **Requires permission:** `membership.read`.
+         */
+        get: operations["membershipUserTierHistory"];
         put?: never;
         post?: never;
         delete?: never;
@@ -1488,11 +1542,14 @@ export interface paths {
          *
          *      <p><b>The ladder is validated as a whole</b>, with 400 <code>VALIDATION_FAILED</code> and a field
          *      error per problem (<code>tiers[2].thresholdPoints12mo</code>): at least one tier and at most 20; the
-         *      first tier's threshold is 0 and no other's is; thresholds strictly increase down the list;
+         *      first tier's reach threshold is 0 and no other's is; reach thresholds strictly increase down
+         *      the list; the first tier's <code>maintainThresholdPoints</code> is 0 and every other's is greater
+         *      than 0 and less than its reach threshold; <code>carrotsPerFriendOrderMinor</code> is 0 or more;
          *      codes and names are unique. A tier's rank is its position in the list.
          *
          *      <p>The benefit flags are stored, not applied: pricing reads <code>pricingLevel</code>, orders read
-         *      <code>freeShipping</code>, invites read <code>activeInviteLimit</code>.
+         *      <code>freeShipping</code>, invites read <code>activeInviteLimit</code>, the referral earn reads <code>
+         *      carrotsPerFriendOrderMinor</code>.
          *
          *     **Requires permission:** `membership.write`.
          */
@@ -1565,7 +1622,8 @@ export interface paths {
          *        <li>409 <code>CONFLICT</code> when another published version already takes effect at that exact
          *            instant — exactly one version governs any instant.
          *        <li>422 <code>BUSINESS_RULE_VIOLATION</code> on a version that is already published, or whose
-         *            stored ladder breaks the ladder rules.
+         *            stored ladder breaks the ladder rules — including a maintain threshold that is not below
+         *            its tier's reach threshold.
          *        <li>409 <code>VERSION_CONFLICT</code> when the draft has been edited since the <code>version</code> you
          *            reviewed — nothing is published.
          *      </ul>
@@ -3381,6 +3439,36 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/admin/stock/availability/reconcile": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * <b>Checks every storefront availability counter in Redis against Postgres, and repairs it</b>
+         *      (1
+         * @description <b>Checks every storefront availability counter in Redis against Postgres, and repairs it</b>
+         *      (1.5b) — the same run the service does every minute. A counter above what Postgres says is
+         *      lowered at once; one below it is raised only after it has stayed low past a grace period, so a
+         *      shopper's reservation still in flight is never handed to someone else. A missing counter is
+         *      created; a variant no longer offered loses its counter.
+         *
+         *      <p>Under <code>inventory.adjust</code>, and audited: it can change what every shopper sees as
+         *      available.
+         *
+         *     **Requires permission:** `inventory.adjust`.
+         */
+        post: operations["stockReconcileAvailability"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/admin/stock/expiring-soon": {
         parameters: {
             query?: never;
@@ -3544,8 +3632,12 @@ export interface paths {
             cookie?: never;
         };
         /**
-         * Totals across every warehouse and batch, per variant.
-         * @description Totals across every warehouse and batch, per variant.
+         * Totals per variant across every warehouse and batch: on hand, the sellable part of it, what
+         *      shoppers' reservations hold, and what is left to sell — so an operator can see why a product
+         *      with stock on the shelf shows as unavailable (1.5b).
+         * @description Totals per variant across every warehouse and batch: on hand, the sellable part of it, what
+         *      shoppers' reservations hold, and what is left to sell — so an operator can see why a product
+         *      with stock on the shelf shows as unavailable (1.5b).
          *
          *     **Requires permission:** `inventory.read`.
          */
@@ -4402,7 +4494,7 @@ export interface components {
              */
             batchId?: string;
             /** @enum {string} */
-            movementType: "RECEIPT" | "ADJUSTMENT" | "TRANSFER_OUT" | "TRANSFER_IN" | "DAMAGE" | "EXPIRY_WRITE_OFF" | "RETURN";
+            movementType: "RECEIPT" | "ADJUSTMENT" | "TRANSFER_OUT" | "TRANSFER_IN" | "DAMAGE" | "EXPIRY_WRITE_OFF" | "RETURN" | "SALE";
             note?: string;
             /** Format: int32 */
             quantity?: number;
@@ -4542,6 +4634,36 @@ export interface components {
             /** Format: date-time */
             occurredAt?: string;
             traceId?: string;
+        };
+        /** @description One variant whose counter was not already right. */
+        AvailabilityCheckRow: {
+            /** @enum {string} */
+            action?: "IN_SYNC" | "POPULATED" | "CORRECTED_DOWN" | "CORRECTED_UP" | "UPWARD_DEFERRED" | "CHANGED_DURING_CHECK" | "REMOVED";
+            /** Format: int64 */
+            counterAfter?: number;
+            /**
+             * Format: int64
+             * @description null when there was no counter
+             */
+            counterBefore?: number;
+            /**
+             * Format: int64
+             * @description what Postgres says the counter should read
+             */
+            expected?: number;
+            /**
+             * Format: int64
+             * @description units a storefront has taken whose reservation row has not arrived yet
+             */
+            inFlight?: number;
+            /** Format: uuid */
+            variantId?: string;
+        };
+        /** @description What a reconciliation run found and did. */
+        AvailabilityReconcileResponse: {
+            changed?: components["schemas"]["AvailabilityCheckRow"][];
+            /** Format: int32 */
+            variantsChecked?: number;
         };
         BatchResponse: {
             batchNumber?: string;
@@ -4912,6 +5034,24 @@ export interface components {
             state: string;
             /** @enum {string} */
             type: "OWN" | "THIRD_PARTY";
+        };
+        /** @description What a cycle-end run did. */
+        CycleRunResponse: {
+            /**
+             * Format: int32
+             * @description members evaluated: cycle ended, ladder changed, or not yet provisioned
+             */
+            evaluated?: number;
+            /**
+             * Format: int32
+             * @description members whose evaluation failed; the next run retries them
+             */
+            failed?: number;
+            /**
+             * Format: int32
+             * @description transitions written across them
+             */
+            transitions?: number;
         };
         /** @description What one drain looked at. */
         DrainResponse: {
@@ -5963,6 +6103,35 @@ export interface components {
          *      exposes internals — <code>pageable</code>, <code>sort</code>, <code>numberOfElements</code> — that no client
          *      should be reading.
          */
+        PageResponseTierTransitionResponse: {
+            content?: components["schemas"]["TierTransitionResponse"][];
+            /** Format: int32 */
+            page?: number;
+            /** Format: int32 */
+            size?: number;
+            /** Format: int64 */
+            totalElements?: number;
+            /** Format: int32 */
+            totalPages?: number;
+        };
+        /**
+         * @description The paging envelope every paginated response uses.
+         *
+         *      <p>Lives in <code>platform</code> rather than in one domain's DTO folder. It carries no domain meaning
+         *      and every module needs it, so putting it in <code>team/dto/admin</code> — where it started, when team
+         *      was the only module — would make <code>catalog</code> import <code>team</code> to return a page of brands.
+         *      Domain packages depend on <code>platform</code> and never on each other; a shared envelope has to sit
+         *      where both can reach it.
+         *
+         *      <p>It is not an exception to "never share DTOs across surfaces". That rule is about
+         *      <i>representations</i> — the fields of a brand, of a member, of an order — where a shared type
+         *      leaks an admin-only field into an app-facing response. This type has no fields of its own; the
+         *      content it wraps is a per-surface DTO and stays one.
+         *
+         *      <p>Deliberately not Spring Data's <code>Page</code>, whose JSON form is unstable across versions and
+         *      exposes internals — <code>pageable</code>, <code>sort</code>, <code>numberOfElements</code> — that no client
+         *      should be reading.
+         */
         PageResponseUserSummaryResponse: {
             content?: components["schemas"]["UserSummaryResponse"][];
             /** Format: int32 */
@@ -6514,12 +6683,23 @@ export interface components {
         ResolvedTierResponse: {
             /** Format: int32 */
             activeInviteLimit?: number;
+            /**
+             * Format: int64
+             * @description referral Carrots per friend order, paise
+             */
+            carrotsPerFriendOrderMinor?: number;
             freeShipping?: boolean;
+            /**
+             * Format: int64
+             * @description what keeps the tier at a cycle's end
+             */
+            maintainThresholdPoints?: number;
             /** @enum {string} */
             pricingLevel?: "MEMBER" | "LOWEST";
             /**
              * Format: int64
-             * @description the points figure that was resolved
+             * @description the points figure that was resolved — for a member, earned in their
+             *          cycle
              */
             qualifyingPoints?: number;
             /** Format: int32 */
@@ -6529,7 +6709,10 @@ export interface components {
              * @description the instant whose effective version was used
              */
             resolvedAt?: string;
-            /** Format: int64 */
+            /**
+             * Format: int64
+             * @description the tier's reach threshold
+             */
             thresholdPoints12mo?: number;
             /** @description the tier's stable code */
             tierCode?: string;
@@ -6690,7 +6873,7 @@ export interface components {
             id?: string;
             idempotencyKey?: string;
             /** @enum {string} */
-            movementType?: "RECEIPT" | "ADJUSTMENT" | "TRANSFER_OUT" | "TRANSFER_IN" | "DAMAGE" | "EXPIRY_WRITE_OFF" | "RETURN";
+            movementType?: "RECEIPT" | "ADJUSTMENT" | "TRANSFER_OUT" | "TRANSFER_IN" | "DAMAGE" | "EXPIRY_WRITE_OFF" | "RETURN" | "SALE";
             note?: string;
             /** Format: date-time */
             occurredAt?: string;
@@ -6709,9 +6892,31 @@ export interface components {
             /** Format: uuid */
             warehouseId?: string;
         };
+        /** @description One variant's stock across every warehouse and batch. */
         StockTotalResponse: {
-            /** Format: int64 */
+            /**
+             * Format: int64
+             * @description <code>sellableOnHand - reserved</code>: what the storefront can still sell. Why a
+             *          product with stock on the shelf shows as unavailable. Negative when stock was written off
+             *          under a hold
+             */
+            available?: number;
+            /**
+             * Format: int64
+             * @description everything on hand, anywhere
+             */
             quantityOnHand?: number;
+            /**
+             * Format: int64
+             * @description units held by shoppers' active, unexpired reservations
+             */
+            reserved?: number;
+            /**
+             * Format: int64
+             * @description on hand in active warehouses, outside batches withdrawn at expiry —
+             *          expired stock is never sellable (D8.8)
+             */
+            sellableOnHand?: number;
             skuCode?: string;
             /** Format: uuid */
             variantId?: string;
@@ -6791,6 +6996,13 @@ export interface components {
              */
             activeInviteLimit: number;
             /**
+             * Format: int64
+             * @description referral Carrots (paise) per order placed by a friend the
+             *          member invited — declared for the referral earn to apply, not applied by membership; 0 or
+             *          more
+             */
+            carrotsPerFriendOrderMinor: number;
+            /**
              * @description stable machine key, unique within the version — 2–30 characters of A–Z, 0–9 and
              *          <code>_</code>, starting with a letter; lowercase is uppercased. Names the tier across versions,
              *          where the display name is free to change
@@ -6798,6 +7010,13 @@ export interface components {
             code: string;
             /** @description declared for orders to apply — not applied by membership */
             freeShipping: boolean;
+            /**
+             * Format: int64
+             * @description points to earn within a cycle to keep the tier at its end; short
+             *          of it, the member drops exactly one tier. <code>0</code> for the first tier; greater than 0 and
+             *          less than <code>thresholdPoints12mo</code> for every other. Tiers may share a value
+             */
+            maintainThresholdPoints: number;
             /** @description display name, unique within the version (case-insensitively) */
             name: string;
             /**
@@ -6807,8 +7026,9 @@ export interface components {
             pricingLevel: "MEMBER" | "LOWEST";
             /**
              * Format: int64
-             * @description points earned in the trailing twelve months needed to hold the tier.
-             *          <code>0</code> for the first tier and only the first; strictly increasing down the list
+             * @description the <b>reach</b> threshold: points earned within a member's current
+             *          12-month cycle that promote them to the tier at once. <code>0</code> for the first tier and only
+             *          the first; strictly increasing down the list
              */
             thresholdPoints12mo: number;
         };
@@ -6816,6 +7036,11 @@ export interface components {
         TierResponse: {
             /** Format: int32 */
             activeInviteLimit?: number;
+            /**
+             * Format: int64
+             * @description referral Carrots per friend order, paise
+             */
+            carrotsPerFriendOrderMinor?: number;
             code?: string;
             freeShipping?: boolean;
             /**
@@ -6824,6 +7049,11 @@ export interface components {
              *          ids change with it
              */
             id?: string;
+            /**
+             * Format: int64
+             * @description what keeps the tier at a cycle's end
+             */
+            maintainThresholdPoints?: number;
             name?: string;
             /** @enum {string} */
             pricingLevel?: "MEMBER" | "LOWEST";
@@ -6832,8 +7062,56 @@ export interface components {
              * @description 1 is the lowest tier
              */
             rank?: number;
-            /** Format: int64 */
+            /**
+             * Format: int64
+             * @description the reach threshold, earned within a cycle
+             */
             thresholdPoints12mo?: number;
+        };
+        /** @description One transition of a member's tier. The history is append-only. */
+        TierTransitionResponse: {
+            /**
+             * Format: uuid
+             * @description the team member whose action caused it; null when the system did
+             */
+            actorId?: string;
+            /**
+             * Format: date-time
+             * @description when it took effect — a cycle-end transition carries the cycle end it evaluated
+             */
+            at?: string;
+            /**
+             * Format: date-time
+             * @description end of that cycle
+             */
+            cycleEnd?: string;
+            /**
+             * Format: date-time
+             * @description start of the cycle it was evaluated in
+             */
+            cycleStart?: string;
+            /** @description null for <code>PROVISIONED</code> and <code>LEGACY_START</code> */
+            fromCode?: string;
+            /** Format: uuid */
+            id?: string;
+            /**
+             * Format: int64
+             * @description points the member had earned in the cycle at <code>at</code>
+             */
+            pointsInCycle?: number;
+            /** @enum {string} */
+            reason?: "PROVISIONED" | "PROMOTED" | "MAINTAINED" | "DROPPED" | "LEGACY_START" | "VERSION_REEVALUATED";
+            /**
+             * Format: date-time
+             * @description when it was written
+             */
+            recordedAt?: string;
+            toCode?: string;
+            /**
+             * Format: uuid
+             * @description the membership version whose thresholds decided it
+             */
+            versionId?: string;
         };
         /** @description Both halves of a transfer. */
         TransferResponse: {
@@ -7301,26 +7579,65 @@ export interface components {
             /** Format: int64 */
             version?: number;
         };
-        /** @description A user's current tier. */
+        /** @description A user's tier: the stored state (D7.15) and the live figures of their current cycle. */
         UserTierResponse: {
             /**
-             * @description the resolved tier; <code>tier.qualifyingPoints</code> is what the user earned in the
-             *          window
+             * Format: date-time
+             * @description end of the current cycle, exclusive: when the maintain bar is checked
+             */
+            cycleEnd?: string;
+            /**
+             * Format: date-time
+             * @description start of the current cycle, inclusive — registration, then each anniversary
+             */
+            cycleStart?: string;
+            /**
+             * Format: int64
+             * @description what the tier needs by <code>cycleEnd</code> to be kept
+             */
+            maintainThresholdPoints?: number;
+            /** @description the tier above; null at the top */
+            nextTierCode?: string;
+            /**
+             * Format: int64
+             * @description its reach threshold; null at the top
+             */
+            nextTierReachPoints?: number;
+            /**
+             * Format: int64
+             * @description points earned in the cycle so far — positive earns net of reversals, never
+             *          negative; spending does not reduce it
+             */
+            pointsInCycle?: number;
+            /**
+             * Format: int64
+             * @description still to earn in this cycle to reach it; null at the top
+             */
+            pointsToNextTier?: number;
+            /**
+             * @description false for a user who is not yet a member (unclaimed, or no ledger accounts):
+             *          <code>tier</code> is then the base tier and every cycle field is null
+             */
+            provisioned?: boolean;
+            /** @description the latest transitions, newest first (at most 10) */
+            recentTransitions?: components["schemas"]["TierTransitionResponse"][];
+            /**
+             * @description <code>pointsInCycle</code> already meets the maintain threshold — the tier is kept at
+             *          the cycle end
+             */
+            secured?: boolean;
+            /**
+             * @description the tier held, under the ladder in effect now. <code>tier.qualifyingPoints</code> equals
+             *          <code>pointsInCycle</code>
              */
             tier?: components["schemas"]["ResolvedTierResponse"];
+            /**
+             * Format: date-time
+             * @description when the member came to hold the tier
+             */
+            tierSince?: string;
             /** Format: uuid */
             userId?: string;
-            /**
-             * Format: date-time
-             * @description start of the qualifying window, inclusive — twelve months before <code>
-             *          windowTo</code>, in the business zone
-             */
-            windowFrom?: string;
-            /**
-             * Format: date-time
-             * @description end of the qualifying window, exclusive: the moment of resolution
-             */
-            windowTo?: string;
         };
         VariantOptionValueResponse: {
             /** Format: uuid */
@@ -9137,10 +9454,10 @@ export interface operations {
     auditList: {
         parameters: {
             query: {
-                action?: "catalog.attribute.created" | "catalog.attribute.deactivated" | "catalog.attribute.reactivated" | "catalog.attribute.reordered" | "catalog.attribute.updated" | "catalog.attribute_group.created" | "catalog.attribute_group.deactivated" | "catalog.attribute_group.reactivated" | "catalog.attribute_group.reordered" | "catalog.attribute_group.updated" | "catalog.attribute_value.created" | "catalog.attribute_value.deactivated" | "catalog.attribute_value.reactivated" | "catalog.attribute_value.reordered" | "catalog.attribute_value.updated" | "catalog.brand.activated" | "catalog.brand.archived" | "catalog.brand.created" | "catalog.brand.published" | "catalog.brand.reordered" | "catalog.brand.unpublished" | "catalog.brand.updated" | "catalog.category.activated" | "catalog.category.archived" | "catalog.category.created" | "catalog.category.moved" | "catalog.category.published" | "catalog.category.reordered" | "catalog.category.unpublished" | "catalog.category.updated" | "catalog.product.approved" | "catalog.product.archived" | "catalog.product.categories_changed" | "catalog.product.created" | "catalog.product.customer_allowed" | "catalog.product.customer_disallowed" | "catalog.product.image_added" | "catalog.product.image_removed" | "catalog.product.image_updated" | "catalog.product.images_reordered" | "catalog.product.option_added" | "catalog.product.option_removed" | "catalog.product.options_reordered" | "catalog.product.published" | "catalog.product.rejected" | "catalog.product.spec_cleared" | "catalog.product.spec_set" | "catalog.product.submitted" | "catalog.product.unpublished" | "catalog.product.updated" | "catalog.product.visibility_changed" | "catalog.variant.created" | "catalog.variant.default_changed" | "catalog.variant.discontinued" | "catalog.variant.image_added" | "catalog.variant.image_removed" | "catalog.variant.image_updated" | "catalog.variant.images_reordered" | "catalog.variant.reinstated" | "catalog.variant.reordered" | "catalog.variant.spec_cleared" | "catalog.variant.spec_set" | "catalog.variant.updated" | "identity.user.claimed" | "identity.user.created" | "identity.user.reinstated" | "identity.user.role_granted" | "identity.user.role_revoked" | "identity.user.suspended" | "identity.user.updated" | "inventory.batch.created" | "inventory.movement.recorded" | "inventory.projection.rebuilt" | "inventory.stock.transferred" | "inventory.warehouse.created" | "inventory.warehouse.deactivated" | "inventory.warehouse.reactivated" | "inventory.warehouse.updated" | "invite.claim.processed" | "invite.claim.rejected" | "invite.intake.processed" | "invite.intake.rejected" | "invite.invite.added" | "invite.invite.expired" | "invite.invite.invalidated" | "invite.invite.issued" | "invite.invite.visited" | "invite.referral.attributed" | "invite.referral.blocked" | "membership.version.created" | "membership.version.published" | "membership.version.updated" | "membership.version.withdrawn" | "pricing.price.cleared" | "pricing.price.set" | "pricing.version.created" | "pricing.version.published" | "pricing.version.updated" | "pricing.version.withdrawn" | "procurement.goods_receipt.posted" | "procurement.purchase_order.approved" | "procurement.purchase_order.cancelled" | "procurement.purchase_order.created" | "procurement.purchase_order.updated" | "procurement.supplier.created" | "procurement.supplier.deactivated" | "procurement.supplier.reactivated" | "procurement.supplier.updated" | "team.member.created" | "team.member.forced_logout" | "team.member.invite.accepted" | "team.member.invite.resent" | "team.member.password.changed" | "team.member.password_reset.completed" | "team.member.password_reset.requested" | "team.member.password_reset.triggered" | "team.member.profile.updated" | "team.member.roles.assigned" | "team.member.status.changed" | "team.member.updated" | "team.role.created" | "team.role.deleted" | "team.role.updated";
+                action?: "catalog.attribute.created" | "catalog.attribute.deactivated" | "catalog.attribute.reactivated" | "catalog.attribute.reordered" | "catalog.attribute.updated" | "catalog.attribute_group.created" | "catalog.attribute_group.deactivated" | "catalog.attribute_group.reactivated" | "catalog.attribute_group.reordered" | "catalog.attribute_group.updated" | "catalog.attribute_value.created" | "catalog.attribute_value.deactivated" | "catalog.attribute_value.reactivated" | "catalog.attribute_value.reordered" | "catalog.attribute_value.updated" | "catalog.brand.activated" | "catalog.brand.archived" | "catalog.brand.created" | "catalog.brand.published" | "catalog.brand.reordered" | "catalog.brand.unpublished" | "catalog.brand.updated" | "catalog.category.activated" | "catalog.category.archived" | "catalog.category.created" | "catalog.category.moved" | "catalog.category.published" | "catalog.category.reordered" | "catalog.category.unpublished" | "catalog.category.updated" | "catalog.product.approved" | "catalog.product.archived" | "catalog.product.categories_changed" | "catalog.product.created" | "catalog.product.customer_allowed" | "catalog.product.customer_disallowed" | "catalog.product.image_added" | "catalog.product.image_removed" | "catalog.product.image_updated" | "catalog.product.images_reordered" | "catalog.product.option_added" | "catalog.product.option_removed" | "catalog.product.options_reordered" | "catalog.product.published" | "catalog.product.rejected" | "catalog.product.spec_cleared" | "catalog.product.spec_set" | "catalog.product.submitted" | "catalog.product.unpublished" | "catalog.product.updated" | "catalog.product.visibility_changed" | "catalog.variant.created" | "catalog.variant.default_changed" | "catalog.variant.discontinued" | "catalog.variant.image_added" | "catalog.variant.image_removed" | "catalog.variant.image_updated" | "catalog.variant.images_reordered" | "catalog.variant.reinstated" | "catalog.variant.reordered" | "catalog.variant.spec_cleared" | "catalog.variant.spec_set" | "catalog.variant.updated" | "identity.user.claimed" | "identity.user.created" | "identity.user.reinstated" | "identity.user.role_granted" | "identity.user.role_revoked" | "identity.user.suspended" | "identity.user.updated" | "inventory.availability.reconciled" | "inventory.batch.created" | "inventory.movement.recorded" | "inventory.projection.rebuilt" | "inventory.stock.transferred" | "inventory.warehouse.created" | "inventory.warehouse.deactivated" | "inventory.warehouse.reactivated" | "inventory.warehouse.updated" | "invite.claim.processed" | "invite.claim.rejected" | "invite.intake.processed" | "invite.intake.rejected" | "invite.invite.added" | "invite.invite.expired" | "invite.invite.invalidated" | "invite.invite.issued" | "invite.invite.visited" | "invite.referral.attributed" | "invite.referral.blocked" | "membership.cycle_run.completed" | "membership.version.created" | "membership.version.published" | "membership.version.updated" | "membership.version.withdrawn" | "pricing.price.cleared" | "pricing.price.set" | "pricing.version.created" | "pricing.version.published" | "pricing.version.updated" | "pricing.version.withdrawn" | "procurement.goods_receipt.posted" | "procurement.purchase_order.approved" | "procurement.purchase_order.cancelled" | "procurement.purchase_order.created" | "procurement.purchase_order.updated" | "procurement.supplier.created" | "procurement.supplier.deactivated" | "procurement.supplier.reactivated" | "procurement.supplier.updated" | "team.member.created" | "team.member.forced_logout" | "team.member.invite.accepted" | "team.member.invite.resent" | "team.member.password.changed" | "team.member.password_reset.completed" | "team.member.password_reset.requested" | "team.member.password_reset.triggered" | "team.member.profile.updated" | "team.member.roles.assigned" | "team.member.status.changed" | "team.member.updated" | "team.role.created" | "team.role.deleted" | "team.role.updated";
                 actorId?: string;
                 entityId?: string;
-                entityType?: "attribute" | "attribute_group" | "attribute_value" | "batch" | "brand" | "category" | "claim_intake" | "goods_receipt" | "invite" | "invite_intake" | "membership_version" | "pricing_version" | "product" | "purchase_order" | "referral" | "role" | "stock_level" | "stock_movement" | "stock_transfer" | "supplier" | "team_member" | "user" | "variant" | "warehouse";
+                entityType?: "attribute" | "attribute_group" | "attribute_value" | "batch" | "brand" | "category" | "claim_intake" | "goods_receipt" | "invite" | "invite_intake" | "membership_cycle_run" | "membership_version" | "pricing_version" | "product" | "purchase_order" | "referral" | "role" | "stock_availability" | "stock_level" | "stock_movement" | "stock_transfer" | "supplier" | "team_member" | "user" | "variant" | "warehouse";
                 from?: string;
                 pageable: components["schemas"]["Pageable"];
                 to?: string;
@@ -12254,6 +12571,80 @@ export interface operations {
             };
         };
     };
+    membershipRunMembershipCycles: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "*/*": components["schemas"]["CycleRunResponse"];
+                };
+            };
+            /** @description `VALIDATION_FAILED` — The request body could not be read, a field failed validation, a required header was absent, or a domain validation rule rejected an input the caller can correct. */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description `AUTHENTICATION_FAILED` — No valid credential. Either none was presented, or the session behind it is expired, revoked, or belongs to a member who can no longer sign in. This status means the session is dead and nothing else does (D2.23) — a wrong *current* password on change-password is a 400 with a `currentPassword` field error, not this. */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description `ACCESS_DENIED` — Authenticated, but lacking the permission the endpoint declares. The session is valid; do not sign the operator out. */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description `CONFLICT` — The request collided with current state for a reason other than a version mismatch: a duplicate natural key (a slug, a code, an email), or a database constraint the application did not catch first. */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description `BUSINESS_RULE_VIOLATION` — The request was well-formed and the entities exist, but a domain rule forbids it — publishing a product with no price, archiving a brand products still reference, issuing more stock than a location holds. Distinct from 400: nothing about the request is malformed. */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description `INTERNAL_ERROR` — An unhandled failure. The message is deliberately generic; `traceId` identifies the server log line that explains it. */
+            500: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+        };
+    };
     membershipResolveTier: {
         parameters: {
             query: {
@@ -12331,6 +12722,75 @@ export interface operations {
                 };
                 content: {
                     "*/*": components["schemas"]["UserTierResponse"];
+                };
+            };
+            /** @description `VALIDATION_FAILED` — The request body could not be read, a field failed validation, a required header was absent, or a domain validation rule rejected an input the caller can correct. */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description `AUTHENTICATION_FAILED` — No valid credential. Either none was presented, or the session behind it is expired, revoked, or belongs to a member who can no longer sign in. This status means the session is dead and nothing else does (D2.23) — a wrong *current* password on change-password is a 400 with a `currentPassword` field error, not this. */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description `ACCESS_DENIED` — Authenticated, but lacking the permission the endpoint declares. The session is valid; do not sign the operator out. */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description `NOT_FOUND` — A referenced entity does not exist, or the URL matches no endpoint. Also returned for a known path called with an unsupported method, as 405. */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description `INTERNAL_ERROR` — An unhandled failure. The message is deliberately generic; `traceId` identifies the server log line that explains it. */
+            500: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+        };
+    };
+    membershipUserTierHistory: {
+        parameters: {
+            query: {
+                pageable: components["schemas"]["Pageable"];
+            };
+            header?: never;
+            path: {
+                userId: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "*/*": components["schemas"]["PageResponseTierTransitionResponse"];
                 };
             };
             /** @description `VALIDATION_FAILED` — The request body could not be read, a field failed validation, a required header was absent, or a domain validation rule rejected an input the caller can correct. */
@@ -19253,6 +19713,80 @@ export interface operations {
             };
         };
     };
+    stockReconcileAvailability: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "*/*": components["schemas"]["AvailabilityReconcileResponse"];
+                };
+            };
+            /** @description `VALIDATION_FAILED` — The request body could not be read, a field failed validation, a required header was absent, or a domain validation rule rejected an input the caller can correct. */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description `AUTHENTICATION_FAILED` — No valid credential. Either none was presented, or the session behind it is expired, revoked, or belongs to a member who can no longer sign in. This status means the session is dead and nothing else does (D2.23) — a wrong *current* password on change-password is a 400 with a `currentPassword` field error, not this. */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description `ACCESS_DENIED` — Authenticated, but lacking the permission the endpoint declares. The session is valid; do not sign the operator out. */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description `CONFLICT` — The request collided with current state for a reason other than a version mismatch: a duplicate natural key (a slug, a code, an email), or a database constraint the application did not catch first. */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description `BUSINESS_RULE_VIOLATION` — The request was well-formed and the entities exist, but a domain rule forbids it — publishing a product with no price, archiving a brand products still reference, issuing more stock than a location holds. Distinct from 400: nothing about the request is malformed. */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description `INTERNAL_ERROR` — An unhandled failure. The message is deliberately generic; `traceId` identifies the server log line that explains it. */
+            500: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+        };
+    };
     stockExpiringSoon: {
         parameters: {
             query: {
@@ -19440,7 +19974,7 @@ export interface operations {
             query: {
                 batchId?: string;
                 from?: string;
-                movementType?: "RECEIPT" | "ADJUSTMENT" | "TRANSFER_OUT" | "TRANSFER_IN" | "DAMAGE" | "EXPIRY_WRITE_OFF" | "RETURN";
+                movementType?: "RECEIPT" | "ADJUSTMENT" | "TRANSFER_OUT" | "TRANSFER_IN" | "DAMAGE" | "EXPIRY_WRITE_OFF" | "RETURN" | "SALE";
                 pageable: components["schemas"]["Pageable"];
                 to?: string;
                 variantId?: string;

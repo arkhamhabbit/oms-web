@@ -21,6 +21,8 @@ import UserDetailPage from '@/pages/UserDetailPage'
 import ProfilePage from '@/pages/ProfilePage'
 import PricingPage from '@/pages/PricingPage'
 import PricingVersionPage from '@/pages/PricingVersionPage'
+import MembershipPage from '@/pages/MembershipPage'
+import MembershipVersionPage from '@/pages/MembershipVersionPage'
 import InvitesPage from '@/pages/InvitesPage'
 import RequireAuth from '@/auth/RequireAuth'
 import RequirePermission from '@/auth/RequirePermission'
@@ -99,6 +101,22 @@ export const router = createBrowserRouter([
             element: (
               <RequirePermission permission="pricing.read">
                 <PricingVersionPage />
+              </RequirePermission>
+            ),
+          },
+          {
+            path: '/membership',
+            element: (
+              <RequirePermission permission="membership.read">
+                <MembershipPage />
+              </RequirePermission>
+            ),
+          },
+          {
+            path: '/membership/:id',
+            element: (
+              <RequirePermission permission="membership.read">
+                <MembershipVersionPage />
               </RequirePermission>
             ),
           },
