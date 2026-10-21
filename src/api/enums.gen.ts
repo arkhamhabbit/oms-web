@@ -139,6 +139,8 @@ export const AUDIT_ACTIONS = [
   "membership.version.published",
   "membership.version.updated",
   "membership.version.withdrawn",
+  "pricing.bits_option.cleared",
+  "pricing.bits_option.set",
   "pricing.price.cleared",
   "pricing.price.set",
   "pricing.version.created",

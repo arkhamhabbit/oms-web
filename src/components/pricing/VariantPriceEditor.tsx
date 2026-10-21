@@ -5,6 +5,7 @@ import { toast } from 'sonner'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { Label } from '@/components/ui/label'
+import { BitsOptionsEditor } from '@/components/pricing/BitsOptionsEditor'
 import { MoneyInput } from '@/components/form/MoneyInput'
 import { NoticeBanner, noticeFromError, type Notice } from '@/components/common/NoticeBanner'
 import { formatMoney } from '@/lib/money'
@@ -52,58 +53,69 @@ function VariantPriceEditor({
   const [notice, setNotice] = React.useState<Notice | undefined>()
 
   return (
-    <Card>
-      <CardHeader className="flex flex-row items-start justify-between gap-2">
-        <div className="flex flex-col gap-1.5">
-          <CardTitle>
-            {prices.data ? (
-              <>
-                <span className="font-mono">{prices.data.skuCode}</span> · {prices.data.variantName}
-              </>
-            ) : (
-              'Variant prices'
+    <>
+      <Card>
+        <CardHeader className="flex flex-row items-start justify-between gap-2">
+          <div className="flex flex-col gap-1.5">
+            <CardTitle>
+              {prices.data ? (
+                <>
+                  <span className="font-mono">{prices.data.skuCode}</span> ·{' '}
+                  {prices.data.variantName}
+                </>
+              ) : (
+                'Variant prices'
+              )}
+            </CardTitle>
+            {prices.data && (
+              <CardDescription>
+                MRP {formatMoney(prices.data.mrp)} · base selling price{' '}
+                {formatMoney(prices.data.baseSellingPrice)}. A tier never pays more than the base.
+              </CardDescription>
             )}
-          </CardTitle>
-          {prices.data && (
-            <CardDescription>
-              MRP {formatMoney(prices.data.mrp)} · base selling price{' '}
-              {formatMoney(prices.data.baseSellingPrice)}. A tier never pays more than the base.
-            </CardDescription>
+          </div>
+          <Button size="sm" variant="ghost" onClick={onClose}>
+            Close
+          </Button>
+        </CardHeader>
+        <CardContent className="flex flex-col gap-4">
+          {notice && (
+            <NoticeBanner
+              notice={notice}
+              onReload={() => {
+                setNotice(undefined)
+                // The draft's version moves with every price edit anywhere in it, so refresh all of it.
+                void queryClient.invalidateQueries({ queryKey: ['pricing'] })
+              }}
+              onDismiss={() => setNotice(undefined)}
+            />
           )}
-        </div>
-        <Button size="sm" variant="ghost" onClick={onClose}>
-          Close
-        </Button>
-      </CardHeader>
-      <CardContent className="flex flex-col gap-4">
-        {notice && (
-          <NoticeBanner
-            notice={notice}
-            onReload={() => {
-              setNotice(undefined)
-              // The draft's version moves with every price edit anywhere in it, so refresh all of it.
-              void queryClient.invalidateQueries({ queryKey: ['pricing'] })
-            }}
-            onDismiss={() => setNotice(undefined)}
-          />
-        )}
-        {prices.isLoading && <p className="text-sm text-muted-foreground">Loading…</p>}
-        {prices.isError && (
-          <p role="alert" className="text-sm text-destructive">
-            These prices could not be loaded.
-          </p>
-        )}
-        {prices.data && (
-          <LevelForm
-            data={prices.data}
-            versionId={versionId}
-            variantId={variantId}
-            editable={editable}
-            onNotice={setNotice}
-          />
-        )}
-      </CardContent>
-    </Card>
+          {prices.isLoading && <p className="text-sm text-muted-foreground">Loading…</p>}
+          {prices.isError && (
+            <p role="alert" className="text-sm text-destructive">
+              These prices could not be loaded.
+            </p>
+          )}
+          {prices.data && (
+            <LevelForm
+              data={prices.data}
+              versionId={versionId}
+              variantId={variantId}
+              editable={editable}
+              onNotice={setNotice}
+            />
+          )}
+        </CardContent>
+      </Card>
+      {prices.data && (
+        <BitsOptionsEditor
+          data={prices.data}
+          versionId={versionId}
+          variantId={variantId}
+          editable={editable}
+        />
+      )}
+    </>
   )
 }
 

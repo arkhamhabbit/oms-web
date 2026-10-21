@@ -1741,7 +1741,9 @@ export interface paths {
          *      function every caller uses (D7.2). The tier's pricing level, from the membership version in
          *      effect, selects the variant's price in the pricing version in effect; with none set, the base
          *      selling price. Never above the base selling price. Carries the pricing and membership version
-         *      ids an order line snapshots (D7.4). Nothing is stored.
+         *      ids an order line snapshots (D7.4), and the tier's Bits option (<code>bitsOption</code>, null when
+         *      there is none; <code>bitsSource</code> says why) from the same pricing version (D7.17). Nothing is
+         *      stored.
          *
          *      <p><code>tier</code> is a tier code (<code>SPROUT</code>, <code>LEGEND</code>, …), case-insensitive; an
          *      unknown one is 400 <code>VALIDATION_FAILED</code> naming the tiers that exist. 404 <code>NOT_FOUND</code>
@@ -1769,10 +1771,12 @@ export interface paths {
         /**
          * A variant's price for every tier at <code>at</code> (default now), lowest tier first (D7.6). At now
          *      it is served from the per-SKU cache when warm; <code>validUntil</code> says when a scheduled version
-         *      will change it. Same refusals as <code>/resolve</code>.
+         *      will change it. Each tier carries its Bits option, as <code>/resolve</code> does. Same refusals as
+         *      <code>/resolve</code>.
          * @description A variant's price for every tier at <code>at</code> (default now), lowest tier first (D7.6). At now
          *      it is served from the per-SKU cache when warm; <code>validUntil</code> says when a scheduled version
-         *      will change it. Same refusals as <code>/resolve</code>.
+         *      will change it. Each tier carries its Bits option, as <code>/resolve</code> does. Same refusals as
+         *      <code>/resolve</code>.
          *
          *     **Requires permission:** `pricing.read`.
          */
@@ -1856,6 +1860,38 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/admin/pricing/versions/{id}/max-points-per-order": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        /**
+         * Sets or clears a draft's per-order Bits cap: the most Bits one order may spend under this
+         *      version (D7.17). <code>maxPointsPerOrder</code> null or omitted means no cap, the default; otherwise
+         *      it must be more than zero (400 <code>VALIDATION_FAILED</code>). Stored and published with the
+         *      version; orders enforce it. Refused on anything but a draft (422); a stale <code>version</code> is
+         *      409 <code>VERSION_CONFLICT</code>. Setting the value it already has changes nothing.
+         * @description Sets or clears a draft's per-order Bits cap: the most Bits one order may spend under this
+         *      version (D7.17). <code>maxPointsPerOrder</code> null or omitted means no cap, the default; otherwise
+         *      it must be more than zero (400 <code>VALIDATION_FAILED</code>). Stored and published with the
+         *      version; orders enforce it. Refused on anything but a draft (422); a stale <code>version</code> is
+         *      409 <code>VERSION_CONFLICT</code>. Setting the value it already has changes nothing.
+         *
+         *     **Requires permission:** `pricing.write`.
+         *
+         *     **Concurrency** — send back the `version` you read. If the record has been changed by someone else since, this returns **409 `VERSION_CONFLICT`** with a `version` field error and writes nothing. Re-read it, show the operator what moved, and submit again with the new `version`.
+         */
+        put: operations["pricingSetPricingMaxPointsPerOrder"];
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/admin/pricing/versions/{id}/prices": {
         parameters: {
             query?: never;
@@ -1917,6 +1953,75 @@ export interface paths {
          */
         post: operations["pricingPublishPricingVersion"];
         delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/admin/pricing/versions/{id}/variants/{variantId}/bits-options": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        /**
+         * Sets a variant's Bits options across tiers in one write
+         * @description Sets a variant's Bits options across tiers in one write. <code>bitsOptions</code> <b>replaces</b>
+         *      the variant's options in this draft: a tier not listed is cleared and has no Bits option; an
+         *      empty list clears them all. Every option is checked before any is written.
+         *
+         *      <p>Each option needs a tier code the membership version in effect has (400 <code>
+         *      VALIDATION_FAILED</code>, "unknown tier code"), a Bits amount above zero and a price of at least ₹1
+         *      in the variant's currency (400), and a price strictly below what that tier pays for the variant
+         *      in this draft (422 <code>BUSINESS_RULE_VIOLATION</code>, "below the tier price"). A variant with no
+         *      base selling price cannot carry one (422). Refused on anything but a draft (422, "published
+         *      version"); a stale <code>version</code> is 409 <code>VERSION_CONFLICT</code>. The response carries the
+         *      new <code>version</code>.
+         *
+         *     **Requires permission:** `pricing.write`.
+         *
+         *     **Concurrency** — send back the `version` you read. If the record has been changed by someone else since, this returns **409 `VERSION_CONFLICT`** with a `version` field error and writes nothing. Re-read it, show the operator what moved, and submit again with the new `version`.
+         */
+        put: operations["pricingSetPricingVariantBitsOptions"];
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/admin/pricing/versions/{id}/variants/{variantId}/bits-options/{tierCode}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        /**
+         * Sets one (variant, tier) Bits option in a draft, replacing any it had.
+         * @description Sets one (variant, tier) Bits option in a draft, replacing any it had. <code>tierCode</code> is a
+         *      stable tier code, case-insensitive. Checked exactly as the bulk set is; refused on anything but
+         *      a draft. The response carries the new <code>version</code>.
+         *
+         *     **Requires permission:** `pricing.write`.
+         *
+         *     **Concurrency** — send back the `version` you read. If the record has been changed by someone else since, this returns **409 `VERSION_CONFLICT`** with a `version` field error and writes nothing. Re-read it, show the operator what moved, and submit again with the new `version`.
+         */
+        put: operations["pricingSetPricingBitsOption"];
+        post?: never;
+        /**
+         * Clears one (variant, tier) Bits option in a draft, so that tier has none.
+         * @description Clears one (variant, tier) Bits option in a draft, so that tier has none. <code>version</code> is
+         *      the draft's, as a query parameter, and is required. Clearing an option the draft does not set
+         *      changes nothing and does not move the version. Refused on anything but a draft (422); a stale
+         *      <code>version</code> is 409 <code>VERSION_CONFLICT</code>.
+         *
+         *     **Requires permission:** `pricing.write`.
+         */
+        delete: operations["pricingClearPricingBitsOption"];
         options?: never;
         head?: never;
         patch?: never;
@@ -4686,6 +4791,16 @@ export interface components {
             /** Format: uuid */
             variantId?: string;
         };
+        /** @description A Bits price (D7.17): spend <code>pointsAmount</code> Bits and pay <code>price</code>. */
+        BitsOptionResponse: {
+            /**
+             * Format: int64
+             * @description whole Bits
+             */
+            pointsAmount?: number;
+            /** @description the money paid alongside the Bits */
+            price?: components["schemas"]["MoneyPayload"];
+        };
         BrandResponse: {
             bannerUrl?: string;
             /** Format: date-time */
@@ -5314,20 +5429,20 @@ export interface components {
              * @description the price the version sets, or null when it sets none and the level pays the base
              *          selling price
              */
-            price?: components["schemas"]["Money"];
+            price?: components["schemas"]["MoneyPayload"];
         };
         /** @description One level's price within a bulk set. */
         LevelPriceRequest: {
             /** @enum {string} */
             level: "MEMBER" | "LOWEST";
             /** @description more than zero, in the variant's currency, and at most its base selling price */
-            price: components["schemas"]["Money"];
+            price: components["schemas"]["MoneyPayload"];
         };
         /** @description One stored price in a version's list. */
         LevelPriceResponse: {
             /** @description the variant's base selling price now — a price above it resolves to it */
-            baseSellingPrice?: components["schemas"]["Money"];
-            price?: components["schemas"]["Money"];
+            baseSellingPrice?: components["schemas"]["MoneyPayload"];
+            price?: components["schemas"]["MoneyPayload"];
             /** @enum {string} */
             pricingLevel?: "MEMBER" | "LOWEST";
             skuCode?: string;
@@ -6263,10 +6378,10 @@ export interface components {
         };
         /** @description A variant's price for every tier. */
         PriceMatrixResponse: {
-            baseSellingPrice?: components["schemas"]["Money"];
+            baseSellingPrice?: components["schemas"]["MoneyPayload"];
             /** Format: uuid */
             membershipVersionId?: string;
-            mrp?: components["schemas"]["Money"];
+            mrp?: components["schemas"]["MoneyPayload"];
             /** Format: uuid */
             pricingVersionId?: string;
             /** Format: date-time */
@@ -6285,6 +6400,11 @@ export interface components {
         };
         /** @description A pricing version. */
         PricingVersionResponse: {
+            /**
+             * Format: int64
+             * @description how many (variant, tier) Bits options it sets (D7.17)
+             */
+            bitsOptionCount?: number;
             /** Format: date-time */
             createdAt?: string;
             /**
@@ -6294,6 +6414,11 @@ export interface components {
             effectiveFrom?: string;
             /** Format: uuid */
             id?: string;
+            /**
+             * Format: int64
+             * @description the most Bits one order may spend under this version; null for no cap
+             */
+            maxPointsPerOrder?: number;
             name?: string;
             notes?: string;
             /**
@@ -6640,14 +6765,26 @@ export interface components {
         };
         /** @description What a tier pays for a variant — everything an order line snapshots (D7.4). */
         ResolvedPriceResponse: {
-            baseSellingPrice?: components["schemas"]["Money"];
+            baseSellingPrice?: components["schemas"]["MoneyPayload"];
+            /**
+             * @description the Bits price this tier is offered, from the same pricing version; null when
+             *          there is none
+             */
+            bitsOption?: components["schemas"]["BitsOptionResponse"];
+            /**
+             * @description <code>BITS_PRICE</code> when offered; <code>NONE</code> when the version sets none for
+             *          this tier; <code>BITS_NOT_BELOW_PRICE</code> when one is set but the catalog has since lowered
+             *          the tier price to or below it, so it is not offered
+             * @enum {string}
+             */
+            bitsSource?: "BITS_PRICE" | "NONE" | "BITS_NOT_BELOW_PRICE";
             /**
              * Format: uuid
              * @description the membership version whose ladder mapped the tier to its level
              */
             membershipVersionId?: string;
-            mrp?: components["schemas"]["Money"];
-            price?: components["schemas"]["Money"];
+            mrp?: components["schemas"]["MoneyPayload"];
+            price?: components["schemas"]["MoneyPayload"];
             /**
              * @description the level the tier declares under <code>membershipVersionId</code>
              * @enum {string}
@@ -6773,6 +6910,27 @@ export interface components {
             name?: string;
             systemRole?: boolean;
         };
+        /**
+         * @description Setting one (variant, tier) Bits option in a draft (D7.17): spend <code>pointsAmount</code> Bits and
+         *      pay <code>price</code>.
+         */
+        SetBitsOptionRequest: {
+            /**
+             * Format: int64
+             * @description whole Bits, more than zero
+             */
+            pointsAmount: number;
+            /**
+             * @description at least ₹1, in the variant's currency, and strictly below the price the tier pays
+             *          in this draft
+             */
+            price: components["schemas"]["MoneyPayload"];
+            /**
+             * Format: int64
+             * @description the draft's <code>version</code>; the response carries the new one
+             */
+            version: number;
+        };
         /** @description The whole membership set at once — "exactly one primary" is a property of the set. */
         SetCategoriesRequest: {
             categoryIds?: string[];
@@ -6789,7 +6947,21 @@ export interface components {
         /** @description Setting one (variant, level) price in a draft. */
         SetLevelPriceRequest: {
             /** @description more than zero, in the variant's currency, and at most its base selling price */
-            price: components["schemas"]["Money"];
+            price: components["schemas"]["MoneyPayload"];
+            /**
+             * Format: int64
+             * @description the draft's <code>version</code>; the response carries the new one
+             */
+            version: number;
+        };
+        /** @description Setting a draft's per-order Bits cap. */
+        SetMaxPointsPerOrderRequest: {
+            /**
+             * Format: int64
+             * @description the most Bits one order may spend under this version, more than zero;
+             *          null (or omitted) for no cap, the default. Orders enforce it (2.4)
+             */
+            maxPointsPerOrder?: number;
             /**
              * Format: int64
              * @description the draft's <code>version</code>; the response carries the new one
@@ -6811,6 +6983,20 @@ export interface components {
             valueBoolean?: boolean;
             valueNumber?: number;
             valueText?: string;
+        };
+        /**
+         * @description Setting a variant's Bits options across tiers in one write. <code>bitsOptions</code> <b>replaces</b>
+         *      the variant's options in the draft: a tier not listed is cleared. An empty list clears them
+         *      all.
+         */
+        SetVariantBitsOptionsRequest: {
+            /** @description at most one entry per tier */
+            bitsOptions: components["schemas"]["TierBitsOptionRequest"][];
+            /**
+             * Format: int64
+             * @description the draft's <code>version</code>; the response carries the new one
+             */
+            version: number;
         };
         /**
          * @description Setting a variant's prices across levels in one write. <code>prices</code> <b>replaces</b> the
@@ -6973,9 +7159,35 @@ export interface components {
             /** Format: int64 */
             version?: number;
         };
+        /** @description One tier's Bits option within a bulk set. */
+        TierBitsOptionRequest: {
+            /**
+             * Format: int64
+             * @description whole Bits, more than zero
+             */
+            pointsAmount: number;
+            /** @description at least ₹1, and strictly below the price that tier pays in this draft */
+            price: components["schemas"]["MoneyPayload"];
+            /**
+             * @description a stable tier code (<code>SPROUT</code>, <code>ACTIVE</code>, …) of the ladder in effect,
+             *          case-insensitive
+             */
+            tierCode: string;
+        };
+        /** @description One tier's stored Bits option within a variant's prices. */
+        TierBitsOptionResponse: {
+            /** Format: int64 */
+            pointsAmount?: number;
+            price?: components["schemas"]["MoneyPayload"];
+            tierCode?: string;
+        };
         /** @description One tier's row of a price matrix. */
         TierPriceResponse: {
-            price?: components["schemas"]["Money"];
+            /** @description the tier's Bits price; null when it has none — <code>bitsSource</code> says why */
+            bitsOption?: components["schemas"]["BitsOptionResponse"];
+            /** @enum {string} */
+            bitsSource?: "BITS_PRICE" | "NONE" | "BITS_NOT_BELOW_PRICE";
+            price?: components["schemas"]["MoneyPayload"];
             /** @enum {string} */
             pricingLevel?: "MEMBER" | "LOWEST";
             /** Format: int32 */
@@ -7647,9 +7859,14 @@ export interface components {
         };
         /** @description A variant's prices in one version, beside the catalog prices they are checked against. */
         VariantPricesResponse: {
-            baseSellingPrice?: components["schemas"]["Money"];
+            baseSellingPrice?: components["schemas"]["MoneyPayload"];
+            /**
+             * @description the Bits options the version sets for this variant, by tier code; a tier not
+             *          listed has none
+             */
+            bitsOptions?: components["schemas"]["TierBitsOptionResponse"][];
             currency?: string;
-            mrp?: components["schemas"]["Money"];
+            mrp?: components["schemas"]["MoneyPayload"];
             /** @description every level, in order; <code>price</code> null where the version sets none */
             prices?: components["schemas"]["LevelOverrideResponse"][];
             skuCode?: string;
@@ -9454,7 +9671,7 @@ export interface operations {
     auditList: {
         parameters: {
             query: {
-                action?: "catalog.attribute.created" | "catalog.attribute.deactivated" | "catalog.attribute.reactivated" | "catalog.attribute.reordered" | "catalog.attribute.updated" | "catalog.attribute_group.created" | "catalog.attribute_group.deactivated" | "catalog.attribute_group.reactivated" | "catalog.attribute_group.reordered" | "catalog.attribute_group.updated" | "catalog.attribute_value.created" | "catalog.attribute_value.deactivated" | "catalog.attribute_value.reactivated" | "catalog.attribute_value.reordered" | "catalog.attribute_value.updated" | "catalog.brand.activated" | "catalog.brand.archived" | "catalog.brand.created" | "catalog.brand.published" | "catalog.brand.reordered" | "catalog.brand.unpublished" | "catalog.brand.updated" | "catalog.category.activated" | "catalog.category.archived" | "catalog.category.created" | "catalog.category.moved" | "catalog.category.published" | "catalog.category.reordered" | "catalog.category.unpublished" | "catalog.category.updated" | "catalog.product.approved" | "catalog.product.archived" | "catalog.product.categories_changed" | "catalog.product.created" | "catalog.product.customer_allowed" | "catalog.product.customer_disallowed" | "catalog.product.image_added" | "catalog.product.image_removed" | "catalog.product.image_updated" | "catalog.product.images_reordered" | "catalog.product.option_added" | "catalog.product.option_removed" | "catalog.product.options_reordered" | "catalog.product.published" | "catalog.product.rejected" | "catalog.product.spec_cleared" | "catalog.product.spec_set" | "catalog.product.submitted" | "catalog.product.unpublished" | "catalog.product.updated" | "catalog.product.visibility_changed" | "catalog.variant.created" | "catalog.variant.default_changed" | "catalog.variant.discontinued" | "catalog.variant.image_added" | "catalog.variant.image_removed" | "catalog.variant.image_updated" | "catalog.variant.images_reordered" | "catalog.variant.reinstated" | "catalog.variant.reordered" | "catalog.variant.spec_cleared" | "catalog.variant.spec_set" | "catalog.variant.updated" | "identity.user.claimed" | "identity.user.created" | "identity.user.reinstated" | "identity.user.role_granted" | "identity.user.role_revoked" | "identity.user.suspended" | "identity.user.updated" | "inventory.availability.reconciled" | "inventory.batch.created" | "inventory.movement.recorded" | "inventory.projection.rebuilt" | "inventory.stock.transferred" | "inventory.warehouse.created" | "inventory.warehouse.deactivated" | "inventory.warehouse.reactivated" | "inventory.warehouse.updated" | "invite.claim.processed" | "invite.claim.rejected" | "invite.intake.processed" | "invite.intake.rejected" | "invite.invite.added" | "invite.invite.expired" | "invite.invite.invalidated" | "invite.invite.issued" | "invite.invite.visited" | "invite.referral.attributed" | "invite.referral.blocked" | "membership.cycle_run.completed" | "membership.version.created" | "membership.version.published" | "membership.version.updated" | "membership.version.withdrawn" | "pricing.price.cleared" | "pricing.price.set" | "pricing.version.created" | "pricing.version.published" | "pricing.version.updated" | "pricing.version.withdrawn" | "procurement.goods_receipt.posted" | "procurement.purchase_order.approved" | "procurement.purchase_order.cancelled" | "procurement.purchase_order.created" | "procurement.purchase_order.updated" | "procurement.supplier.created" | "procurement.supplier.deactivated" | "procurement.supplier.reactivated" | "procurement.supplier.updated" | "team.member.created" | "team.member.forced_logout" | "team.member.invite.accepted" | "team.member.invite.resent" | "team.member.password.changed" | "team.member.password_reset.completed" | "team.member.password_reset.requested" | "team.member.password_reset.triggered" | "team.member.profile.updated" | "team.member.roles.assigned" | "team.member.status.changed" | "team.member.updated" | "team.role.created" | "team.role.deleted" | "team.role.updated";
+                action?: "catalog.attribute.created" | "catalog.attribute.deactivated" | "catalog.attribute.reactivated" | "catalog.attribute.reordered" | "catalog.attribute.updated" | "catalog.attribute_group.created" | "catalog.attribute_group.deactivated" | "catalog.attribute_group.reactivated" | "catalog.attribute_group.reordered" | "catalog.attribute_group.updated" | "catalog.attribute_value.created" | "catalog.attribute_value.deactivated" | "catalog.attribute_value.reactivated" | "catalog.attribute_value.reordered" | "catalog.attribute_value.updated" | "catalog.brand.activated" | "catalog.brand.archived" | "catalog.brand.created" | "catalog.brand.published" | "catalog.brand.reordered" | "catalog.brand.unpublished" | "catalog.brand.updated" | "catalog.category.activated" | "catalog.category.archived" | "catalog.category.created" | "catalog.category.moved" | "catalog.category.published" | "catalog.category.reordered" | "catalog.category.unpublished" | "catalog.category.updated" | "catalog.product.approved" | "catalog.product.archived" | "catalog.product.categories_changed" | "catalog.product.created" | "catalog.product.customer_allowed" | "catalog.product.customer_disallowed" | "catalog.product.image_added" | "catalog.product.image_removed" | "catalog.product.image_updated" | "catalog.product.images_reordered" | "catalog.product.option_added" | "catalog.product.option_removed" | "catalog.product.options_reordered" | "catalog.product.published" | "catalog.product.rejected" | "catalog.product.spec_cleared" | "catalog.product.spec_set" | "catalog.product.submitted" | "catalog.product.unpublished" | "catalog.product.updated" | "catalog.product.visibility_changed" | "catalog.variant.created" | "catalog.variant.default_changed" | "catalog.variant.discontinued" | "catalog.variant.image_added" | "catalog.variant.image_removed" | "catalog.variant.image_updated" | "catalog.variant.images_reordered" | "catalog.variant.reinstated" | "catalog.variant.reordered" | "catalog.variant.spec_cleared" | "catalog.variant.spec_set" | "catalog.variant.updated" | "identity.user.claimed" | "identity.user.created" | "identity.user.reinstated" | "identity.user.role_granted" | "identity.user.role_revoked" | "identity.user.suspended" | "identity.user.updated" | "inventory.availability.reconciled" | "inventory.batch.created" | "inventory.movement.recorded" | "inventory.projection.rebuilt" | "inventory.stock.transferred" | "inventory.warehouse.created" | "inventory.warehouse.deactivated" | "inventory.warehouse.reactivated" | "inventory.warehouse.updated" | "invite.claim.processed" | "invite.claim.rejected" | "invite.intake.processed" | "invite.intake.rejected" | "invite.invite.added" | "invite.invite.expired" | "invite.invite.invalidated" | "invite.invite.issued" | "invite.invite.visited" | "invite.referral.attributed" | "invite.referral.blocked" | "membership.cycle_run.completed" | "membership.version.created" | "membership.version.published" | "membership.version.updated" | "membership.version.withdrawn" | "pricing.bits_option.cleared" | "pricing.bits_option.set" | "pricing.price.cleared" | "pricing.price.set" | "pricing.version.created" | "pricing.version.published" | "pricing.version.updated" | "pricing.version.withdrawn" | "procurement.goods_receipt.posted" | "procurement.purchase_order.approved" | "procurement.purchase_order.cancelled" | "procurement.purchase_order.created" | "procurement.purchase_order.updated" | "procurement.supplier.created" | "procurement.supplier.deactivated" | "procurement.supplier.reactivated" | "procurement.supplier.updated" | "team.member.created" | "team.member.forced_logout" | "team.member.invite.accepted" | "team.member.invite.resent" | "team.member.password.changed" | "team.member.password_reset.completed" | "team.member.password_reset.requested" | "team.member.password_reset.triggered" | "team.member.profile.updated" | "team.member.roles.assigned" | "team.member.status.changed" | "team.member.updated" | "team.role.created" | "team.role.deleted" | "team.role.updated";
                 actorId?: string;
                 entityId?: string;
                 entityType?: "attribute" | "attribute_group" | "attribute_value" | "batch" | "brand" | "category" | "claim_intake" | "goods_receipt" | "invite" | "invite_intake" | "membership_cycle_run" | "membership_version" | "pricing_version" | "product" | "purchase_order" | "referral" | "role" | "stock_availability" | "stock_level" | "stock_movement" | "stock_transfer" | "supplier" | "team_member" | "user" | "variant" | "warehouse";
@@ -13901,6 +14118,104 @@ export interface operations {
             };
         };
     };
+    pricingSetPricingMaxPointsPerOrder: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["SetMaxPointsPerOrderRequest"];
+            };
+        };
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "*/*": components["schemas"]["PricingVersionResponse"];
+                };
+            };
+            /** @description `VALIDATION_FAILED` — The request body could not be read, a field failed validation, a required header was absent, or a domain validation rule rejected an input the caller can correct. */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description `AUTHENTICATION_FAILED` — No valid credential. Either none was presented, or the session behind it is expired, revoked, or belongs to a member who can no longer sign in. This status means the session is dead and nothing else does (D2.23) — a wrong *current* password on change-password is a 400 with a `currentPassword` field error, not this. */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description `ACCESS_DENIED` — Authenticated, but lacking the permission the endpoint declares. The session is valid; do not sign the operator out. */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description `NOT_FOUND` — A referenced entity does not exist, or the URL matches no endpoint. Also returned for a known path called with an unsupported method, as 405. */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description `VERSION_CONFLICT` or `CONFLICT` — The `version` sent with an update is not the version stored — the record was changed by someone else since it was read. Nothing was written. Re-read the record, show the operator what changed, and submit again with the new `version`. */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description `UNSUPPORTED_MEDIA_TYPE` — The request body was sent with a `Content-Type` the endpoint does not read. Every endpoint that takes a body reads `application/json`. */
+            415: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description `BUSINESS_RULE_VIOLATION` — The request was well-formed and the entities exist, but a domain rule forbids it — publishing a product with no price, archiving a brand products still reference, issuing more stock than a location holds. Distinct from 400: nothing about the request is malformed. */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description `INTERNAL_ERROR` — An unhandled failure. The message is deliberately generic; `traceId` identifies the server log line that explains it. */
+            500: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+        };
+    };
     pricingListPricingVersionPrices: {
         parameters: {
             query: {
@@ -14041,6 +14356,294 @@ export interface operations {
             };
             /** @description `UNSUPPORTED_MEDIA_TYPE` — The request body was sent with a `Content-Type` the endpoint does not read. Every endpoint that takes a body reads `application/json`. */
             415: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description `BUSINESS_RULE_VIOLATION` — The request was well-formed and the entities exist, but a domain rule forbids it — publishing a product with no price, archiving a brand products still reference, issuing more stock than a location holds. Distinct from 400: nothing about the request is malformed. */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description `INTERNAL_ERROR` — An unhandled failure. The message is deliberately generic; `traceId` identifies the server log line that explains it. */
+            500: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+        };
+    };
+    pricingSetPricingVariantBitsOptions: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: string;
+                variantId: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["SetVariantBitsOptionsRequest"];
+            };
+        };
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "*/*": components["schemas"]["VariantPricesResponse"];
+                };
+            };
+            /** @description `VALIDATION_FAILED` — The request body could not be read, a field failed validation, a required header was absent, or a domain validation rule rejected an input the caller can correct. */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description `AUTHENTICATION_FAILED` — No valid credential. Either none was presented, or the session behind it is expired, revoked, or belongs to a member who can no longer sign in. This status means the session is dead and nothing else does (D2.23) — a wrong *current* password on change-password is a 400 with a `currentPassword` field error, not this. */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description `ACCESS_DENIED` — Authenticated, but lacking the permission the endpoint declares. The session is valid; do not sign the operator out. */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description `NOT_FOUND` — A referenced entity does not exist, or the URL matches no endpoint. Also returned for a known path called with an unsupported method, as 405. */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description `VERSION_CONFLICT` or `CONFLICT` — The `version` sent with an update is not the version stored — the record was changed by someone else since it was read. Nothing was written. Re-read the record, show the operator what changed, and submit again with the new `version`. */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description `UNSUPPORTED_MEDIA_TYPE` — The request body was sent with a `Content-Type` the endpoint does not read. Every endpoint that takes a body reads `application/json`. */
+            415: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description `BUSINESS_RULE_VIOLATION` — The request was well-formed and the entities exist, but a domain rule forbids it — publishing a product with no price, archiving a brand products still reference, issuing more stock than a location holds. Distinct from 400: nothing about the request is malformed. */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description `INTERNAL_ERROR` — An unhandled failure. The message is deliberately generic; `traceId` identifies the server log line that explains it. */
+            500: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+        };
+    };
+    pricingSetPricingBitsOption: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: string;
+                tierCode: string;
+                variantId: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["SetBitsOptionRequest"];
+            };
+        };
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "*/*": components["schemas"]["VariantPricesResponse"];
+                };
+            };
+            /** @description `VALIDATION_FAILED` — The request body could not be read, a field failed validation, a required header was absent, or a domain validation rule rejected an input the caller can correct. */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description `AUTHENTICATION_FAILED` — No valid credential. Either none was presented, or the session behind it is expired, revoked, or belongs to a member who can no longer sign in. This status means the session is dead and nothing else does (D2.23) — a wrong *current* password on change-password is a 400 with a `currentPassword` field error, not this. */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description `ACCESS_DENIED` — Authenticated, but lacking the permission the endpoint declares. The session is valid; do not sign the operator out. */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description `NOT_FOUND` — A referenced entity does not exist, or the URL matches no endpoint. Also returned for a known path called with an unsupported method, as 405. */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description `VERSION_CONFLICT` or `CONFLICT` — The `version` sent with an update is not the version stored — the record was changed by someone else since it was read. Nothing was written. Re-read the record, show the operator what changed, and submit again with the new `version`. */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description `UNSUPPORTED_MEDIA_TYPE` — The request body was sent with a `Content-Type` the endpoint does not read. Every endpoint that takes a body reads `application/json`. */
+            415: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description `BUSINESS_RULE_VIOLATION` — The request was well-formed and the entities exist, but a domain rule forbids it — publishing a product with no price, archiving a brand products still reference, issuing more stock than a location holds. Distinct from 400: nothing about the request is malformed. */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description `INTERNAL_ERROR` — An unhandled failure. The message is deliberately generic; `traceId` identifies the server log line that explains it. */
+            500: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+        };
+    };
+    pricingClearPricingBitsOption: {
+        parameters: {
+            query: {
+                version: number;
+            };
+            header?: never;
+            path: {
+                id: string;
+                tierCode: string;
+                variantId: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "*/*": components["schemas"]["VariantPricesResponse"];
+                };
+            };
+            /** @description `VALIDATION_FAILED` — The request body could not be read, a field failed validation, a required header was absent, or a domain validation rule rejected an input the caller can correct. */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description `AUTHENTICATION_FAILED` — No valid credential. Either none was presented, or the session behind it is expired, revoked, or belongs to a member who can no longer sign in. This status means the session is dead and nothing else does (D2.23) — a wrong *current* password on change-password is a 400 with a `currentPassword` field error, not this. */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description `ACCESS_DENIED` — Authenticated, but lacking the permission the endpoint declares. The session is valid; do not sign the operator out. */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description `NOT_FOUND` — A referenced entity does not exist, or the URL matches no endpoint. Also returned for a known path called with an unsupported method, as 405. */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description `CONFLICT` — The request collided with current state for a reason other than a version mismatch: a duplicate natural key (a slug, a code, an email), or a database constraint the application did not catch first. */
+            409: {
                 headers: {
                     [name: string]: unknown;
                 };
