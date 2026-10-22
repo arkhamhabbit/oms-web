@@ -23,6 +23,8 @@ import PricingPage from '@/pages/PricingPage'
 import PricingVersionPage from '@/pages/PricingVersionPage'
 import MembershipPage from '@/pages/MembershipPage'
 import MembershipVersionPage from '@/pages/MembershipVersionPage'
+import EarnPage from '@/pages/EarnPage'
+import EarnVersionPage from '@/pages/EarnVersionPage'
 import InvitesPage from '@/pages/InvitesPage'
 import RequireAuth from '@/auth/RequireAuth'
 import RequirePermission from '@/auth/RequirePermission'
@@ -117,6 +119,22 @@ export const router = createBrowserRouter([
             element: (
               <RequirePermission permission="membership.read">
                 <MembershipVersionPage />
+              </RequirePermission>
+            ),
+          },
+          {
+            path: '/earn',
+            element: (
+              <RequirePermission permission="earn.read">
+                <EarnPage />
+              </RequirePermission>
+            ),
+          },
+          {
+            path: '/earn/:id',
+            element: (
+              <RequirePermission permission="earn.read">
+                <EarnVersionPage />
               </RequirePermission>
             ),
           },
