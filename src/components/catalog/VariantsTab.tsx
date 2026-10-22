@@ -33,6 +33,7 @@ import {
   useReinstateVariantMutation,
   useReorderVariantsMutation,
   type OptionValuePayload,
+  type ProductAudience,
   type ProductOption,
   type Variant,
 } from '@/api/products'
@@ -43,6 +44,8 @@ export interface VariantsTabProps {
   options: ProductOption[]
   skuCodesEditable: boolean
   canWrite: boolean
+  productAudience: ProductAudience
+  productRequiredTierCode?: string
 }
 
 function NewVariantDialog({
@@ -153,7 +156,15 @@ function OptionValuePicker({
  * pattern established for W1.1's values panel). Each row shows the option combination, status,
  * MRP/price, and expands into the full `VariantFieldsForm` for editing.
  */
-function VariantsTab({ productId, variants, options, skuCodesEditable, canWrite }: VariantsTabProps) {
+function VariantsTab({
+  productId,
+  variants,
+  options,
+  skuCodesEditable,
+  canWrite,
+  productAudience,
+  productRequiredTierCode,
+}: VariantsTabProps) {
   const attributesQuery = useAttributesQuery({ page: 0, size: 200, kind: 'OPTION' })
   const attributesById = new Map((attributesQuery.data?.content ?? []).map((a) => [a.id, a]))
   const reorder = useReorderVariantsMutation(productId)
@@ -250,6 +261,8 @@ function VariantsTab({ productId, variants, options, skuCodesEditable, canWrite 
               variant={variant}
               skuCodesEditable={skuCodesEditable}
               canWrite={canWrite}
+              productAudience={productAudience}
+              productRequiredTierCode={productRequiredTierCode}
             />
           </div>
         )}

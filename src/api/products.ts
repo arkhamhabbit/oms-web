@@ -18,6 +18,8 @@ export type ProductImage = components['schemas']['ImageResponse']
 export type ResolvedImage = components['schemas']['ResolvedImageResponse']
 export type SpecValue = components['schemas']['SpecValueResponse']
 export type VariantOptionValueResponse = components['schemas']['VariantOptionValueResponse']
+export type VisibilityPreview = components['schemas']['ProductVisibilityPreviewResponse']
+export type VariantVisibility = components['schemas']['VariantVisibilityResponse']
 export type OptionValuePayload = components['schemas']['OptionValuePayload']
 
 type CreateProductRequest = components['schemas']['CreateProductRequest']
@@ -230,6 +232,35 @@ export function useReorderOptionsMutation(productId: string) {
         })
       ),
     onSuccess: invalidate,
+  })
+}
+
+// ---- Visibility preview -------------------------------------------------------------------
+
+/** What a viewer at `tier` (none = no tier) sees for the product and each of its variants (D4.18). */
+export function useVisibilityPreviewQuery(productId: string, tier: string | undefined) {
+  return useQuery({
+    queryKey: [PRODUCTS_KEY, 'visibility-preview', productId, { tier }],
+    queryFn: () =>
+      unwrap<VisibilityPreview>(
+        api.GET('/api/admin/products/{productId}/visibility', {
+          params: { path: { productId }, query: { tier } },
+        })
+      ),
+  })
+}
+
+/** The same, for a real customer: their tier is resolved by membership, then the allowlist applies. */
+export function useUserVisibilityPreviewQuery(productId: string, userId: string | undefined) {
+  return useQuery({
+    queryKey: [PRODUCTS_KEY, 'visibility-preview', productId, { userId }],
+    enabled: !!userId,
+    queryFn: () =>
+      unwrap<VisibilityPreview>(
+        api.GET('/api/admin/products/{productId}/visibility/users/{userId}', {
+          params: { path: { productId, userId: userId! } },
+        })
+      ),
   })
 }
 
