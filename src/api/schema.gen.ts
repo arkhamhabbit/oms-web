@@ -1120,6 +1120,165 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/admin/earn/versions": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Lists earn-rules versions: drafts first, then published versions, latest effective date first
+         * @description Lists earn-rules versions: drafts first, then published versions, latest effective date first.
+         *
+         *      <p><code>status</code> is optional and filters on what is stored. Each version also carries its
+         *      derived <code>state</code>, and exactly one version is <code>EFFECTIVE</code>.
+         *
+         *     **Requires permission:** `earn.read`.
+         */
+        get: operations["earnListEarnRulesVersions"];
+        put?: never;
+        /**
+         * Creates a draft with every earn amount
+         * @description Creates a draft with every earn amount. A draft governs nothing until it is published.
+         *
+         *      <p>400 <code>VALIDATION_FAILED</code>, with a field error per problem, for a missing or negative
+         *      amount. 0 is allowed and means no earn.
+         *
+         *     **Requires permission:** `earn.write`.
+         */
+        post: operations["earnCreateEarnRulesVersion"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/admin/earn/versions/{id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * One version, and the <code>version</code> to send back on an edit or a publish.
+         * @description One version, and the <code>version</code> to send back on an edit or a publish.
+         *
+         *     **Requires permission:** `earn.read`.
+         */
+        get: operations["earnGetEarnRulesVersion"];
+        /**
+         * Edits a draft's name, notes and amounts — send all of them
+         * @description Edits a draft's name, notes and amounts — send all of them. Validated exactly as on create.
+         *
+         *      <p><b>Refused on a published version</b> with 422 <code>BUSINESS_RULE_VIOLATION</code>: a published
+         *      version is immutable, and a change is a new version. A stale <code>version</code> is refused with
+         *      409 <code>VERSION_CONFLICT</code> and nothing is written.
+         *
+         *     **Requires permission:** `earn.write`.
+         *
+         *     **Concurrency** — send back the `version` you read. If the record has been changed by someone else since, this returns **409 `VERSION_CONFLICT`** with a `version` field error and writes nothing. Re-read it, show the operator what moved, and submit again with the new `version`.
+         */
+        put: operations["earnUpdateEarnRulesVersion"];
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/admin/earn/versions/{id}/publish": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Publishes a draft: stamps <code>effectiveFrom</code> and makes the version immutable
+         * @description Publishes a draft: stamps <code>effectiveFrom</code> and makes the version immutable. <b>Its own
+         *      permission</b>, <code>earn.publish</code>: putting amounts live decides what every member earns from
+         *      that instant.
+         *
+         *      <p><code>effectiveFrom</code> omitted means now; a future instant <b>schedules</b> the version.
+         *      Refused:
+         *
+         *      <ul>
+         *        <li>400 <code>VALIDATION_FAILED</code> on <code>effectiveFrom</code> in the past.
+         *        <li>409 <code>CONFLICT</code> when another published version already takes effect at that instant.
+         *        <li>422 <code>BUSINESS_RULE_VIOLATION</code> on a version that is already published or withdrawn.
+         *        <li>409 <code>VERSION_CONFLICT</code> when the draft has been edited since the <code>version</code> you
+         *            reviewed — nothing is published.
+         *      </ul>
+         *
+         *     **Requires permission:** `earn.publish`.
+         *
+         *     **Concurrency** — send back the `version` you read. If the record has been changed by someone else since, this returns **409 `VERSION_CONFLICT`** with a `version` field error and writes nothing. Re-read it, show the operator what moved, and submit again with the new `version`.
+         */
+        post: operations["earnPublishEarnRulesVersion"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/admin/earn/versions/{id}/withdraw": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Withdraws a <b>scheduled</b> version — published, effective in the future (D7
+         * @description Withdraws a <b>scheduled</b> version — published, effective in the future (D7.11). It becomes
+         *      <code>WITHDRAWN</code>, final; the version in effect now is untouched. Requires <code>
+         *      earn.publish</code>, the inverse of publishing.
+         *
+         *      <p>Refused with 422 <code>BUSINESS_RULE_VIOLATION</code>, naming why, for a version that is or has
+         *      been effective, for a draft, and for one already withdrawn. A stale <code>version</code> is refused
+         *      with 409 <code>VERSION_CONFLICT</code>.
+         *
+         *     **Requires permission:** `earn.publish`.
+         *
+         *     **Concurrency** — send back the `version` you read. If the record has been changed by someone else since, this returns **409 `VERSION_CONFLICT`** with a `version` field error and writes nothing. Re-read it, show the operator what moved, and submit again with the new `version`.
+         */
+        post: operations["earnWithdrawEarnRulesVersion"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/admin/earn/versions/effective": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * The version in effect at <code>at</code> — optional, default now; a future instant previews what a
+         *      scheduled version will change.
+         * @description The version in effect at <code>at</code> — optional, default now; a future instant previews what a
+         *      scheduled version will change. 404 <code>NOT_FOUND</code> before the launch version took effect.
+         *
+         *     **Requires permission:** `earn.read`.
+         */
+        get: operations["earnEffectiveEarnRulesVersion"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/admin/goods-receipts": {
         parameters: {
             query?: never;
@@ -5115,6 +5274,55 @@ export interface components {
             /** @description optional — derived from the name when absent */
             slug?: string;
         };
+        /**
+         * @description A new draft with every amount. Bits are whole points; Carrots are minor units of <code>INR</code>
+         *      (<code>10000</code> is ₹100.00). Each amount is 0 or more, and 0 means no earn.
+         */
+        CreateEarnRulesRequest: {
+            /**
+             * Format: int64
+             * @description Bits for connecting a device — stored; not yet triggered
+             */
+            deviceConnectedPoints: number;
+            /**
+             * Format: int64
+             * @description Bits for a member's own first order — stored; not yet triggered
+             */
+            firstOrderPoints: number;
+            name: string;
+            notes?: string;
+            /**
+             * Format: int64
+             * @description Bits for completing the profile — stored; not yet triggered
+             */
+            profileCompletePoints: number;
+            /**
+             * Format: int64
+             * @description Carrots to the inviter on the friend's first order. Later
+             *          orders pay the inviter's tier rate (<code>carrotsPerFriendOrderMinor</code> on the tier)
+             */
+            referralFirstOrderCarrotsMinor: number;
+            /**
+             * Format: int64
+             * @description Bits to the inviter when an invited friend's account turns ACTIVE
+             */
+            referralJoinPoints: number;
+            /**
+             * Format: int64
+             * @description Carrots credited when an account turns ACTIVE
+             */
+            welcomeCarrotsMinor: number;
+            /**
+             * @description whether a legacy member (imported opening balance) also gets the
+             *          welcome bonus; their opening balance is normally the welcome
+             */
+            welcomeForLegacy: boolean;
+            /**
+             * Format: int64
+             * @description Bits credited when an account turns ACTIVE
+             */
+            welcomePoints: number;
+        };
         /** @description A new draft version. */
         CreatePricingVersionRequest: {
             /**
@@ -5322,6 +5530,64 @@ export interface components {
             variantId?: string;
             /** Format: uuid */
             warehouseId?: string;
+        };
+        /** @description An earn-rules version. */
+        EarnRulesResponse: {
+            /** Format: date-time */
+            createdAt?: string;
+            /** @description the currency of every Carrots amount; <code>INR</code> */
+            currency?: string;
+            /** Format: int64 */
+            deviceConnectedPoints?: number;
+            /**
+             * Format: date-time
+             * @description when it takes or took effect; null for a draft
+             */
+            effectiveFrom?: string;
+            /** Format: int64 */
+            firstOrderPoints?: number;
+            /** Format: uuid */
+            id?: string;
+            name?: string;
+            notes?: string;
+            /** Format: int64 */
+            profileCompletePoints?: number;
+            /** Format: date-time */
+            publishedAt?: string;
+            /**
+             * Format: uuid
+             * @description the team member who published it; null for a draft, and for the launch
+             *          version, which the migration seeded
+             */
+            publishedBy?: string;
+            /** Format: int64 */
+            referralFirstOrderCarrotsMinor?: number;
+            /** Format: int64 */
+            referralJoinPoints?: number;
+            /**
+             * @description where the version stands now — <code>DRAFT</code>, <code>SCHEDULED</code>, <code>EFFECTIVE</code>
+             *          (exactly one version), <code>SUPERSEDED</code> or <code>WITHDRAWN</code>. Derived on every read
+             * @enum {string}
+             */
+            state?: "DRAFT" | "SCHEDULED" | "EFFECTIVE" | "SUPERSEDED" | "WITHDRAWN";
+            /**
+             * @description what is stored: <code>DRAFT</code>, <code>PUBLISHED</code> or <code>WITHDRAWN</code>
+             * @enum {string}
+             */
+            status?: "DRAFT" | "PUBLISHED" | "WITHDRAWN";
+            /** Format: date-time */
+            updatedAt?: string;
+            /** Format: int64 */
+            version?: number;
+            /** Format: int64 */
+            welcomeCarrotsMinor?: number;
+            welcomeForLegacy?: boolean;
+            /** Format: int64 */
+            welcomePoints?: number;
+            /** Format: date-time */
+            withdrawnAt?: string;
+            /** Format: uuid */
+            withdrawnBy?: string;
         };
         /**
          * @description The machine-readable error code. Branch on this, never on `message`. The catalog in the API description says what each one means and which fields it populates.
@@ -5875,6 +6141,35 @@ export interface components {
          */
         PageResponseClaimIntakeResponse: {
             content?: components["schemas"]["ClaimIntakeResponse"][];
+            /** Format: int32 */
+            page?: number;
+            /** Format: int32 */
+            size?: number;
+            /** Format: int64 */
+            totalElements?: number;
+            /** Format: int32 */
+            totalPages?: number;
+        };
+        /**
+         * @description The paging envelope every paginated response uses.
+         *
+         *      <p>Lives in <code>platform</code> rather than in one domain's DTO folder. It carries no domain meaning
+         *      and every module needs it, so putting it in <code>team/dto/admin</code> — where it started, when team
+         *      was the only module — would make <code>catalog</code> import <code>team</code> to return a page of brands.
+         *      Domain packages depend on <code>platform</code> and never on each other; a shared envelope has to sit
+         *      where both can reach it.
+         *
+         *      <p>It is not an exception to "never share DTOs across surfaces". That rule is about
+         *      <i>representations</i> — the fields of a brand, of a member, of an order — where a shared type
+         *      leaks an admin-only field into an app-facing response. This type has no fields of its own; the
+         *      content it wraps is a per-surface DTO and stays one.
+         *
+         *      <p>Deliberately not Spring Data's <code>Page</code>, whose JSON form is unstable across versions and
+         *      exposes internals — <code>pageable</code>, <code>sort</code>, <code>numberOfElements</code> — that no client
+         *      should be reading.
+         */
+        PageResponseEarnRulesResponse: {
+            content?: components["schemas"]["EarnRulesResponse"][];
             /** Format: int32 */
             page?: number;
             /** Format: int32 */
@@ -6808,6 +7103,21 @@ export interface components {
             version?: number;
         };
         /** @description Publishing a draft. */
+        PublishEarnRulesRequest: {
+            /**
+             * Format: date-time
+             * @description when the version takes effect. Omit for immediately; a future instant
+             *          schedules it. Never in the past
+             */
+            effectiveFrom?: string;
+            /**
+             * Format: int64
+             * @description the <code>version</code> of the draft you reviewed. If it has been edited since, the
+             *          publish is refused with 409 <code>VERSION_CONFLICT</code>
+             */
+            version: number;
+        };
+        /** @description Publishing a draft. */
         PublishPricingVersionRequest: {
             /**
              * Format: date-time
@@ -7704,6 +8014,32 @@ export interface components {
              */
             version: number;
         };
+        /** @description Editing a draft: every amount, replacing what is stored. */
+        UpdateEarnRulesRequest: {
+            /** Format: int64 */
+            deviceConnectedPoints: number;
+            /** Format: int64 */
+            firstOrderPoints: number;
+            name: string;
+            notes?: string;
+            /** Format: int64 */
+            profileCompletePoints: number;
+            /** Format: int64 */
+            referralFirstOrderCarrotsMinor: number;
+            /** Format: int64 */
+            referralJoinPoints: number;
+            /**
+             * Format: int64
+             * @description the <code>version</code> from the draft you read. A mismatch is refused with 409
+             *          <code>VERSION_CONFLICT</code> and nothing is written
+             */
+            version: number;
+            /** Format: int64 */
+            welcomeCarrotsMinor: number;
+            welcomeForLegacy: boolean;
+            /** Format: int64 */
+            welcomePoints: number;
+        };
         /** @description Editing an image. */
         UpdateImageRequest: {
             altText?: string | null;
@@ -8347,6 +8683,15 @@ export interface components {
             updatedAt?: string;
             /** Format: int64 */
             version?: number;
+        };
+        /** @description Withdrawing a scheduled version. */
+        WithdrawEarnRulesRequest: {
+            /**
+             * Format: int64
+             * @description the <code>version</code> of the version you read. A mismatch is refused with 409
+             *          <code>VERSION_CONFLICT</code> and nothing is withdrawn
+             */
+            version: number;
         };
         /** @description Withdrawing a scheduled version. */
         WithdrawPricingVersionRequest: {
@@ -9982,10 +10327,10 @@ export interface operations {
     auditList: {
         parameters: {
             query: {
-                action?: "catalog.attribute.created" | "catalog.attribute.deactivated" | "catalog.attribute.reactivated" | "catalog.attribute.reordered" | "catalog.attribute.updated" | "catalog.attribute_group.created" | "catalog.attribute_group.deactivated" | "catalog.attribute_group.reactivated" | "catalog.attribute_group.reordered" | "catalog.attribute_group.updated" | "catalog.attribute_value.created" | "catalog.attribute_value.deactivated" | "catalog.attribute_value.reactivated" | "catalog.attribute_value.reordered" | "catalog.attribute_value.updated" | "catalog.brand.activated" | "catalog.brand.archived" | "catalog.brand.created" | "catalog.brand.published" | "catalog.brand.reordered" | "catalog.brand.unpublished" | "catalog.brand.updated" | "catalog.category.activated" | "catalog.category.archived" | "catalog.category.created" | "catalog.category.moved" | "catalog.category.published" | "catalog.category.reordered" | "catalog.category.unpublished" | "catalog.category.updated" | "catalog.product.approved" | "catalog.product.archived" | "catalog.product.categories_changed" | "catalog.product.created" | "catalog.product.customer_allowed" | "catalog.product.customer_disallowed" | "catalog.product.image_added" | "catalog.product.image_removed" | "catalog.product.image_updated" | "catalog.product.images_reordered" | "catalog.product.option_added" | "catalog.product.option_removed" | "catalog.product.options_reordered" | "catalog.product.published" | "catalog.product.rejected" | "catalog.product.spec_cleared" | "catalog.product.spec_set" | "catalog.product.submitted" | "catalog.product.unpublished" | "catalog.product.updated" | "catalog.product.visibility_changed" | "catalog.variant.created" | "catalog.variant.default_changed" | "catalog.variant.discontinued" | "catalog.variant.image_added" | "catalog.variant.image_removed" | "catalog.variant.image_updated" | "catalog.variant.images_reordered" | "catalog.variant.reinstated" | "catalog.variant.reordered" | "catalog.variant.spec_cleared" | "catalog.variant.spec_set" | "catalog.variant.updated" | "catalog.variant.visibility_changed" | "identity.user.claimed" | "identity.user.created" | "identity.user.profile_applied" | "identity.user.reinstated" | "identity.user.role_granted" | "identity.user.role_revoked" | "identity.user.suspended" | "identity.user.updated" | "inventory.availability.reconciled" | "inventory.batch.created" | "inventory.movement.recorded" | "inventory.projection.rebuilt" | "inventory.stock.transferred" | "inventory.warehouse.created" | "inventory.warehouse.deactivated" | "inventory.warehouse.reactivated" | "inventory.warehouse.updated" | "invite.claim.processed" | "invite.claim.rejected" | "invite.intake.processed" | "invite.intake.rejected" | "invite.invite.added" | "invite.invite.expired" | "invite.invite.invalidated" | "invite.invite.issued" | "invite.invite.visited" | "invite.referral.attributed" | "invite.referral.blocked" | "membership.cycle_run.completed" | "membership.version.created" | "membership.version.published" | "membership.version.updated" | "membership.version.withdrawn" | "pricing.bits_option.cleared" | "pricing.bits_option.set" | "pricing.price.cleared" | "pricing.price.set" | "pricing.version.created" | "pricing.version.published" | "pricing.version.updated" | "pricing.version.withdrawn" | "procurement.goods_receipt.posted" | "procurement.purchase_order.approved" | "procurement.purchase_order.cancelled" | "procurement.purchase_order.created" | "procurement.purchase_order.updated" | "procurement.supplier.created" | "procurement.supplier.deactivated" | "procurement.supplier.reactivated" | "procurement.supplier.updated" | "team.member.created" | "team.member.forced_logout" | "team.member.invite.accepted" | "team.member.invite.resent" | "team.member.password.changed" | "team.member.password_reset.completed" | "team.member.password_reset.requested" | "team.member.password_reset.triggered" | "team.member.profile.updated" | "team.member.roles.assigned" | "team.member.status.changed" | "team.member.updated" | "team.role.created" | "team.role.deleted" | "team.role.updated";
+                action?: "catalog.attribute.created" | "catalog.attribute.deactivated" | "catalog.attribute.reactivated" | "catalog.attribute.reordered" | "catalog.attribute.updated" | "catalog.attribute_group.created" | "catalog.attribute_group.deactivated" | "catalog.attribute_group.reactivated" | "catalog.attribute_group.reordered" | "catalog.attribute_group.updated" | "catalog.attribute_value.created" | "catalog.attribute_value.deactivated" | "catalog.attribute_value.reactivated" | "catalog.attribute_value.reordered" | "catalog.attribute_value.updated" | "catalog.brand.activated" | "catalog.brand.archived" | "catalog.brand.created" | "catalog.brand.published" | "catalog.brand.reordered" | "catalog.brand.unpublished" | "catalog.brand.updated" | "catalog.category.activated" | "catalog.category.archived" | "catalog.category.created" | "catalog.category.moved" | "catalog.category.published" | "catalog.category.reordered" | "catalog.category.unpublished" | "catalog.category.updated" | "catalog.product.approved" | "catalog.product.archived" | "catalog.product.categories_changed" | "catalog.product.created" | "catalog.product.customer_allowed" | "catalog.product.customer_disallowed" | "catalog.product.image_added" | "catalog.product.image_removed" | "catalog.product.image_updated" | "catalog.product.images_reordered" | "catalog.product.option_added" | "catalog.product.option_removed" | "catalog.product.options_reordered" | "catalog.product.published" | "catalog.product.rejected" | "catalog.product.spec_cleared" | "catalog.product.spec_set" | "catalog.product.submitted" | "catalog.product.unpublished" | "catalog.product.updated" | "catalog.product.visibility_changed" | "catalog.variant.created" | "catalog.variant.default_changed" | "catalog.variant.discontinued" | "catalog.variant.image_added" | "catalog.variant.image_removed" | "catalog.variant.image_updated" | "catalog.variant.images_reordered" | "catalog.variant.reinstated" | "catalog.variant.reordered" | "catalog.variant.spec_cleared" | "catalog.variant.spec_set" | "catalog.variant.updated" | "catalog.variant.visibility_changed" | "earn.rules_version.created" | "earn.rules_version.published" | "earn.rules_version.updated" | "earn.rules_version.withdrawn" | "identity.user.claimed" | "identity.user.created" | "identity.user.profile_applied" | "identity.user.reinstated" | "identity.user.role_granted" | "identity.user.role_revoked" | "identity.user.suspended" | "identity.user.updated" | "inventory.availability.reconciled" | "inventory.batch.created" | "inventory.movement.recorded" | "inventory.projection.rebuilt" | "inventory.stock.transferred" | "inventory.warehouse.created" | "inventory.warehouse.deactivated" | "inventory.warehouse.reactivated" | "inventory.warehouse.updated" | "invite.claim.processed" | "invite.claim.rejected" | "invite.intake.processed" | "invite.intake.rejected" | "invite.invite.added" | "invite.invite.expired" | "invite.invite.invalidated" | "invite.invite.issued" | "invite.invite.visited" | "invite.referral.attributed" | "invite.referral.blocked" | "membership.cycle_run.completed" | "membership.version.created" | "membership.version.published" | "membership.version.updated" | "membership.version.withdrawn" | "pricing.bits_option.cleared" | "pricing.bits_option.set" | "pricing.price.cleared" | "pricing.price.set" | "pricing.version.created" | "pricing.version.published" | "pricing.version.updated" | "pricing.version.withdrawn" | "procurement.goods_receipt.posted" | "procurement.purchase_order.approved" | "procurement.purchase_order.cancelled" | "procurement.purchase_order.created" | "procurement.purchase_order.updated" | "procurement.supplier.created" | "procurement.supplier.deactivated" | "procurement.supplier.reactivated" | "procurement.supplier.updated" | "team.member.created" | "team.member.forced_logout" | "team.member.invite.accepted" | "team.member.invite.resent" | "team.member.password.changed" | "team.member.password_reset.completed" | "team.member.password_reset.requested" | "team.member.password_reset.triggered" | "team.member.profile.updated" | "team.member.roles.assigned" | "team.member.status.changed" | "team.member.updated" | "team.role.created" | "team.role.deleted" | "team.role.updated";
                 actorId?: string;
                 entityId?: string;
-                entityType?: "attribute" | "attribute_group" | "attribute_value" | "batch" | "brand" | "category" | "claim_intake" | "goods_receipt" | "invite" | "invite_intake" | "membership_cycle_run" | "membership_version" | "pricing_version" | "product" | "purchase_order" | "referral" | "role" | "stock_availability" | "stock_level" | "stock_movement" | "stock_transfer" | "supplier" | "team_member" | "user" | "variant" | "warehouse";
+                entityType?: "attribute" | "attribute_group" | "attribute_value" | "batch" | "brand" | "category" | "claim_intake" | "earn_rules_version" | "goods_receipt" | "invite" | "invite_intake" | "membership_cycle_run" | "membership_version" | "pricing_version" | "product" | "purchase_order" | "referral" | "role" | "stock_availability" | "stock_level" | "stock_movement" | "stock_transfer" | "supplier" | "team_member" | "user" | "variant" | "warehouse";
                 from?: string;
                 pageable: components["schemas"]["Pageable"];
                 to?: string;
@@ -12203,6 +12548,571 @@ export interface operations {
                 };
                 content: {
                     "*/*": components["schemas"]["CategoryTreeResponse"][];
+                };
+            };
+            /** @description `VALIDATION_FAILED` — The request body could not be read, a field failed validation, a required header was absent, or a domain validation rule rejected an input the caller can correct. */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description `AUTHENTICATION_FAILED` — No valid credential. Either none was presented, or the session behind it is expired, revoked, or belongs to a member who can no longer sign in. This status means the session is dead and nothing else does (D2.23) — a wrong *current* password on change-password is a 400 with a `currentPassword` field error, not this. */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description `ACCESS_DENIED` — Authenticated, but lacking the permission the endpoint declares. The session is valid; do not sign the operator out. */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description `INTERNAL_ERROR` — An unhandled failure. The message is deliberately generic; `traceId` identifies the server log line that explains it. */
+            500: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+        };
+    };
+    earnListEarnRulesVersions: {
+        parameters: {
+            query: {
+                pageable: components["schemas"]["Pageable"];
+                status?: "DRAFT" | "PUBLISHED" | "WITHDRAWN";
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "*/*": components["schemas"]["PageResponseEarnRulesResponse"];
+                };
+            };
+            /** @description `VALIDATION_FAILED` — The request body could not be read, a field failed validation, a required header was absent, or a domain validation rule rejected an input the caller can correct. */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description `AUTHENTICATION_FAILED` — No valid credential. Either none was presented, or the session behind it is expired, revoked, or belongs to a member who can no longer sign in. This status means the session is dead and nothing else does (D2.23) — a wrong *current* password on change-password is a 400 with a `currentPassword` field error, not this. */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description `ACCESS_DENIED` — Authenticated, but lacking the permission the endpoint declares. The session is valid; do not sign the operator out. */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description `INTERNAL_ERROR` — An unhandled failure. The message is deliberately generic; `traceId` identifies the server log line that explains it. */
+            500: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+        };
+    };
+    earnCreateEarnRulesVersion: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["CreateEarnRulesRequest"];
+            };
+        };
+        responses: {
+            /** @description Created */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "*/*": components["schemas"]["EarnRulesResponse"];
+                };
+            };
+            /** @description `VALIDATION_FAILED` — The request body could not be read, a field failed validation, a required header was absent, or a domain validation rule rejected an input the caller can correct. */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description `AUTHENTICATION_FAILED` — No valid credential. Either none was presented, or the session behind it is expired, revoked, or belongs to a member who can no longer sign in. This status means the session is dead and nothing else does (D2.23) — a wrong *current* password on change-password is a 400 with a `currentPassword` field error, not this. */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description `ACCESS_DENIED` — Authenticated, but lacking the permission the endpoint declares. The session is valid; do not sign the operator out. */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description `CONFLICT` — The request collided with current state for a reason other than a version mismatch: a duplicate natural key (a slug, a code, an email), or a database constraint the application did not catch first. */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description `UNSUPPORTED_MEDIA_TYPE` — The request body was sent with a `Content-Type` the endpoint does not read. Every endpoint that takes a body reads `application/json`. */
+            415: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description `BUSINESS_RULE_VIOLATION` — The request was well-formed and the entities exist, but a domain rule forbids it — publishing a product with no price, archiving a brand products still reference, issuing more stock than a location holds. Distinct from 400: nothing about the request is malformed. */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description `INTERNAL_ERROR` — An unhandled failure. The message is deliberately generic; `traceId` identifies the server log line that explains it. */
+            500: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+        };
+    };
+    earnGetEarnRulesVersion: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "*/*": components["schemas"]["EarnRulesResponse"];
+                };
+            };
+            /** @description `VALIDATION_FAILED` — The request body could not be read, a field failed validation, a required header was absent, or a domain validation rule rejected an input the caller can correct. */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description `AUTHENTICATION_FAILED` — No valid credential. Either none was presented, or the session behind it is expired, revoked, or belongs to a member who can no longer sign in. This status means the session is dead and nothing else does (D2.23) — a wrong *current* password on change-password is a 400 with a `currentPassword` field error, not this. */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description `ACCESS_DENIED` — Authenticated, but lacking the permission the endpoint declares. The session is valid; do not sign the operator out. */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description `NOT_FOUND` — A referenced entity does not exist, or the URL matches no endpoint. Also returned for a known path called with an unsupported method, as 405. */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description `INTERNAL_ERROR` — An unhandled failure. The message is deliberately generic; `traceId` identifies the server log line that explains it. */
+            500: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+        };
+    };
+    earnUpdateEarnRulesVersion: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["UpdateEarnRulesRequest"];
+            };
+        };
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "*/*": components["schemas"]["EarnRulesResponse"];
+                };
+            };
+            /** @description `VALIDATION_FAILED` — The request body could not be read, a field failed validation, a required header was absent, or a domain validation rule rejected an input the caller can correct. */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description `AUTHENTICATION_FAILED` — No valid credential. Either none was presented, or the session behind it is expired, revoked, or belongs to a member who can no longer sign in. This status means the session is dead and nothing else does (D2.23) — a wrong *current* password on change-password is a 400 with a `currentPassword` field error, not this. */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description `ACCESS_DENIED` — Authenticated, but lacking the permission the endpoint declares. The session is valid; do not sign the operator out. */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description `NOT_FOUND` — A referenced entity does not exist, or the URL matches no endpoint. Also returned for a known path called with an unsupported method, as 405. */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description `VERSION_CONFLICT` or `CONFLICT` — The `version` sent with an update is not the version stored — the record was changed by someone else since it was read. Nothing was written. Re-read the record, show the operator what changed, and submit again with the new `version`. */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description `UNSUPPORTED_MEDIA_TYPE` — The request body was sent with a `Content-Type` the endpoint does not read. Every endpoint that takes a body reads `application/json`. */
+            415: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description `BUSINESS_RULE_VIOLATION` — The request was well-formed and the entities exist, but a domain rule forbids it — publishing a product with no price, archiving a brand products still reference, issuing more stock than a location holds. Distinct from 400: nothing about the request is malformed. */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description `INTERNAL_ERROR` — An unhandled failure. The message is deliberately generic; `traceId` identifies the server log line that explains it. */
+            500: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+        };
+    };
+    earnPublishEarnRulesVersion: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["PublishEarnRulesRequest"];
+            };
+        };
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "*/*": components["schemas"]["EarnRulesResponse"];
+                };
+            };
+            /** @description `VALIDATION_FAILED` — The request body could not be read, a field failed validation, a required header was absent, or a domain validation rule rejected an input the caller can correct. */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description `AUTHENTICATION_FAILED` — No valid credential. Either none was presented, or the session behind it is expired, revoked, or belongs to a member who can no longer sign in. This status means the session is dead and nothing else does (D2.23) — a wrong *current* password on change-password is a 400 with a `currentPassword` field error, not this. */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description `ACCESS_DENIED` — Authenticated, but lacking the permission the endpoint declares. The session is valid; do not sign the operator out. */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description `NOT_FOUND` — A referenced entity does not exist, or the URL matches no endpoint. Also returned for a known path called with an unsupported method, as 405. */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description `VERSION_CONFLICT` or `CONFLICT` — The `version` sent with an update is not the version stored — the record was changed by someone else since it was read. Nothing was written. Re-read the record, show the operator what changed, and submit again with the new `version`. */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description `UNSUPPORTED_MEDIA_TYPE` — The request body was sent with a `Content-Type` the endpoint does not read. Every endpoint that takes a body reads `application/json`. */
+            415: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description `BUSINESS_RULE_VIOLATION` — The request was well-formed and the entities exist, but a domain rule forbids it — publishing a product with no price, archiving a brand products still reference, issuing more stock than a location holds. Distinct from 400: nothing about the request is malformed. */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description `INTERNAL_ERROR` — An unhandled failure. The message is deliberately generic; `traceId` identifies the server log line that explains it. */
+            500: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+        };
+    };
+    earnWithdrawEarnRulesVersion: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["WithdrawEarnRulesRequest"];
+            };
+        };
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "*/*": components["schemas"]["EarnRulesResponse"];
+                };
+            };
+            /** @description `VALIDATION_FAILED` — The request body could not be read, a field failed validation, a required header was absent, or a domain validation rule rejected an input the caller can correct. */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description `AUTHENTICATION_FAILED` — No valid credential. Either none was presented, or the session behind it is expired, revoked, or belongs to a member who can no longer sign in. This status means the session is dead and nothing else does (D2.23) — a wrong *current* password on change-password is a 400 with a `currentPassword` field error, not this. */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description `ACCESS_DENIED` — Authenticated, but lacking the permission the endpoint declares. The session is valid; do not sign the operator out. */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description `NOT_FOUND` — A referenced entity does not exist, or the URL matches no endpoint. Also returned for a known path called with an unsupported method, as 405. */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description `VERSION_CONFLICT` or `CONFLICT` — The `version` sent with an update is not the version stored — the record was changed by someone else since it was read. Nothing was written. Re-read the record, show the operator what changed, and submit again with the new `version`. */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description `UNSUPPORTED_MEDIA_TYPE` — The request body was sent with a `Content-Type` the endpoint does not read. Every endpoint that takes a body reads `application/json`. */
+            415: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description `BUSINESS_RULE_VIOLATION` — The request was well-formed and the entities exist, but a domain rule forbids it — publishing a product with no price, archiving a brand products still reference, issuing more stock than a location holds. Distinct from 400: nothing about the request is malformed. */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description `INTERNAL_ERROR` — An unhandled failure. The message is deliberately generic; `traceId` identifies the server log line that explains it. */
+            500: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+        };
+    };
+    earnEffectiveEarnRulesVersion: {
+        parameters: {
+            query?: {
+                at?: string;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "*/*": components["schemas"]["EarnRulesResponse"];
                 };
             };
             /** @description `VALIDATION_FAILED` — The request body could not be read, a field failed validation, a required header was absent, or a domain validation rule rejected an input the caller can correct. */

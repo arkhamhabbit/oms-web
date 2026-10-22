@@ -12,6 +12,7 @@ import {
   IndianRupee,
   Send,
   Medal,
+  Gift,
 } from 'lucide-react'
 
 export interface NavItem {
@@ -30,6 +31,7 @@ export const navItems: NavItem[] = [
   { label: 'Products', to: '/products', icon: Package, permission: 'catalog.product.read' },
   { label: 'Pricing', to: '/pricing', icon: IndianRupee, permission: 'pricing.read' },
   { label: 'Membership', to: '/membership', icon: Medal, permission: 'membership.read' },
+  { label: 'Earn rules', to: '/earn', icon: Gift, permission: 'earn.read' },
   { label: 'Users', to: '/users', icon: UserRound, permission: 'identity.user.read' },
   { label: 'Invites', to: '/invites', icon: Send, permission: 'invite.read' },
   { label: 'Team', to: '/team', icon: Users, permission: 'team.read' },
