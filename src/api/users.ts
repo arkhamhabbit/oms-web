@@ -8,6 +8,8 @@ export type UserSummary = components['schemas']['UserSummaryResponse']
 export type UserStatus = NonNullable<User['status']>
 export type UserRole = NonNullable<User['roles']>[number]
 export type RoleGrant = components['schemas']['RoleGrantResponse']
+export type ConsumerAddress = components['schemas']['ConsumerAddressResponse']
+export type ProfileIntake = components['schemas']['ProfileIntakeResponse']
 type CreateUserRequest = components['schemas']['CreateUserRequest']
 type UpdateUserRequest = components['schemas']['UpdateUserRequest']
 
@@ -43,6 +45,26 @@ export function useUserQuery(id: string) {
   return useQuery({
     queryKey: ['users', 'detail', id],
     queryFn: () => unwrap(api.GET('/api/admin/users/{id}', { params: { path: { id } } })),
+  })
+}
+
+export function useUserAddressesQuery(id: string) {
+  return useQuery({
+    queryKey: ['users', 'addresses', id],
+    queryFn: () => unwrap(api.GET('/api/admin/users/{id}/addresses', { params: { path: { id } } })),
+  })
+}
+
+export function useUserProfileIntakeQuery(id: string, page: number, size: number) {
+  return useQuery({
+    queryKey: ['users', 'profile-intake', id, page, size],
+    queryFn: () =>
+      unwrap(
+        api.GET('/api/admin/users/{id}/profile-intake', {
+          params: { path: { id }, query: { pageable: { page, size } } },
+        })
+      ),
+    placeholderData: (previous) => previous,
   })
 }
 

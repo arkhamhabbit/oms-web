@@ -1860,6 +1860,34 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/admin/pricing/versions/{id}/bits-options": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * The Bits options a version sets (D7.17), a page at a time, ordered by variant then tier code —
+         *      each with the variant's SKU code and its base selling price now. Lists every option whether or
+         *      not the variant also has a level price. A (variant, tier) not listed has no Bits option. 404
+         *      <code>NOT_FOUND</code> for an unknown version.
+         * @description The Bits options a version sets (D7.17), a page at a time, ordered by variant then tier code —
+         *      each with the variant's SKU code and its base selling price now. Lists every option whether or
+         *      not the variant also has a level price. A (variant, tier) not listed has no Bits option. 404
+         *      <code>NOT_FOUND</code> for an unknown version.
+         *
+         *     **Requires permission:** `pricing.read`.
+         */
+        get: operations["pricingListPricingVersionBitsOptions"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/admin/pricing/versions/{id}/max-points-per-order": {
         parameters: {
             query?: never;
@@ -5372,7 +5400,7 @@ export interface components {
              * @description what was <b>actually</b> charged. Omit it and the purchase order's agreed cost
              *          stands. Must be in the order's currency
              */
-            unitCost?: components["schemas"]["Money"];
+            unitCost?: components["schemas"]["MoneyPayload"];
         };
         GoodsReceiptLineResponse: {
             /** Format: date-time */
@@ -5382,7 +5410,7 @@ export interface components {
             batchNumber?: string;
             /** Format: uuid */
             id?: string;
-            lineCost?: components["schemas"]["Money"];
+            lineCost?: components["schemas"]["MoneyPayload"];
             /** Format: uuid */
             purchaseOrderLineId?: string;
             /** Format: int32 */
@@ -5390,7 +5418,7 @@ export interface components {
             /** Format: int32 */
             quantityRejected?: number;
             skuCode?: string;
-            unitCost?: components["schemas"]["Money"];
+            unitCost?: components["schemas"]["MoneyPayload"];
             /** Format: uuid */
             variantId?: string;
             variantName?: string;
@@ -5421,7 +5449,7 @@ export interface components {
             /** Format: date */
             receivedOn?: string;
             supplierInvoiceNumber?: string;
-            totalCost?: components["schemas"]["Money"];
+            totalCost?: components["schemas"]["MoneyPayload"];
             warehouseCode?: string;
             /** Format: uuid */
             warehouseId?: string;
@@ -5593,21 +5621,6 @@ export interface components {
             status?: string;
             /** @description the session token — sent once, never retrievable again */
             token?: string;
-        };
-        /**
-         * @description An immutable monetary amount: a signed count of minor units plus an ISO-4217 currency.
-         *
-         *      <p><code>double</code>, <code>float</code> and bare {@link BigDecimal BigDecimal} are banned from money handling. All
-         *      arithmetic lives on this type so that rounding happens in exactly one place and is impossible to
-         *      get subtly wrong at a call site.
-         *
-         *      <p>Rounding is always {@link RoundingMode#HALF_UP RoundingMode#HALF_UP} and always to a whole minor unit. Operations
-         *      that combine two amounts reject a currency mismatch rather than coercing.
-         */
-        Money: {
-            negative?: boolean;
-            positive?: boolean;
-            zero?: boolean;
         };
         /** @description Money on the wire. */
         MoneyPayload: {
@@ -6411,6 +6424,35 @@ export interface components {
          *      exposes internals — <code>pageable</code>, <code>sort</code>, <code>numberOfElements</code> — that no client
          *      should be reading.
          */
+        PageResponseVersionBitsOptionResponse: {
+            content?: components["schemas"]["VersionBitsOptionResponse"][];
+            /** Format: int32 */
+            page?: number;
+            /** Format: int32 */
+            size?: number;
+            /** Format: int64 */
+            totalElements?: number;
+            /** Format: int32 */
+            totalPages?: number;
+        };
+        /**
+         * @description The paging envelope every paginated response uses.
+         *
+         *      <p>Lives in <code>platform</code> rather than in one domain's DTO folder. It carries no domain meaning
+         *      and every module needs it, so putting it in <code>team/dto/admin</code> — where it started, when team
+         *      was the only module — would make <code>catalog</code> import <code>team</code> to return a page of brands.
+         *      Domain packages depend on <code>platform</code> and never on each other; a shared envelope has to sit
+         *      where both can reach it.
+         *
+         *      <p>It is not an exception to "never share DTOs across surfaces". That rule is about
+         *      <i>representations</i> — the fields of a brand, of a member, of an order — where a shared type
+         *      leaks an admin-only field into an app-facing response. This type has no fields of its own; the
+         *      content it wraps is a per-surface DTO and stays one.
+         *
+         *      <p>Deliberately not Spring Data's <code>Page</code>, whose JSON form is unstable across versions and
+         *      exposes internals — <code>pageable</code>, <code>sort</code>, <code>numberOfElements</code> — that no client
+         *      should be reading.
+         */
         PageResponseVersionResponse: {
             content?: components["schemas"]["VersionResponse"][];
             /** Format: int32 */
@@ -6551,7 +6593,8 @@ export interface components {
             id?: string;
             /**
              * Format: int64
-             * @description the most Bits one order may spend under this version; null for no cap
+             * @description the most Bits one order may spend under this version; absent for no
+             *          cap
              */
             maxPointsPerOrder?: number;
             name?: string;
@@ -6806,7 +6849,7 @@ export interface components {
              * @description minor units plus currency, e.g. <code>{&quot;amountMinor&quot;: 45000, &quot;currency&quot;:
              *          &quot;INR&quot;</code>}. Must be in the order's currency — a mismatch is refused rather than converted
              */
-            unitCost: components["schemas"]["Money"];
+            unitCost: components["schemas"]["MoneyPayload"];
             /** Format: uuid */
             variantId: string;
         };
@@ -6814,10 +6857,10 @@ export interface components {
             batchTracked?: boolean;
             /** Format: uuid */
             id?: string;
-            lineCost?: components["schemas"]["Money"];
+            lineCost?: components["schemas"]["MoneyPayload"];
             /** Format: int32 */
             lineNumber?: number;
-            lineTax?: components["schemas"]["Money"];
+            lineTax?: components["schemas"]["MoneyPayload"];
             productName?: string;
             /** Format: int32 */
             quantityOrdered?: number;
@@ -6827,7 +6870,7 @@ export interface components {
             quantityReceived?: number;
             skuCode?: string;
             taxRate?: number;
-            unitCost?: components["schemas"]["Money"];
+            unitCost?: components["schemas"]["MoneyPayload"];
             /** Format: uuid */
             variantId?: string;
             variantName?: string;
@@ -6868,8 +6911,8 @@ export interface components {
             /** Format: uuid */
             supplierId?: string;
             supplierName?: string;
-            totalCost?: components["schemas"]["Money"];
-            totalTax?: components["schemas"]["Money"];
+            totalCost?: components["schemas"]["MoneyPayload"];
+            totalTax?: components["schemas"]["MoneyPayload"];
             /** Format: date-time */
             updatedAt?: string;
             /** Format: int64 */
@@ -7009,15 +7052,25 @@ export interface components {
             /** Format: uuid */
             variantId?: string;
         };
-        /** @description The tier a points figure resolves to. */
+        /**
+         * @description The tier a points figure resolves to.
+         *
+         *      <p><code>tierId</code>, <code>tierCode</code> and <code>tierName</code> are {@link TierResponse TierResponse}'s <code>id</code>,
+         *      <code>code</code> and <code>name</code> — the same values. They carry the <code>tier</code> prefix because
+         *      this shape also names the version it was resolved under, and they keep it: published clients
+         *      read these names.
+         */
         ResolvedTierResponse: {
             /** Format: int32 */
             activeInviteLimit?: number;
             /**
              * Format: int64
-             * @description referral Carrots per friend order, paise
+             * @description referral Carrots per friend order, in minor units of <code>
+             *          currency</code>
              */
             carrotsPerFriendOrderMinor?: number;
+            /** @description the currency of <code>carrotsPerFriendOrderMinor</code>; <code>INR</code> */
+            currency?: string;
             freeShipping?: boolean;
             /**
              * Format: int64
@@ -7044,13 +7097,14 @@ export interface components {
              * @description the tier's reach threshold
              */
             thresholdPoints12mo?: number;
-            /** @description the tier's stable code */
+            /** @description the tier's stable code — {@link TierResponse TierResponse}'s <code>code</code> */
             tierCode?: string;
             /**
              * Format: uuid
-             * @description the published tier row
+             * @description the published tier row — {@link TierResponse TierResponse}'s <code>id</code>
              */
             tierId?: string;
+            /** @description the tier's display name — {@link TierResponse TierResponse}'s <code>name</code> */
             tierName?: string;
             /**
              * Format: uuid
@@ -7152,7 +7206,7 @@ export interface components {
             /**
              * Format: int64
              * @description the most Bits one order may spend under this version, more than zero;
-             *          null (or omitted) for no cap, the default. Orders enforce it (2.4)
+             *          omitted for no cap, the default (null is read the same way). Orders enforce it (2.4)
              */
             maxPointsPerOrder?: number;
             /**
@@ -7443,10 +7497,16 @@ export interface components {
             activeInviteLimit?: number;
             /**
              * Format: int64
-             * @description referral Carrots per friend order, paise
+             * @description referral Carrots per friend order, in minor units of <code>
+             *          currency</code>
              */
             carrotsPerFriendOrderMinor?: number;
             code?: string;
+            /**
+             * @description the currency of <code>carrotsPerFriendOrderMinor</code> — the consumer-cash account
+             *          Carrots are earned into; <code>INR</code>
+             */
+            currency?: string;
             freeShipping?: boolean;
             /**
              * Format: uuid
@@ -7579,13 +7639,13 @@ export interface components {
             /** @enum {string} */
             dataType: "TEXT" | "NUMBER" | "BOOLEAN" | "SINGLE_SELECT" | "MULTI_SELECT";
             /** Format: uuid */
-            groupId?: string;
-            helpText?: string;
+            groupId?: string | null;
+            helpText?: string | null;
             /** @enum {string} */
             kind: "OPTION" | "SPEC";
             name: string;
-            /** @enum {string} */
-            unit?: "g" | "mg" | "kg" | "ml" | "l" | "kcal" | "iu" | "mcg" | "servings" | "days" | "pieces";
+            /** @enum {string|null} */
+            unit?: "g" | "mg" | "kg" | "ml" | "l" | "kcal" | "iu" | "mcg" | "servings" | "days" | "pieces" | null;
             /**
              * Format: int64
              * @description the <code>version</code> from the attribute you read. A mismatch is refused with 409
@@ -7602,10 +7662,10 @@ export interface components {
          *      200 for a change that never happened.
          */
         UpdateBrandRequest: {
-            bannerUrl?: string;
-            description?: string;
+            bannerUrl?: string | null;
+            description?: string | null;
             live?: boolean;
-            logoUrl?: string;
+            logoUrl?: string | null;
             name: string;
             slug?: string;
             /** @enum {string} */
@@ -7629,9 +7689,9 @@ export interface components {
          *      {@link AdminBrandDtos.UpdateBrandRequest AdminBrandDtos.UpdateBrandRequest}.
          */
         UpdateCategoryRequest: {
-            bannerUrl?: string;
-            description?: string;
-            imageUrl?: string;
+            bannerUrl?: string | null;
+            description?: string | null;
+            imageUrl?: string | null;
             live?: boolean;
             name: string;
             slug?: string;
@@ -7646,7 +7706,7 @@ export interface components {
         };
         /** @description Editing an image. */
         UpdateImageRequest: {
-            altText?: string;
+            altText?: string | null;
             url: string;
             /**
              * Format: int64
@@ -7678,7 +7738,7 @@ export interface components {
             audience?: "PUBLIC" | "TIER_RESTRICTED" | "CUSTOMER_RESTRICTED";
             /** Format: uuid */
             brandId: string;
-            description?: string;
+            description?: string | null;
             /** @enum {string} */
             listingVisibility?: "LISTED" | "UNLISTED";
             live?: boolean;
@@ -7689,8 +7749,8 @@ export interface components {
              * @description the tier a <code>TIER_RESTRICTED</code> product requires — required for that
              *          audience, refused for any other. Send it back unchanged on every edit of such a product
              */
-            requiredTierCode?: string;
-            shortDescription?: string;
+            requiredTierCode?: string | null;
+            shortDescription?: string | null;
             slug?: string;
             /** @enum {string} */
             status: "DRAFT" | "IN_REVIEW" | "ACTIVE" | "ARCHIVED";
@@ -7856,16 +7916,16 @@ export interface components {
          *      printing the old code.
          */
         UpdateVariantRequest: {
-            barcode?: string;
-            baseSellingPrice?: components["schemas"]["MoneyPayload"];
+            barcode?: string | null;
+            baseSellingPrice?: components["schemas"]["MoneyPayload"] | null;
             batchTracked?: boolean;
-            gstRate?: number;
+            gstRate?: number | null;
             /** Format: int32 */
-            heightMm?: number;
-            hsnCode?: string;
+            heightMm?: number | null;
+            hsnCode?: string | null;
             /** Format: int32 */
-            lengthMm?: number;
-            mrp?: components["schemas"]["MoneyPayload"];
+            lengthMm?: number | null;
+            mrp?: components["schemas"]["MoneyPayload"] | null;
             /**
              * @description a tier this variant requires on top of its product's rule ("Exclusive
              *          to Apex" on one size, D4.18) — a stable tier code in the ladder in effect, or null for "as
@@ -7873,9 +7933,9 @@ export interface components {
              *          PUBLIC</code> product, refused on a <code>CUSTOMER_RESTRICTED</code> one. <b>Null clears it: send it
              *          back unchanged on every edit</b>
              */
-            requiredTierCode?: string;
+            requiredTierCode?: string | null;
             /** Format: int32 */
-            shelfLifeDays?: number;
+            shelfLifeDays?: number | null;
             skuCode: string;
             /**
              * Format: int64
@@ -7884,9 +7944,9 @@ export interface components {
              */
             version: number;
             /** Format: int32 */
-            weightGrams?: number;
+            weightGrams?: number | null;
             /** Format: int32 */
-            widthMm?: number;
+            widthMm?: number | null;
         };
         /** @description Editing a draft. <code>tiers</code> <b>replaces</b> the draft's ladder — send all of it. */
         UpdateVersionRequest: {
@@ -8146,6 +8206,28 @@ export interface components {
              * @enum {string}
              */
             visibility?: "VISIBLE" | "LOCKED" | "HIDDEN";
+        };
+        /** @description One stored Bits option in a version's list — the Bits counterpart of {@link com.oms.service.pricing.dto.admin.AdminPricingDtos.VersionBitsOptionResponse  LevelPriceResponse}. */
+        VersionBitsOptionResponse: {
+            /**
+             * @description the variant's base selling price now; absent if the catalog has since
+             *          cleared it
+             */
+            baseSellingPrice?: components["schemas"]["MoneyPayload"];
+            /**
+             * Format: int64
+             * @description whole Bits spent
+             */
+            pointsAmount?: number;
+            /** @description the money paid alongside the Bits */
+            price?: components["schemas"]["MoneyPayload"];
+            skuCode?: string;
+            /** @description the tier this option is offered to */
+            tierCode?: string;
+            /** Format: uuid */
+            variantId?: string;
+            /** Format: uuid */
+            versionId?: string;
         };
         /** @description A version with its ladder. */
         VersionResponse: {
@@ -14329,6 +14411,75 @@ export interface operations {
             };
             /** @description `BUSINESS_RULE_VIOLATION` — The request was well-formed and the entities exist, but a domain rule forbids it — publishing a product with no price, archiving a brand products still reference, issuing more stock than a location holds. Distinct from 400: nothing about the request is malformed. */
             422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description `INTERNAL_ERROR` — An unhandled failure. The message is deliberately generic; `traceId` identifies the server log line that explains it. */
+            500: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+        };
+    };
+    pricingListPricingVersionBitsOptions: {
+        parameters: {
+            query: {
+                pageable: components["schemas"]["Pageable"];
+            };
+            header?: never;
+            path: {
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "*/*": components["schemas"]["PageResponseVersionBitsOptionResponse"];
+                };
+            };
+            /** @description `VALIDATION_FAILED` — The request body could not be read, a field failed validation, a required header was absent, or a domain validation rule rejected an input the caller can correct. */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description `AUTHENTICATION_FAILED` — No valid credential. Either none was presented, or the session behind it is expired, revoked, or belongs to a member who can no longer sign in. This status means the session is dead and nothing else does (D2.23) — a wrong *current* password on change-password is a 400 with a `currentPassword` field error, not this. */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description `ACCESS_DENIED` — Authenticated, but lacking the permission the endpoint declares. The session is valid; do not sign the operator out. */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description `NOT_FOUND` — A referenced entity does not exist, or the URL matches no endpoint. Also returned for a known path called with an unsupported method, as 405. */
+            404: {
                 headers: {
                     [name: string]: unknown;
                 };
