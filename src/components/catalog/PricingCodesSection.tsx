@@ -1,12 +1,14 @@
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { VariantFieldsForm } from '@/components/catalog/VariantFieldsForm'
-import type { Variant } from '@/api/products'
+import type { ProductAudience, Variant } from '@/api/products'
 
 export interface PricingCodesSectionProps {
   productId: string
   variant: Variant
   skuCodesEditable: boolean
   canWrite: boolean
+  productAudience: ProductAudience
+  productRequiredTierCode?: string
 }
 
 /**
@@ -19,6 +21,8 @@ function PricingCodesSection({
   variant,
   skuCodesEditable,
   canWrite,
+  productAudience,
+  productRequiredTierCode,
 }: PricingCodesSectionProps) {
   return (
     <Card>
@@ -34,6 +38,9 @@ function PricingCodesSection({
           variant={variant}
           skuCodesEditable={skuCodesEditable}
           canWrite={canWrite}
+          productAudience={productAudience}
+          productRequiredTierCode={productRequiredTierCode}
+          simple
         />
       </CardContent>
     </Card>

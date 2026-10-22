@@ -109,6 +109,8 @@ function ProductDetailPage() {
               variant={defaultVariant}
               skuCodesEditable={!!product.skuCodesEditable}
               canWrite={canWrite}
+              productAudience={product.audience ?? 'PUBLIC'}
+              productRequiredTierCode={product.requiredTierCode ?? undefined}
             />
           ) : (
             <p className="text-sm text-muted-foreground">No default variant found.</p>
@@ -120,6 +122,8 @@ function ProductDetailPage() {
             options={options}
             skuCodesEditable={!!product.skuCodesEditable}
             canWrite={canWrite}
+            productAudience={product.audience ?? 'PUBLIC'}
+            productRequiredTierCode={product.requiredTierCode ?? undefined}
           />
         ))}
       {tab === 'specs' && (

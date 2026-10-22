@@ -1,14 +1,31 @@
+import * as React from 'react'
+import { useQueryClient } from '@tanstack/react-query'
 import { toast } from 'sonner'
 
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { Switch } from '@/components/ui/switch'
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from '@/components/ui/select'
 import { MoneyInput } from '@/components/form/MoneyInput'
-import { toastApiError } from '@/lib/api-error'
+import { NoticeBanner, noticeFromError, type Notice } from '@/components/common/NoticeBanner'
+import { usePermissions } from '@/auth/usePermissions'
 import { sellingPriceExceedsMrp } from '@/lib/money'
 import { useKeyedState } from '@/lib/use-keyed-state'
-import { useUpdateVariantMutation, type Variant } from '@/api/products'
+import { AS_PRODUCT, variantTierChoices, variantTierProblem } from '@/lib/visibility'
+import { useEffectiveLadderQuery } from '@/api/membership'
+import {
+  productVariantsQueryKey,
+  useUpdateVariantMutation,
+  type ProductAudience,
+  type Variant,
+} from '@/api/products'
 
 /** INR only — multi-currency is out of MVP scope (DECISIONS.md §10). */
 const CURRENCY = 'INR'
@@ -37,6 +54,11 @@ export interface VariantFieldsFormProps {
   /** `ProductResponse.skuCodesEditable` — true until the product has ever been ACTIVE (spec §5). */
   skuCodesEditable: boolean
   canWrite: boolean
+  /** The product's own rule — a variant's tier may only add to it (D4.18). */
+  productAudience: ProductAudience
+  productRequiredTierCode?: string
+  /** A simple product's one variant is presented as the product, so its copy never says "variant". */
+  simple?: boolean
   /** Hides the "SKU code" label's variant-combination context for a simple product, where this
    * form is presented as the product's own pricing & codes rather than "a variant's" fields. */
   hideOptionCombination?: boolean
@@ -58,10 +80,18 @@ function VariantFieldsForm({
   variant,
   skuCodesEditable,
   canWrite,
+  productAudience,
+  productRequiredTierCode,
+  simple,
   optionLabel,
   onSaved,
 }: VariantFieldsFormProps) {
+  const { has } = usePermissions()
+  const canReadLadder = has('membership.read')
+  const ladder = useEffectiveLadderQuery(canReadLadder)
   const updateVariant = useUpdateVariantMutation(productId, variant.id!)
+  const queryClient = useQueryClient()
+  const [notice, setNotice] = React.useState<Notice | undefined>()
 
   // Re-derives every field whenever the server's copy moves (a save landed, or someone else's
   // did) — `version` is the reliable signal, combined with `id` for switching between variants
@@ -92,12 +122,33 @@ function VariantFieldsForm({
     () => variant.shelfLifeDays?.toString() ?? ''
   )
 
+  // Echoed on every save (D4.18): the server replaces the field whole, so omitting it would clear
+  // the variant's tier. `undefined` is "as the product" and is sent as null.
+  const [ownTierCode, setOwnTierCode] = useKeyedState<string | undefined>(
+    resetKey,
+    () => variant.requiredTierCode ?? undefined
+  )
+
+  const tiers = ladder.data ?? []
+  const storedTierMissing =
+    !!variant.requiredTierCode &&
+    ladder.isSuccess &&
+    !tiers.some((t) => t.code === variant.requiredTierCode)
+  const tierChoices = variantTierChoices(productAudience, productRequiredTierCode, tiers)
+  const tierProblem = variantTierProblem(
+    productAudience,
+    productRequiredTierCode,
+    ownTierCode,
+    ladder.isSuccess ? tiers : undefined
+  )
+
   const mrpExceeded =
     mrpMinor !== null &&
     baseSellingPriceMinor !== null &&
     sellingPriceExceedsMrp(baseSellingPriceMinor, mrpMinor)
 
   function handleSave() {
+    setNotice(undefined)
     updateVariant
       .mutateAsync({
         skuCode,
@@ -115,13 +166,22 @@ function VariantFieldsForm({
         heightMm: toIntOrUndefined(heightMm),
         batchTracked,
         shelfLifeDays: batchTracked ? toIntOrUndefined(shelfLifeDays) : undefined,
+        // The contract types this field as a plain string, but null is what clears it (1.0e).
+        requiredTierCode: (ownTierCode ?? null) as string | undefined,
         version: variant.version!,
       })
       .then(() => {
         toast.success('Saved')
         onSaved?.()
       })
-      .catch((error) => toastApiError(error))
+      // A tier refusal (400 unknown code, 422 looser / customer-restricted) is a sentence worded for
+      // the operator — shown beside the Save it answers, not as a toast that disappears.
+      .catch((error) => setNotice(noticeFromError(error, 'This variant')))
+  }
+
+  function reload() {
+    setNotice(undefined)
+    void queryClient.invalidateQueries({ queryKey: productVariantsQueryKey(productId) })
   }
 
   const idPrefix = `variant-${variant.id}`
@@ -246,6 +306,61 @@ function VariantFieldsForm({
         </div>
       </div>
 
+      <div className="flex flex-col gap-1.5">
+        <Label htmlFor={`${idPrefix}-tier`}>Required tier</Label>
+        {canReadLadder ? (
+          <Select
+            value={ownTierCode ?? AS_PRODUCT}
+            onValueChange={(v) => setOwnTierCode(v === AS_PRODUCT ? undefined : v)}
+            disabled={!canWrite || ladder.isLoading || productAudience === 'CUSTOMER_RESTRICTED'}
+          >
+            <SelectTrigger
+              id={`${idPrefix}-tier`}
+              className="w-64"
+              aria-invalid={!!tierProblem || undefined}
+            >
+              <SelectValue />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value={AS_PRODUCT}>As the product</SelectItem>
+              {tierChoices.map((t) => (
+                <SelectItem key={t.code} value={t.code!}>
+                  {t.name} ({t.code})
+                </SelectItem>
+              ))}
+              {storedTierMissing && (
+                <SelectItem value={variant.requiredTierCode!}>
+                  {variant.requiredTierCode} — not in the ladder in effect
+                </SelectItem>
+              )}
+            </SelectContent>
+          </Select>
+        ) : (
+          <p className="text-sm">
+            {variant.requiredTierCode ?? 'As the product'}{' '}
+            <span className="text-xs text-muted-foreground">
+              — changing it needs the <code>membership.read</code> permission to list the tiers.
+            </span>
+          </p>
+        )}
+        {tierProblem ? (
+          <p className="text-sm text-destructive">{tierProblem}</p>
+        ) : (
+          <p className="text-xs text-muted-foreground">
+            {productAudience === 'CUSTOMER_RESTRICTED'
+              ? 'Not available — a customer-restricted product is limited by its allowlist.'
+              : `Adds to the product’s own rule${simple ? '' : ' for this variant'}: only tiers at or above the product’s requirement. A stricter choice is shown locked only when the product’s locked display is “Show, locked”; with “Hide” it is left out.`}
+          </p>
+        )}
+        {storedTierMissing && (
+          <p className="text-sm text-destructive">
+            The ladder in effect has no {variant.requiredTierCode} tier, so this{' '}
+            {simple ? 'product' : 'variant'} is hidden from everyone until a tier that exists is
+            chosen.
+          </p>
+        )}
+      </div>
+
       <div className="flex flex-wrap items-center gap-6">
         <div className="flex items-center gap-2">
           <Switch
@@ -270,6 +385,10 @@ function VariantFieldsForm({
           </div>
         )}
       </div>
+
+      {notice && (
+        <NoticeBanner notice={notice} onReload={reload} onDismiss={() => setNotice(undefined)} />
+      )}
 
       <div>
         <Button type="button" disabled={!canWrite || updateVariant.isPending} onClick={handleSave}>

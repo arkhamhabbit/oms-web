@@ -13,6 +13,7 @@ import {
   SelectValue,
 } from '@/components/ui/select'
 import { NoticeBanner, noticeFromError, type Notice } from '@/components/common/NoticeBanner'
+import { ProductVisibilityPreviewCard } from '@/components/catalog/ProductVisibilityPreviewCard'
 import { ProductAllowlistCard } from '@/components/catalog/ProductAllowlistCard'
 import { usePermissions } from '@/auth/usePermissions'
 import { useKeyedState } from '@/lib/use-keyed-state'
@@ -142,14 +143,6 @@ function ProductVisibilityTab({ product, canWrite }: ProductVisibilityTabProps) 
           </CardDescription>
         </CardHeader>
         <CardContent className="flex flex-col gap-5">
-          {notice && (
-            <NoticeBanner
-              notice={notice}
-              onReload={reload}
-              onDismiss={() => setNotice(undefined)}
-            />
-          )}
-
           <div className="flex flex-col gap-1.5">
             <Label htmlFor="visibility-audience">Audience</Label>
             <Select
@@ -264,6 +257,16 @@ function ProductVisibilityTab({ product, canWrite }: ProductVisibilityTabProps) 
             <p className="text-xs text-muted-foreground">{LOCKED_COPY[lockedDisplay]}</p>
           </div>
 
+          {/* A product edit that would leave a variant looser is refused with the variants' names
+              (D4.18) — shown right beside the save it answers. */}
+          {notice && (
+            <NoticeBanner
+              notice={notice}
+              onReload={reload}
+              onDismiss={() => setNotice(undefined)}
+            />
+          )}
+
           <div>
             <Button
               type="button"
@@ -275,6 +278,8 @@ function ProductVisibilityTab({ product, canWrite }: ProductVisibilityTabProps) 
           </div>
         </CardContent>
       </Card>
+
+      <ProductVisibilityPreviewCard productId={product.id!} />
 
       <ProductAllowlistCard
         productId={product.id!}

@@ -2235,6 +2235,11 @@ export interface paths {
          *      live</code> differ from what is stored (D2.11) — submit, approve, reject, publish and archive are
          *      each their own audited endpoint.
          *
+         *      <p><b>Also refuses</b> (422 <code>BUSINESS_RULE_VIOLATION</code>, naming the variants) a visibility
+         *      change that would leave a variant more open than its product (D4.18): a required tier raised
+         *      above a variant's own, or a move to <code>CUSTOMER_RESTRICTED</code> while a variant requires a
+         *      tier. Change those variants first.
+         *
          *      <p>Renaming the product renames its sole default variant, which is named after it. A product
          *      with several variants names them after their option combination instead, and those are
          *      untouched here.
@@ -2759,6 +2764,11 @@ export interface paths {
          *      <p>Only meaningful once the product declares an axis: a product with none has exactly one
          *      variant (D4.9), and that one was created with the product.
          *
+         *      <p><code>requiredTierCode</code> optionally makes the variant stricter than its product (D4.18): 400
+         *      <code>VALIDATION_FAILED</code> for a code the ladder in effect does not have; 422 <code>
+         *      BUSINESS_RULE_VIOLATION</code> for one below a <code>TIER_RESTRICTED</code> product's tier, or any code on
+         *      a <code>CUSTOMER_RESTRICTED</code> product.
+         *
          *     **Requires permission:** `catalog.product.write`.
          */
         post: operations["productCreateVariant"];
@@ -2790,6 +2800,12 @@ export interface paths {
          *      when the selling price is above the MRP; and when <code>shelfLifeDays</code> is set on a variant
          *      that is not <code>batchTracked</code> — a shelf life with no batches has no date to be computed
          *      against (D4.12).
+         *
+         *      <p><b><code>requiredTierCode</code></b> is the variant's own tier on top of its product's rule
+         *      (D4.18), and null means "as the product" — so send it back unchanged. Refused as on create (400
+         *      for a code not in the ladder in effect; 422 when looser than the product's, or on a <code>
+         *      CUSTOMER_RESTRICTED</code> product). A change is audited as <code>
+         *      catalog.variant.visibility_changed</code> beside <code>catalog.variant.updated</code>.
          *
          *      <p>404 when the variant exists but belongs to a different product than the one in the path.
          *
@@ -3083,6 +3099,11 @@ export interface paths {
          *      customer for the allowlist (none means anonymous). Tier is taken as given here, not resolved
          *      from the user — use <code>/visibility/users/{userId</code>} for that.
          *
+         *      <p><code>variants</code> resolves each of the product's variants for the same viewer (D4.18), under
+         *      the stricter of the product's tier and the variant's own: a variant can be <code>LOCKED</code> while
+         *      the product is <code>VISIBLE</code>, and a <code>HIDDEN</code> product hides every variant. The product's
+         *      own verdict ignores its variants — one whose every variant is locked is still <code>VISIBLE</code>.
+         *
          *      <p>404 <code>NOT_FOUND</code> for an unknown product; 400 <code>VALIDATION_FAILED</code> for a tier code
          *      the ladder in effect does not have.
          *
@@ -3106,10 +3127,10 @@ export interface paths {
         };
         /**
          * What a real customer sees for one product: their tier resolved by membership from the points
-         *      they earned in the trailing twelve months, then the same resolution.
+         *      they earned in the trailing twelve months, then the same resolution, variants included.
          * @description What a real customer sees for one product: their tier resolved by membership from the points
-         *      they earned in the trailing twelve months, then the same resolution. 404 <code>NOT_FOUND</code> for
-         *      an unknown product, or a user that does not exist or was deleted.
+         *      they earned in the trailing twelve months, then the same resolution, variants included. 404
+         *      <code>NOT_FOUND</code> for an unknown product, or a user that does not exist or was deleted.
          *
          *     **Requires permission:** `catalog.product.read`.
          */
@@ -4280,6 +4301,34 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/admin/users/{id}/addresses": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * The account's delivery addresses, default first — OMS's copy of the address book the consumer
+         *      keeps in the app (D5.14). Read-only: the consumer edits them in the app, and each change
+         *      reaches OMS through the storefront's profile intake. Deleted addresses are not listed. Empty
+         *      for an account that has none. 404 for an account that does not exist or has been deleted.
+         * @description The account's delivery addresses, default first — OMS's copy of the address book the consumer
+         *      keeps in the app (D5.14). Read-only: the consumer edits them in the app, and each change
+         *      reaches OMS through the storefront's profile intake. Deleted addresses are not listed. Empty
+         *      for an account that has none. 404 for an account that does not exist or has been deleted.
+         *
+         *     **Requires permission:** `identity.user.read`.
+         */
+        get: operations["userListAddresses"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/admin/users/{id}/grant-partner": {
         parameters: {
             query?: never;
@@ -4303,6 +4352,33 @@ export interface paths {
          *     **Concurrency** — send back the `version` you read. If the record has been changed by someone else since, this returns **409 `VERSION_CONFLICT`** with a `version` field error and writes nothing. Re-read it, show the operator what moved, and submit again with the new `version`.
          */
         post: operations["userGrantPartner"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/admin/users/{id}/profile-intake": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Every profile change the app sent for the account, newest first, with OMS's conclusion: <code>
+         *      PENDING</code>, <code>APPLIED</code>, or <code>REJECTED</code> with a <code>reason</code> such as <code>
+         *      EMAIL_IN_USE</code> — what support reads to answer "why didn't my email save?".
+         * @description Every profile change the app sent for the account, newest first, with OMS's conclusion: <code>
+         *      PENDING</code>, <code>APPLIED</code>, or <code>REJECTED</code> with a <code>reason</code> such as <code>
+         *      EMAIL_IN_USE</code> — what support reads to answer "why didn't my email save?". Read-only. 404 for an
+         *      account that does not exist or has been deleted.
+         *
+         *     **Requires permission:** `identity.user.read`.
+         */
+        get: operations["userListProfileIntake"];
+        put?: never;
+        post?: never;
         delete?: never;
         options?: never;
         head?: never;
@@ -4924,6 +5000,31 @@ export interface components {
             password: string;
             token: string;
         };
+        /**
+         * @description One of a consumer's delivery addresses, as applied from the storefront's profile intake
+         *      (D5.14). Read-only: edits stay consumer-side.
+         */
+        ConsumerAddressResponse: {
+            /** Format: date-time */
+            createdAt?: string;
+            /** @description the number the courier calls, normalised (<code>+91</code> and ten digits) */
+            deliveryMobile?: string;
+            /** @description the storefront verified the number by OTP */
+            deliveryMobileVerified?: boolean;
+            /**
+             * Format: uuid
+             * @description the storefront's own id for the address
+             */
+            id?: string;
+            /** @description the consumer's default address; at most one is */
+            isDefault?: boolean;
+            label?: string;
+            landmark?: string;
+            line1?: string;
+            pincode?: string;
+            /** Format: date-time */
+            updatedAt?: string;
+        };
         CreateAttributeGroupRequest: {
             name: string;
         };
@@ -5123,6 +5224,11 @@ export interface components {
          */
         CreateVariantRequest: {
             optionValues: components["schemas"]["OptionValuePayload"][];
+            /**
+             * @description optional — a tier this variant requires on top of its product's rule
+             *          (D4.18), as on {@link UpdateVariantRequest UpdateVariantRequest}. Absent means "as the product"
+             */
+            requiredTierCode?: string;
             skuCode: string;
         };
         /** @description A new draft version with its complete ladder. */
@@ -6015,6 +6121,35 @@ export interface components {
          *      exposes internals — <code>pageable</code>, <code>sort</code>, <code>numberOfElements</code> — that no client
          *      should be reading.
          */
+        PageResponseProfileIntakeResponse: {
+            content?: components["schemas"]["ProfileIntakeResponse"][];
+            /** Format: int32 */
+            page?: number;
+            /** Format: int32 */
+            size?: number;
+            /** Format: int64 */
+            totalElements?: number;
+            /** Format: int32 */
+            totalPages?: number;
+        };
+        /**
+         * @description The paging envelope every paginated response uses.
+         *
+         *      <p>Lives in <code>platform</code> rather than in one domain's DTO folder. It carries no domain meaning
+         *      and every module needs it, so putting it in <code>team/dto/admin</code> — where it started, when team
+         *      was the only module — would make <code>catalog</code> import <code>team</code> to return a page of brands.
+         *      Domain packages depend on <code>platform</code> and never on each other; a shared envelope has to sit
+         *      where both can reach it.
+         *
+         *      <p>It is not an exception to "never share DTOs across surfaces". That rule is about
+         *      <i>representations</i> — the fields of a brand, of a member, of an order — where a shared type
+         *      leaks an admin-only field into an app-facing response. This type has no fields of its own; the
+         *      content it wraps is a per-surface DTO and stays one.
+         *
+         *      <p>Deliberately not Spring Data's <code>Page</code>, whose JSON form is unstable across versions and
+         *      exposes internals — <code>pageable</code>, <code>sort</code>, <code>numberOfElements</code> — that no client
+         *      should be reading.
+         */
         PageResponsePurchaseOrderResponse: {
             content?: components["schemas"]["PurchaseOrderResponse"][];
             /** Format: int32 */
@@ -6548,6 +6683,64 @@ export interface components {
             updatedAt?: string;
             /** Format: int64 */
             version?: number;
+        };
+        /**
+         * @description One product resolved for one viewer on direct fetch, with each of its variants (D4.18). The
+         *      product's own fields are exactly {@link VisibilityDecisionResponse VisibilityDecisionResponse}'s.
+         */
+        ProductVisibilityPreviewResponse: {
+            discoverable?: boolean;
+            listed?: boolean;
+            /** Format: uuid */
+            membershipVersionId?: string;
+            /** Format: uuid */
+            productId?: string;
+            /** @enum {string} */
+            reason?: "NOT_LIVE" | "BRAND_NOT_LIVE" | "PUBLIC" | "TIER_MET" | "TIER_NOT_MET" | "TIER_NOT_IN_LADDER" | "ON_ALLOWLIST" | "NOT_ON_ALLOWLIST";
+            requiredTierCode?: string;
+            /**
+             * @description every variant, discontinued included, in display order — each resolved under
+             *          the stricter of the product's requirement and its own
+             */
+            variants?: components["schemas"]["VariantVisibilityResponse"][];
+            /** @enum {string} */
+            visibility?: "VISIBLE" | "LOCKED" | "HIDDEN";
+        };
+        /** @description One profile change the storefront sent, and what OMS made of it. */
+        ProfileIntakeResponse: {
+            /**
+             * Format: int32
+             * @description failed attempts so far, for a change OMS could not apply for a reason outside
+             *          it
+             */
+            attempts?: number;
+            /** Format: date-time */
+            concludedAt?: string;
+            /** Format: uuid */
+            id?: string;
+            /** @enum {string} */
+            kind?: "NAME" | "EMAIL" | "ADDRESS_UPSERT" | "ADDRESS_DELETE";
+            /**
+             * @description <code>PENDING</code> until OMS concludes it; then <code>APPLIED</code> or <code>REJECTED</code>
+             * @enum {string}
+             */
+            outcome?: "PENDING" | "APPLIED" | "REJECTED";
+            /**
+             * @description the change as sent; its shape per <code>kind</code> is published in <code>
+             *          intake.json</code>
+             */
+            payload?: {
+                [key: string]: unknown;
+            };
+            /**
+             * @description why it was rejected; null otherwise
+             * @enum {string}
+             */
+            reason?: "EMAIL_IN_USE" | "INVALID_PAYLOAD" | "INVALID_MOBILE" | "NO_SUCH_ACCOUNT" | "UNKNOWN_ADDRESS" | "ADDRESS_NOT_OWNED" | "ADDRESS_DELETED" | "PROCESSING_FAILED";
+            /** @description a human-readable account of the rejection, for support */
+            reasonMessage?: string;
+            /** Format: date-time */
+            submittedAt?: string;
         };
         /**
          * @description The caller's own account.
@@ -7673,6 +7866,14 @@ export interface components {
             /** Format: int32 */
             lengthMm?: number;
             mrp?: components["schemas"]["MoneyPayload"];
+            /**
+             * @description a tier this variant requires on top of its product's rule ("Exclusive
+             *          to Apex" on one size, D4.18) — a stable tier code in the ladder in effect, or null for "as
+             *          the product". At or above a <code>TIER_RESTRICTED</code> product's tier, any tier on a <code>
+             *          PUBLIC</code> product, refused on a <code>CUSTOMER_RESTRICTED</code> one. <b>Null clears it: send it
+             *          back unchanged on every edit</b>
+             */
+            requiredTierCode?: string;
             /** Format: int32 */
             shelfLifeDays?: number;
             skuCode: string;
@@ -7904,6 +8105,7 @@ export interface components {
             optionValues?: components["schemas"]["VariantOptionValueResponse"][];
             /** Format: uuid */
             productId?: string;
+            requiredTierCode?: string;
             /** Format: int32 */
             shelfLifeDays?: number;
             skuCode?: string;
@@ -7917,6 +8119,33 @@ export interface components {
             weightGrams?: number;
             /** Format: int32 */
             widthMm?: number;
+        };
+        /** @description One variant resolved for one viewer (D4.18). */
+        VariantVisibilityResponse: {
+            name?: string;
+            /** @description the variant's own tier; null means "as the product" */
+            ownRequiredTierCode?: string;
+            /**
+             * @description the gate that decided it
+             * @enum {string}
+             */
+            reason?: "NOT_LIVE" | "BRAND_NOT_LIVE" | "PUBLIC" | "TIER_MET" | "TIER_NOT_MET" | "TIER_NOT_IN_LADDER" | "ON_ALLOWLIST" | "NOT_ON_ALLOWLIST";
+            /**
+             * @description the effective tier — the stricter of the product's and the variant's;
+             *          what a locked chip names. Null when neither requires one
+             */
+            requiredTierCode?: string;
+            skuCode?: string;
+            /** Format: uuid */
+            variantId?: string;
+            /** @enum {string} */
+            variantStatus?: "ACTIVE" | "DISCONTINUED";
+            /**
+             * @description <code>VISIBLE</code>; <code>LOCKED</code> (shown with its tier chip, not purchasable);
+             *          or <code>HIDDEN</code> (left out of the selector). Never more open than the product's
+             * @enum {string}
+             */
+            visibility?: "VISIBLE" | "LOCKED" | "HIDDEN";
         };
         /** @description A version with its ladder. */
         VersionResponse: {
@@ -9671,7 +9900,7 @@ export interface operations {
     auditList: {
         parameters: {
             query: {
-                action?: "catalog.attribute.created" | "catalog.attribute.deactivated" | "catalog.attribute.reactivated" | "catalog.attribute.reordered" | "catalog.attribute.updated" | "catalog.attribute_group.created" | "catalog.attribute_group.deactivated" | "catalog.attribute_group.reactivated" | "catalog.attribute_group.reordered" | "catalog.attribute_group.updated" | "catalog.attribute_value.created" | "catalog.attribute_value.deactivated" | "catalog.attribute_value.reactivated" | "catalog.attribute_value.reordered" | "catalog.attribute_value.updated" | "catalog.brand.activated" | "catalog.brand.archived" | "catalog.brand.created" | "catalog.brand.published" | "catalog.brand.reordered" | "catalog.brand.unpublished" | "catalog.brand.updated" | "catalog.category.activated" | "catalog.category.archived" | "catalog.category.created" | "catalog.category.moved" | "catalog.category.published" | "catalog.category.reordered" | "catalog.category.unpublished" | "catalog.category.updated" | "catalog.product.approved" | "catalog.product.archived" | "catalog.product.categories_changed" | "catalog.product.created" | "catalog.product.customer_allowed" | "catalog.product.customer_disallowed" | "catalog.product.image_added" | "catalog.product.image_removed" | "catalog.product.image_updated" | "catalog.product.images_reordered" | "catalog.product.option_added" | "catalog.product.option_removed" | "catalog.product.options_reordered" | "catalog.product.published" | "catalog.product.rejected" | "catalog.product.spec_cleared" | "catalog.product.spec_set" | "catalog.product.submitted" | "catalog.product.unpublished" | "catalog.product.updated" | "catalog.product.visibility_changed" | "catalog.variant.created" | "catalog.variant.default_changed" | "catalog.variant.discontinued" | "catalog.variant.image_added" | "catalog.variant.image_removed" | "catalog.variant.image_updated" | "catalog.variant.images_reordered" | "catalog.variant.reinstated" | "catalog.variant.reordered" | "catalog.variant.spec_cleared" | "catalog.variant.spec_set" | "catalog.variant.updated" | "identity.user.claimed" | "identity.user.created" | "identity.user.reinstated" | "identity.user.role_granted" | "identity.user.role_revoked" | "identity.user.suspended" | "identity.user.updated" | "inventory.availability.reconciled" | "inventory.batch.created" | "inventory.movement.recorded" | "inventory.projection.rebuilt" | "inventory.stock.transferred" | "inventory.warehouse.created" | "inventory.warehouse.deactivated" | "inventory.warehouse.reactivated" | "inventory.warehouse.updated" | "invite.claim.processed" | "invite.claim.rejected" | "invite.intake.processed" | "invite.intake.rejected" | "invite.invite.added" | "invite.invite.expired" | "invite.invite.invalidated" | "invite.invite.issued" | "invite.invite.visited" | "invite.referral.attributed" | "invite.referral.blocked" | "membership.cycle_run.completed" | "membership.version.created" | "membership.version.published" | "membership.version.updated" | "membership.version.withdrawn" | "pricing.bits_option.cleared" | "pricing.bits_option.set" | "pricing.price.cleared" | "pricing.price.set" | "pricing.version.created" | "pricing.version.published" | "pricing.version.updated" | "pricing.version.withdrawn" | "procurement.goods_receipt.posted" | "procurement.purchase_order.approved" | "procurement.purchase_order.cancelled" | "procurement.purchase_order.created" | "procurement.purchase_order.updated" | "procurement.supplier.created" | "procurement.supplier.deactivated" | "procurement.supplier.reactivated" | "procurement.supplier.updated" | "team.member.created" | "team.member.forced_logout" | "team.member.invite.accepted" | "team.member.invite.resent" | "team.member.password.changed" | "team.member.password_reset.completed" | "team.member.password_reset.requested" | "team.member.password_reset.triggered" | "team.member.profile.updated" | "team.member.roles.assigned" | "team.member.status.changed" | "team.member.updated" | "team.role.created" | "team.role.deleted" | "team.role.updated";
+                action?: "catalog.attribute.created" | "catalog.attribute.deactivated" | "catalog.attribute.reactivated" | "catalog.attribute.reordered" | "catalog.attribute.updated" | "catalog.attribute_group.created" | "catalog.attribute_group.deactivated" | "catalog.attribute_group.reactivated" | "catalog.attribute_group.reordered" | "catalog.attribute_group.updated" | "catalog.attribute_value.created" | "catalog.attribute_value.deactivated" | "catalog.attribute_value.reactivated" | "catalog.attribute_value.reordered" | "catalog.attribute_value.updated" | "catalog.brand.activated" | "catalog.brand.archived" | "catalog.brand.created" | "catalog.brand.published" | "catalog.brand.reordered" | "catalog.brand.unpublished" | "catalog.brand.updated" | "catalog.category.activated" | "catalog.category.archived" | "catalog.category.created" | "catalog.category.moved" | "catalog.category.published" | "catalog.category.reordered" | "catalog.category.unpublished" | "catalog.category.updated" | "catalog.product.approved" | "catalog.product.archived" | "catalog.product.categories_changed" | "catalog.product.created" | "catalog.product.customer_allowed" | "catalog.product.customer_disallowed" | "catalog.product.image_added" | "catalog.product.image_removed" | "catalog.product.image_updated" | "catalog.product.images_reordered" | "catalog.product.option_added" | "catalog.product.option_removed" | "catalog.product.options_reordered" | "catalog.product.published" | "catalog.product.rejected" | "catalog.product.spec_cleared" | "catalog.product.spec_set" | "catalog.product.submitted" | "catalog.product.unpublished" | "catalog.product.updated" | "catalog.product.visibility_changed" | "catalog.variant.created" | "catalog.variant.default_changed" | "catalog.variant.discontinued" | "catalog.variant.image_added" | "catalog.variant.image_removed" | "catalog.variant.image_updated" | "catalog.variant.images_reordered" | "catalog.variant.reinstated" | "catalog.variant.reordered" | "catalog.variant.spec_cleared" | "catalog.variant.spec_set" | "catalog.variant.updated" | "catalog.variant.visibility_changed" | "identity.user.claimed" | "identity.user.created" | "identity.user.profile_applied" | "identity.user.reinstated" | "identity.user.role_granted" | "identity.user.role_revoked" | "identity.user.suspended" | "identity.user.updated" | "inventory.availability.reconciled" | "inventory.batch.created" | "inventory.movement.recorded" | "inventory.projection.rebuilt" | "inventory.stock.transferred" | "inventory.warehouse.created" | "inventory.warehouse.deactivated" | "inventory.warehouse.reactivated" | "inventory.warehouse.updated" | "invite.claim.processed" | "invite.claim.rejected" | "invite.intake.processed" | "invite.intake.rejected" | "invite.invite.added" | "invite.invite.expired" | "invite.invite.invalidated" | "invite.invite.issued" | "invite.invite.visited" | "invite.referral.attributed" | "invite.referral.blocked" | "membership.cycle_run.completed" | "membership.version.created" | "membership.version.published" | "membership.version.updated" | "membership.version.withdrawn" | "pricing.bits_option.cleared" | "pricing.bits_option.set" | "pricing.price.cleared" | "pricing.price.set" | "pricing.version.created" | "pricing.version.published" | "pricing.version.updated" | "pricing.version.withdrawn" | "procurement.goods_receipt.posted" | "procurement.purchase_order.approved" | "procurement.purchase_order.cancelled" | "procurement.purchase_order.created" | "procurement.purchase_order.updated" | "procurement.supplier.created" | "procurement.supplier.deactivated" | "procurement.supplier.reactivated" | "procurement.supplier.updated" | "team.member.created" | "team.member.forced_logout" | "team.member.invite.accepted" | "team.member.invite.resent" | "team.member.password.changed" | "team.member.password_reset.completed" | "team.member.password_reset.requested" | "team.member.password_reset.triggered" | "team.member.profile.updated" | "team.member.roles.assigned" | "team.member.status.changed" | "team.member.updated" | "team.role.created" | "team.role.deleted" | "team.role.updated";
                 actorId?: string;
                 entityId?: string;
                 entityType?: "attribute" | "attribute_group" | "attribute_value" | "batch" | "brand" | "category" | "claim_intake" | "goods_receipt" | "invite" | "invite_intake" | "membership_cycle_run" | "membership_version" | "pricing_version" | "product" | "purchase_order" | "referral" | "role" | "stock_availability" | "stock_level" | "stock_movement" | "stock_transfer" | "supplier" | "team_member" | "user" | "variant" | "warehouse";
@@ -18733,7 +18962,7 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "*/*": components["schemas"]["VisibilityDecisionResponse"];
+                    "*/*": components["schemas"]["ProductVisibilityPreviewResponse"];
                 };
             };
             /** @description `VALIDATION_FAILED` — The request body could not be read, a field failed validation, a required header was absent, or a domain validation rule rejected an input the caller can correct. */
@@ -18801,7 +19030,7 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "*/*": components["schemas"]["VisibilityDecisionResponse"];
+                    "*/*": components["schemas"]["ProductVisibilityPreviewResponse"];
                 };
             };
             /** @description `VALIDATION_FAILED` — The request body could not be read, a field failed validation, a required header was absent, or a domain validation rule rejected an input the caller can correct. */
@@ -22697,6 +22926,73 @@ export interface operations {
             };
         };
     };
+    userListAddresses: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "*/*": components["schemas"]["ConsumerAddressResponse"][];
+                };
+            };
+            /** @description `VALIDATION_FAILED` — The request body could not be read, a field failed validation, a required header was absent, or a domain validation rule rejected an input the caller can correct. */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description `AUTHENTICATION_FAILED` — No valid credential. Either none was presented, or the session behind it is expired, revoked, or belongs to a member who can no longer sign in. This status means the session is dead and nothing else does (D2.23) — a wrong *current* password on change-password is a 400 with a `currentPassword` field error, not this. */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description `ACCESS_DENIED` — Authenticated, but lacking the permission the endpoint declares. The session is valid; do not sign the operator out. */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description `NOT_FOUND` — A referenced entity does not exist, or the URL matches no endpoint. Also returned for a known path called with an unsupported method, as 405. */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description `INTERNAL_ERROR` — An unhandled failure. The message is deliberately generic; `traceId` identifies the server log line that explains it. */
+            500: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+        };
+    };
     userGrantPartner: {
         parameters: {
             query?: never;
@@ -22777,6 +23073,75 @@ export interface operations {
             };
             /** @description `BUSINESS_RULE_VIOLATION` — The request was well-formed and the entities exist, but a domain rule forbids it — publishing a product with no price, archiving a brand products still reference, issuing more stock than a location holds. Distinct from 400: nothing about the request is malformed. */
             422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description `INTERNAL_ERROR` — An unhandled failure. The message is deliberately generic; `traceId` identifies the server log line that explains it. */
+            500: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+        };
+    };
+    userListProfileIntake: {
+        parameters: {
+            query: {
+                pageable: components["schemas"]["Pageable"];
+            };
+            header?: never;
+            path: {
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "*/*": components["schemas"]["PageResponseProfileIntakeResponse"];
+                };
+            };
+            /** @description `VALIDATION_FAILED` — The request body could not be read, a field failed validation, a required header was absent, or a domain validation rule rejected an input the caller can correct. */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description `AUTHENTICATION_FAILED` — No valid credential. Either none was presented, or the session behind it is expired, revoked, or belongs to a member who can no longer sign in. This status means the session is dead and nothing else does (D2.23) — a wrong *current* password on change-password is a 400 with a `currentPassword` field error, not this. */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description `ACCESS_DENIED` — Authenticated, but lacking the permission the endpoint declares. The session is valid; do not sign the operator out. */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description `NOT_FOUND` — A referenced entity does not exist, or the URL matches no endpoint. Also returned for a known path called with an unsupported method, as 405. */
+            404: {
                 headers: {
                     [name: string]: unknown;
                 };
