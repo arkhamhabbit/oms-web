@@ -10,6 +10,8 @@ import DashboardPage from '@/pages/DashboardPage'
 import BrandsPage from '@/pages/BrandsPage'
 import CategoriesPage from '@/pages/CategoriesPage'
 import AttributesPage from '@/pages/AttributesPage'
+import MediaLibraryPage from '@/pages/MediaLibraryPage'
+import TagsPage from '@/pages/TagsPage'
 import ProductsPage from '@/pages/ProductsPage'
 import ProductDetailPage from '@/pages/ProductDetailPage'
 import TeamPage from '@/pages/TeamPage'
@@ -71,6 +73,22 @@ export const router = createBrowserRouter([
             element: (
               <RequirePermission permission="catalog.attribute.read">
                 <AttributesPage />
+              </RequirePermission>
+            ),
+          },
+          {
+            path: '/media',
+            element: (
+              <RequirePermission permission="catalog.media.read">
+                <MediaLibraryPage />
+              </RequirePermission>
+            ),
+          },
+          {
+            path: '/tags',
+            element: (
+              <RequirePermission permission="catalog.attribute.read">
+                <TagsPage />
               </RequirePermission>
             ),
           },
