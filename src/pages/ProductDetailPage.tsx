@@ -9,6 +9,8 @@ import { PricingCodesSection } from '@/components/catalog/PricingCodesSection'
 import { VariantsTab } from '@/components/catalog/VariantsTab'
 import { ProductSpecsTab } from '@/components/catalog/ProductSpecsTab'
 import { ProductImagesTab } from '@/components/catalog/ProductImagesTab'
+import { ProductContentTab } from '@/components/content/ProductContentTab'
+import { ProductMerchandisingTab } from '@/components/catalog/ProductMerchandisingTab'
 import { ProductVisibilityTab } from '@/components/catalog/ProductVisibilityTab'
 import { ProductTransitionMenu } from '@/components/catalog/ProductTransitionMenu'
 import { useBreadcrumb } from '@/layouts/breadcrumb-context'
@@ -16,7 +18,15 @@ import { usePermissions } from '@/auth/usePermissions'
 import type { CatalogStatus } from '@/lib/catalog-transitions'
 import { useProductQuery } from '@/api/products'
 
-type Tab = 'details' | 'options' | 'variants' | 'specs' | 'images' | 'visibility'
+type Tab =
+  | 'details'
+  | 'options'
+  | 'variants'
+  | 'specs'
+  | 'images'
+  | 'content'
+  | 'merchandising'
+  | 'visibility'
 
 function ProductDetailPage() {
   const { id } = useParams<{ id: string }>()
@@ -29,10 +39,7 @@ function ProductDetailPage() {
   const detail = productQuery.data
   const product = detail?.product
 
-  useBreadcrumb([
-    { label: 'Products', to: '/products' },
-    { label: product?.name ?? 'Product' },
-  ])
+  useBreadcrumb([{ label: 'Products', to: '/products' }, { label: product?.name ?? 'Product' }])
 
   const [tab, setTab] = React.useState<Tab>('details')
 
@@ -58,6 +65,8 @@ function ProductDetailPage() {
     { key: 'variants', label: isSimple ? 'Pricing & codes' : 'Variants' },
     { key: 'specs', label: 'Specs' },
     { key: 'images', label: 'Images' },
+    { key: 'content', label: 'Content' },
+    { key: 'merchandising', label: 'Merchandising' },
     { key: 'visibility', label: 'Visibility' },
   ]
 
@@ -132,9 +141,23 @@ function ProductDetailPage() {
       {tab === 'images' && (
         <ProductImagesTab productId={product.id!} variants={variants} isSimple={isSimple} />
       )}
-      {tab === 'visibility' && (
-        <ProductVisibilityTab product={product} canWrite={canWrite} />
+      {tab === 'content' && (
+        <ProductContentTab
+          productId={product.id!}
+          variants={variants}
+          isSimple={isSimple}
+          canWrite={canWrite}
+        />
       )}
+      {tab === 'merchandising' && (
+        <ProductMerchandisingTab
+          productId={product.id!}
+          variants={variants}
+          isSimple={isSimple}
+          canWrite={canWrite}
+        />
+      )}
+      {tab === 'visibility' && <ProductVisibilityTab product={product} canWrite={canWrite} />}
     </div>
   )
 }

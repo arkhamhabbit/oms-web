@@ -5,7 +5,8 @@ import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card'
 import { Input } from '@/components/ui/input'
-import { ImageUrlField } from '@/components/form/ImageUrlField'
+import { MediaPicker, type PickedMedia } from '@/components/media/MediaPicker'
+import { MediaThumb } from '@/components/media/MediaThumb'
 import { toastApiError } from '@/lib/api-error'
 import { moveItem } from '@/lib/reorder'
 import {
@@ -26,7 +27,7 @@ function ProductLevelImages({ productId }: { productId: string }) {
   const removeImage = useRemoveProductImageMutation(productId)
   const reorder = useReorderProductImagesMutation(productId)
 
-  const [url, setUrl] = React.useState('')
+  const [picked, setPicked] = React.useState<PickedMedia | null>(null)
   const [altText, setAltText] = React.useState('')
 
   const images = imagesQuery.data ?? []
@@ -49,12 +50,15 @@ function ProductLevelImages({ productId }: { productId: string }) {
         <div className="flex flex-col divide-y rounded-md border bg-background">
           {images.map((image, index) => (
             <div key={image.id} className="flex items-center gap-3 px-3 py-2">
-              <img
-                src={image.url}
-                alt={image.altText ?? ''}
-                className="size-12 rounded object-cover"
-              />
-              <span className="flex-1 truncate text-sm">{image.url}</span>
+              <MediaThumb media={image.media} fallbackUrl={image.url} alt={image.altText ?? ''} />
+              <span className="flex-1 truncate text-sm">
+                {image.altText || (image.legacyUrl ? image.legacyUrl : 'Library image')}
+              </span>
+              {image.legacyUrl && !image.mediaId && (
+                <Badge variant="outline" title={image.legacyUrl}>
+                  Old URL
+                </Badge>
+              )}
               {index === 0 && <Badge variant="secondary">Primary</Badge>}
               <Button
                 variant="ghost"
@@ -91,7 +95,7 @@ function ProductLevelImages({ productId }: { productId: string }) {
 
       <div className="flex items-end gap-2">
         <div className="flex-1">
-          <ImageUrlField value={url} onChange={(e) => setUrl(e.target.value)} />
+          <MediaPicker label="image" value={picked} onChange={setPicked} />
         </div>
         <Input
           placeholder="Alt text (optional)"
@@ -101,12 +105,12 @@ function ProductLevelImages({ productId }: { productId: string }) {
         />
         <Button
           type="button"
-          disabled={!url || addImage.isPending}
+          disabled={!picked || addImage.isPending}
           onClick={() =>
             addImage
-              .mutateAsync({ url, altText: altText || undefined })
+              .mutateAsync({ mediaId: picked!.id, altText: altText || undefined })
               .then(() => {
-                setUrl('')
+                setPicked(null)
                 setAltText('')
               })
               .catch((error) => toastApiError(error))
@@ -125,7 +129,7 @@ function VariantLevelImages({ productId, variant }: { productId: string; variant
   const removeImage = useRemoveVariantImageMutation(productId, variant.id!)
   const reorder = useReorderVariantImagesMutation(productId, variant.id!)
 
-  const [url, setUrl] = React.useState('')
+  const [picked, setPicked] = React.useState<PickedMedia | null>(null)
   const [altText, setAltText] = React.useState('')
 
   const images = imagesQuery.data ?? []
@@ -155,12 +159,15 @@ function VariantLevelImages({ productId, variant }: { productId: string; variant
         <div className="flex flex-col divide-y rounded-md border bg-background">
           {images.map((image, index) => (
             <div key={image.id} className="flex items-center gap-3 px-3 py-2">
-              <img
-                src={image.url}
-                alt={image.altText ?? ''}
-                className="size-12 rounded object-cover"
-              />
-              <span className="flex-1 truncate text-sm">{image.url}</span>
+              <MediaThumb media={image.media} fallbackUrl={image.url} alt={image.altText ?? ''} />
+              <span className="flex-1 truncate text-sm">
+                {image.altText || (image.legacyUrl ? image.legacyUrl : 'Library image')}
+              </span>
+              {image.legacyUrl && !image.mediaId && (
+                <Badge variant="outline" title={image.legacyUrl}>
+                  Old URL
+                </Badge>
+              )}
               {image.inherited ? (
                 <Badge variant="outline">Inherited from product</Badge>
               ) : (
@@ -202,7 +209,7 @@ function VariantLevelImages({ productId, variant }: { productId: string; variant
       )}
       <div className="flex items-end gap-2">
         <div className="flex-1">
-          <ImageUrlField value={url} onChange={(e) => setUrl(e.target.value)} />
+          <MediaPicker label="image" value={picked} onChange={setPicked} />
         </div>
         <Input
           placeholder="Alt text (optional)"
@@ -212,12 +219,12 @@ function VariantLevelImages({ productId, variant }: { productId: string; variant
         />
         <Button
           type="button"
-          disabled={!url || addImage.isPending}
+          disabled={!picked || addImage.isPending}
           onClick={() =>
             addImage
-              .mutateAsync({ url, altText: altText || undefined })
+              .mutateAsync({ mediaId: picked!.id, altText: altText || undefined })
               .then(() => {
-                setUrl('')
+                setPicked(null)
                 setAltText('')
               })
               .catch((error) => toastApiError(error))

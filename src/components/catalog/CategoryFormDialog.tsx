@@ -28,7 +28,7 @@ import {
   FormLabel,
   FormMessage,
 } from '@/components/ui/form'
-import { ImageUrlField } from '@/components/form/ImageUrlField'
+import { MediaPicker, pickedFromRef, type PickedMedia } from '@/components/media/MediaPicker'
 import { ApiClientError, applyApiErrorToForm } from '@/lib/api-error'
 import { slugify } from '@/lib/slug'
 import { flattenCategoryTree } from '@/lib/category-tree-adapter'
@@ -45,8 +45,8 @@ const categoryFormSchema = z.object({
   name: z.string().trim().min(1, 'Name is required').max(200),
   slug: z.string().trim().max(160).optional(),
   description: z.string().optional(),
-  imageUrl: z.string().optional(),
-  bannerUrl: z.string().optional(),
+  image: z.custom<PickedMedia | null>().nullable(),
+  banner: z.custom<PickedMedia | null>().nullable(),
   parentId: z.string().optional(),
 })
 type CategoryFormValues = z.infer<typeof categoryFormSchema>
@@ -55,8 +55,8 @@ const emptyValues: CategoryFormValues = {
   name: '',
   slug: '',
   description: '',
-  imageUrl: '',
-  bannerUrl: '',
+  image: null,
+  banner: null,
   parentId: NONE,
 }
 
@@ -99,8 +99,8 @@ function CategoryFormDialog({
             name: category.name ?? '',
             slug: category.slug ?? '',
             description: category.description ?? '',
-            imageUrl: category.imageUrl ?? '',
-            bannerUrl: category.bannerUrl ?? '',
+            image: pickedFromRef(category.image, category.imageMediaId),
+            banner: pickedFromRef(category.banner, category.bannerMediaId),
             parentId: category.parentId ?? NONE,
           }
         : { ...emptyValues, parentId: defaultParentId ?? NONE }
@@ -116,13 +116,15 @@ function CategoryFormDialog({
       name: values.name,
       slug: values.slug || undefined,
       description: values.description || undefined,
-      imageUrl: values.imageUrl || undefined,
-      bannerUrl: values.bannerUrl || undefined,
     }
 
     const mutation = isEdit
       ? updateCategory.mutateAsync({
           ...payload,
+          // D4.21 — the media ids are echoed on every edit; null clears. A category still on a
+          // legacy URL has no id to echo, so it sends null and the legacy URL stays as it was.
+          imageMediaId: values.image?.id ?? null,
+          bannerMediaId: values.banner?.id ?? null,
           // D2.11 — status/live are immutable through this endpoint but required in the
           // payload; sent back unchanged from what was loaded, never defaulted. Parent is
           // reparented through /move, not this form, so it isn't part of the edit payload.
@@ -131,7 +133,12 @@ function CategoryFormDialog({
           // D2.24 — version is required and compared before any field is applied.
           version: category!.version!,
         })
-      : createCategory.mutateAsync({ ...payload, parentId })
+      : createCategory.mutateAsync({
+          ...payload,
+          parentId,
+          imageMediaId: values.image?.id,
+          bannerMediaId: values.banner?.id,
+        })
 
     mutation
       .then(() => {
@@ -237,12 +244,17 @@ function CategoryFormDialog({
             />
             <FormField
               control={form.control}
-              name="imageUrl"
+              name="image"
               render={({ field }) => (
                 <FormItem>
-                  <FormLabel>Image URL</FormLabel>
+                  <FormLabel>Image</FormLabel>
                   <FormControl>
-                    <ImageUrlField {...field} />
+                    <MediaPicker
+                      label="image"
+                      value={field.value ?? null}
+                      onChange={field.onChange}
+                      legacyUrl={category?.legacyImageUrl}
+                    />
                   </FormControl>
                   <FormMessage />
                 </FormItem>
@@ -250,12 +262,17 @@ function CategoryFormDialog({
             />
             <FormField
               control={form.control}
-              name="bannerUrl"
+              name="banner"
               render={({ field }) => (
                 <FormItem>
-                  <FormLabel>Banner URL</FormLabel>
+                  <FormLabel>Banner</FormLabel>
                   <FormControl>
-                    <ImageUrlField {...field} />
+                    <MediaPicker
+                      label="banner"
+                      value={field.value ?? null}
+                      onChange={field.onChange}
+                      legacyUrl={category?.legacyBannerUrl}
+                    />
                   </FormControl>
                   <FormMessage />
                 </FormItem>

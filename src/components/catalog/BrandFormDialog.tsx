@@ -21,7 +21,7 @@ import {
   FormLabel,
   FormMessage,
 } from '@/components/ui/form'
-import { ImageUrlField } from '@/components/form/ImageUrlField'
+import { MediaPicker, pickedFromRef, type PickedMedia } from '@/components/media/MediaPicker'
 import { ApiClientError, applyApiErrorToForm } from '@/lib/api-error'
 import { slugify } from '@/lib/slug'
 import { useCreateBrandMutation, useUpdateBrandMutation, type Brand } from '@/api/brands'
@@ -30,8 +30,8 @@ const brandFormSchema = z.object({
   name: z.string().trim().min(1, 'Name is required').max(200),
   slug: z.string().trim().max(160).optional(),
   description: z.string().optional(),
-  logoUrl: z.string().optional(),
-  bannerUrl: z.string().optional(),
+  logo: z.custom<PickedMedia | null>().nullable(),
+  banner: z.custom<PickedMedia | null>().nullable(),
 })
 type BrandFormValues = z.infer<typeof brandFormSchema>
 
@@ -39,8 +39,8 @@ const emptyValues: BrandFormValues = {
   name: '',
   slug: '',
   description: '',
-  logoUrl: '',
-  bannerUrl: '',
+  logo: null,
+  banner: null,
 }
 
 export interface BrandFormDialogProps {
@@ -77,8 +77,8 @@ function BrandFormDialog({ open, onOpenChange, brand }: BrandFormDialogProps) {
             name: brand.name ?? '',
             slug: brand.slug ?? '',
             description: brand.description ?? '',
-            logoUrl: brand.logoUrl ?? '',
-            bannerUrl: brand.bannerUrl ?? '',
+            logo: pickedFromRef(brand.logo, brand.logoMediaId),
+            banner: pickedFromRef(brand.banner, brand.bannerMediaId),
           }
         : emptyValues
     )
@@ -90,13 +90,15 @@ function BrandFormDialog({ open, onOpenChange, brand }: BrandFormDialogProps) {
       name: values.name,
       slug: values.slug || undefined,
       description: values.description || undefined,
-      logoUrl: values.logoUrl || undefined,
-      bannerUrl: values.bannerUrl || undefined,
     }
 
     const mutation = isEdit
       ? updateBrand.mutateAsync({
           ...payload,
+          // D4.19 — the media ids are echoed on every edit; null clears. A brand still on a
+          // legacy URL has no id to echo, so it sends null and the legacy URL stays as it was.
+          logoMediaId: values.logo?.id ?? null,
+          bannerMediaId: values.banner?.id ?? null,
           // D2.11 — status/live are immutable through this endpoint but required in the
           // payload; sent back unchanged from what was loaded, never defaulted.
           status: brand!.status!,
@@ -104,7 +106,11 @@ function BrandFormDialog({ open, onOpenChange, brand }: BrandFormDialogProps) {
           // D2.24 — version is required and compared before any field is applied.
           version: brand!.version!,
         })
-      : createBrand.mutateAsync(payload)
+      : createBrand.mutateAsync({
+          ...payload,
+          logoMediaId: values.logo?.id,
+          bannerMediaId: values.banner?.id,
+        })
 
     mutation
       .then(() => {
@@ -183,12 +189,18 @@ function BrandFormDialog({ open, onOpenChange, brand }: BrandFormDialogProps) {
             />
             <FormField
               control={form.control}
-              name="logoUrl"
+              name="logo"
               render={({ field }) => (
                 <FormItem>
-                  <FormLabel>Logo URL</FormLabel>
+                  <FormLabel>Logo</FormLabel>
                   <FormControl>
-                    <ImageUrlField {...field} />
+                    <MediaPicker
+                      label="logo"
+                      value={field.value ?? null}
+                      onChange={field.onChange}
+                      legacyUrl={brand?.legacyLogoUrl}
+                      round
+                    />
                   </FormControl>
                   <FormMessage />
                 </FormItem>
@@ -196,12 +208,17 @@ function BrandFormDialog({ open, onOpenChange, brand }: BrandFormDialogProps) {
             />
             <FormField
               control={form.control}
-              name="bannerUrl"
+              name="banner"
               render={({ field }) => (
                 <FormItem>
-                  <FormLabel>Banner URL</FormLabel>
+                  <FormLabel>Banner</FormLabel>
                   <FormControl>
-                    <ImageUrlField {...field} />
+                    <MediaPicker
+                      label="banner"
+                      value={field.value ?? null}
+                      onChange={field.onChange}
+                      legacyUrl={brand?.legacyBannerUrl}
+                    />
                   </FormControl>
                   <FormMessage />
                 </FormItem>

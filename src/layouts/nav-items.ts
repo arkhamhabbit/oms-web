@@ -13,6 +13,8 @@ import {
   Send,
   Medal,
   Gift,
+  Images,
+  Tag,
 } from 'lucide-react'
 
 export interface NavItem {
@@ -28,6 +30,8 @@ export const navItems: NavItem[] = [
   { label: 'Brands', to: '/brands', icon: Tags, permission: 'catalog.brand.read' },
   { label: 'Categories', to: '/categories', icon: FolderTree, permission: 'catalog.category.read' },
   { label: 'Attributes', to: '/attributes', icon: ListTree, permission: 'catalog.attribute.read' },
+  { label: 'Tags', to: '/tags', icon: Tag, permission: 'catalog.attribute.read' },
+  { label: 'Media', to: '/media', icon: Images, permission: 'catalog.media.read' },
   { label: 'Products', to: '/products', icon: Package, permission: 'catalog.product.read' },
   { label: 'Pricing', to: '/pricing', icon: IndianRupee, permission: 'pricing.read' },
   { label: 'Membership', to: '/membership', icon: Medal, permission: 'membership.read' },
