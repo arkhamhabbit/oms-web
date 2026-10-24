@@ -240,7 +240,7 @@ function ProductMerchandisingTab({
         <CardHeader>
           <CardTitle>{isSimple ? 'Item' : 'Variants'}</CardTitle>
           <CardDescription>
-            A {isSimple ? 'item' : 'variant'} can carry its own tags, and a spec line that replaces
+            {isSimple ? 'An item' : 'A variant'} can carry its own tags, and a spec line that replaces
             the product's.
           </CardDescription>
         </CardHeader>
