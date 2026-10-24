@@ -18,6 +18,8 @@ export interface EarnDraft {
   profileCompletePoints: number | null
   deviceConnectedPoints: number | null
   firstOrderPoints: number | null
+  orderPointsPer100Rupees: number | null
+  orderCarrotsPer100RupeesMinor: number | null
   welcomeForLegacy: boolean
 }
 
@@ -30,6 +32,8 @@ export function rulesToDraft(rules: EarnRules): EarnDraft {
     profileCompletePoints: rules.profileCompletePoints ?? 0,
     deviceConnectedPoints: rules.deviceConnectedPoints ?? 0,
     firstOrderPoints: rules.firstOrderPoints ?? 0,
+    orderPointsPer100Rupees: rules.orderPointsPer100Rupees ?? 0,
+    orderCarrotsPer100RupeesMinor: rules.orderCarrotsPer100RupeesMinor ?? 0,
     welcomeForLegacy: rules.welcomeForLegacy ?? false,
   }
 }
@@ -57,6 +61,8 @@ export function draftToRequest(draft: EarnDraft) {
     profileCompletePoints,
     deviceConnectedPoints,
     firstOrderPoints,
+    orderPointsPer100Rupees,
+    orderCarrotsPer100RupeesMinor,
     welcomeForLegacy,
   } = draft
   if (
@@ -66,7 +72,9 @@ export function draftToRequest(draft: EarnDraft) {
     referralFirstOrderCarrotsMinor === null ||
     profileCompletePoints === null ||
     deviceConnectedPoints === null ||
-    firstOrderPoints === null
+    firstOrderPoints === null ||
+    orderPointsPer100Rupees === null ||
+    orderCarrotsPer100RupeesMinor === null
   ) {
     return null
   }
@@ -78,6 +86,8 @@ export function draftToRequest(draft: EarnDraft) {
     profileCompletePoints,
     deviceConnectedPoints,
     firstOrderPoints,
+    orderPointsPer100Rupees,
+    orderCarrotsPer100RupeesMinor,
     welcomeForLegacy,
   }
 }

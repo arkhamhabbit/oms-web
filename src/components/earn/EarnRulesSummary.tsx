@@ -4,7 +4,7 @@ import { minorToMajorString } from '@/lib/money'
 const bits = (value: number | undefined) => `${(value ?? 0).toLocaleString('en-IN')} Bits`
 const carrots = (value: number | undefined) => `₹${minorToMajorString(value ?? 0)}`
 
-/** The eight parameters of a version, read-only. */
+/** The ten parameters of a version, read-only. */
 function EarnRulesSummary({ rules }: { rules: EarnRules }) {
   const rows: [string, string][] = [
     ['Welcome Bits', bits(rules.welcomePoints)],
@@ -14,6 +14,8 @@ function EarnRulesSummary({ rules }: { rules: EarnRules }) {
     ['Profile complete Bits', bits(rules.profileCompletePoints)],
     ['Device connected Bits', bits(rules.deviceConnectedPoints)],
     ['First order Bits', bits(rules.firstOrderPoints)],
+    ['Own-order Bits per ₹100', bits(rules.orderPointsPer100Rupees)],
+    ['Own-order Carrots per ₹100', carrots(rules.orderCarrotsPer100RupeesMinor)],
     ['Welcome bonus for legacy members', rules.welcomeForLegacy ? 'Yes' : 'No'],
   ]
   return (
