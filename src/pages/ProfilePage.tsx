@@ -181,7 +181,7 @@ function ChangePasswordCard() {
                   <FormControl>
                     <Input type="password" autoComplete="new-password" {...field} />
                   </FormControl>
-                  <FormDescription>The other things they told you not to reuse.</FormDescription>
+                  <FormDescription>At least 12 characters.</FormDescription>
                   <FormMessage />
                 </FormItem>
               )}
