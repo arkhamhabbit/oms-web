@@ -1998,6 +1998,290 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/admin/orders": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Lists orders, newest placement first.
+         * @description Lists orders, newest placement first. Every filter is optional: <code>status</code>, <code>
+         *      consumerId</code>, <code>number</code> (exact, e.g. <code>HBT_10000001</code>), and a placement window <code>
+         *      from</code> (inclusive) / <code>to</code> (exclusive).
+         *
+         *     **Requires permission:** `orders.read`.
+         */
+        get: operations["orderListOrders"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/admin/orders/{id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * One order: delivery address as placed, totals with the GST breakdown, the rule versions it was
+         *      produced under, lines, payment, the full status history and — once confirmed — the invoice.
+         * @description One order: delivery address as placed, totals with the GST breakdown, the rule versions it was
+         *      produced under, lines, payment, the full status history and — once confirmed — the invoice. 404
+         *      <code>NOT_FOUND</code> for an unknown id.
+         *
+         *     **Requires permission:** `orders.read`.
+         */
+        get: operations["orderGetOrder"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/admin/orders/{id}/cancel": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Cancels an order
+         * @description Cancels an order. An unpaid one: its holds go back. A confirmed one, within the cancel window
+         *      (until SHIPPED by default — see the settings): its stock goes back on the shelf, the Bits and
+         *      Carrots it spent are returned, its payment is refunded in full at the gateway and what it
+         *      earned is reversed; it becomes REFUNDED once the gateway accepts the refund.
+         *
+         *      <p>422 <code>BUSINESS_RULE_VIOLATION</code> past the window (refund a shipped order instead). An
+         *      order already CANCELLED or REFUNDED is returned unchanged.
+         *
+         *     **Requires permission:** `orders.write`.
+         *
+         *     **Concurrency** — send back the `version` you read. If the record has been changed by someone else since, this returns **409 `VERSION_CONFLICT`** with a `version` field error and writes nothing. Re-read it, show the operator what moved, and submit again with the new `version`.
+         */
+        post: operations["orderCancelOrder"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/admin/orders/{id}/deliver": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * OUT_FOR_DELIVERY → DELIVERED.
+         * @description OUT_FOR_DELIVERY → DELIVERED. 422 from any other status.
+         *
+         *     **Requires permission:** `orders.fulfil`.
+         *
+         *     **Concurrency** — send back the `version` you read. If the record has been changed by someone else since, this returns **409 `VERSION_CONFLICT`** with a `version` field error and writes nothing. Re-read it, show the operator what moved, and submit again with the new `version`.
+         */
+        post: operations["orderDeliverOrder"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/admin/orders/{id}/invoice": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * A confirmed order's invoice data: number (gapless per financial year), totals and the GST
+         *      breakdown.
+         * @description A confirmed order's invoice data: number (gapless per financial year), totals and the GST
+         *      breakdown. 404 <code>NOT_FOUND</code> for an order never confirmed. Rendering a PDF is a later task.
+         *
+         *     **Requires permission:** `orders.read`.
+         */
+        get: operations["orderGetOrderInvoice"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/admin/orders/{id}/out-for-delivery": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * SHIPPED → OUT_FOR_DELIVERY.
+         * @description SHIPPED → OUT_FOR_DELIVERY. 422 from any other status.
+         *
+         *     **Requires permission:** `orders.fulfil`.
+         *
+         *     **Concurrency** — send back the `version` you read. If the record has been changed by someone else since, this returns **409 `VERSION_CONFLICT`** with a `version` field error and writes nothing. Re-read it, show the operator what moved, and submit again with the new `version`.
+         */
+        post: operations["orderMarkOrderOutForDelivery"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/admin/orders/{id}/pack": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * CONFIRMED → PACKED.
+         * @description CONFIRMED → PACKED. 422 <code>BUSINESS_RULE_VIOLATION</code> from any other status, naming the
+         *      order's next step; an order already PACKED is returned unchanged.
+         *
+         *     **Requires permission:** `orders.fulfil`.
+         *
+         *     **Concurrency** — send back the `version` you read. If the record has been changed by someone else since, this returns **409 `VERSION_CONFLICT`** with a `version` field error and writes nothing. Re-read it, show the operator what moved, and submit again with the new `version`.
+         */
+        post: operations["orderPackOrder"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/admin/orders/{id}/refund": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Refunds a SHIPPED, OUT_FOR_DELIVERY or DELIVERED order in full: the Bits and Carrots it spent
+         *      are returned, the payment is refunded at the gateway and what it earned is reversed
+         * @description Refunds a SHIPPED, OUT_FOR_DELIVERY or DELIVERED order in full: the Bits and Carrots it spent
+         *      are returned, the payment is refunded at the gateway and what it earned is reversed. It becomes
+         *      REFUNDED once the gateway accepts; a gateway failure leaves the refund owed and retried. No
+         *      stock moves — the goods are with the shopper. Partial refunds and returns are not offered yet.
+         *
+         *      <p>422 <code>BUSINESS_RULE_VIOLATION</code> for an order not shipped yet (cancel it instead).
+         *
+         *     **Requires permission:** `orders.refund`.
+         *
+         *     **Concurrency** — send back the `version` you read. If the record has been changed by someone else since, this returns **409 `VERSION_CONFLICT`** with a `version` field error and writes nothing. Re-read it, show the operator what moved, and submit again with the new `version`.
+         */
+        post: operations["orderRefundOrder"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/admin/orders/{id}/ship": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * PACKED → SHIPPED, with the carrier and the tracking reference the shopper sees.
+         * @description PACKED → SHIPPED, with the carrier and the tracking reference the shopper sees. 400 <code>
+         *      VALIDATION_FAILED</code> without either; 422 from any status but PACKED.
+         *
+         *     **Requires permission:** `orders.fulfil`.
+         *
+         *     **Concurrency** — send back the `version` you read. If the record has been changed by someone else since, this returns **409 `VERSION_CONFLICT`** with a `version` field error and writes nothing. Re-read it, show the operator what moved, and submit again with the new `version`.
+         */
+        post: operations["orderShipOrder"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/admin/orders/settings": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * The order settings in effect: flat shipping, payment timeout, cancel window.
+         * @description The order settings in effect: flat shipping, payment timeout, cancel window.
+         *
+         *     **Requires permission:** `orders.read`.
+         */
+        get: operations["orderCurrentOrderSettings"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/admin/orders/settings/versions": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Every version of the order settings, newest first.
+         * @description Every version of the order settings, newest first.
+         *
+         *     **Requires permission:** `orders.read`.
+         */
+        get: operations["orderListOrderSettingsVersions"];
+        put?: never;
+        /**
+         * Publishes new order settings, effective at once — a new version; earlier ones stay as the
+         *      record of what each order was placed under.
+         * @description Publishes new order settings, effective at once — a new version; earlier ones stay as the
+         *      record of what each order was placed under. A quote already given keeps the shipping it showed.
+         *      Free shipping is a tier benefit, set on the membership version, not here.
+         *
+         *     **Requires permission:** `orders.write`.
+         */
+        post: operations["orderPublishOrderSettings"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/admin/permissions": {
         parameters: {
             query?: never;
@@ -5331,6 +5615,16 @@ export interface components {
              */
             valueForExistingVariant: string;
         };
+        /** @description Where the order goes, as it was when placed. */
+        AddressResponse: {
+            /** Format: uuid */
+            addressId?: string;
+            deliveryMobile?: string;
+            label?: string;
+            landmark?: string;
+            line1?: string;
+            pincode?: string;
+        };
         /** @description A new slide, appended to its set. */
         AddSlideRequest: {
             body?: string;
@@ -5879,11 +6173,23 @@ export interface components {
             deviceConnectedPoints: number;
             /**
              * Format: int64
-             * @description Bits for a member's own first order — stored; not yet triggered
+             * @description Bits to a member on their own first confirmed order
              */
             firstOrderPoints: number;
             name: string;
             notes?: string;
+            /**
+             * Format: int64
+             * @description Carrots, in minor units, a member earns on their own order
+             *          per ₹100 of the same amount (<code>100</code> is ₹1 per ₹100), pro rata, rounded down
+             */
+            orderCarrotsPer100RupeesMinor: number;
+            /**
+             * Format: int64
+             * @description Bits a member earns on their own order per ₹100 of goods paid in
+             *          cash (after Carrots, before shipping), pro rata, rounded down
+             */
+            orderPointsPer100Rupees: number;
             /**
              * Format: int64
              * @description Bits for completing the profile — stored; not yet triggered
@@ -6150,6 +6456,10 @@ export interface components {
             name?: string;
             notes?: string;
             /** Format: int64 */
+            orderCarrotsPer100RupeesMinor?: number;
+            /** Format: int64 */
+            orderPointsPer100Rupees?: number;
+            /** Format: int64 */
             profileCompletePoints?: number;
             /** Format: date-time */
             publishedAt?: string;
@@ -6319,6 +6629,14 @@ export interface components {
             /** Format: uuid */
             warehouseId?: string;
         };
+        /** @description The goods at one GST rate: their value before tax, and the tax included. */
+        GstRateResponse: {
+            rate?: number;
+            /** Format: int64 */
+            taxableMinor?: number;
+            /** Format: int64 */
+            taxMinor?: number;
+        };
         /** @description One image. */
         ImageResponse: {
             altText?: string;
@@ -6427,6 +6745,38 @@ export interface components {
             version?: number;
             /** Format: date-time */
             visitedAt?: string;
+        };
+        /** @description A confirmed order's tax invoice — the data; rendering it is a later task. */
+        InvoiceResponse: {
+            /**
+             * Format: int64
+             * @description Carrots redeemed — a means of payment, not a discount on the taxable value
+             */
+            carrotsMinor?: number;
+            currency?: string;
+            financialYear?: string;
+            gstBreakdown?: components["schemas"]["GstRateResponse"][];
+            /** Format: int64 */
+            gstMinor?: number;
+            /** Format: uuid */
+            id?: string;
+            /** Format: date-time */
+            issuedAt?: string;
+            /** Format: int64 */
+            itemTotalMinor?: number;
+            /** @description <code>HBT/&lt;financial year&gt;/&lt;6 digits&gt;</code>, gapless per financial year */
+            number?: string;
+            /** Format: uuid */
+            orderId?: string;
+            /** Format: int64 */
+            payableMinor?: number;
+            /** Format: int64 */
+            shippingMinor?: number;
+            /**
+             * Format: int64
+             * @description the goods before tax: <code>itemTotalMinor - gstMinor</code>
+             */
+            taxableMinor?: number;
         };
         /**
          * @description An upload URL and the <code>PENDING</code> item it fills. PUT the file to <code>upload.url</code>, then
@@ -6626,6 +6976,233 @@ export interface components {
             attributeId: string;
             /** Format: uuid */
             attributeValueId: string;
+        };
+        /** @description One order, whole. */
+        OrderDetailResponse: {
+            address?: components["schemas"]["AddressResponse"];
+            /** Format: int64 */
+            bitsSpent?: number;
+            /** Format: date-time */
+            cancelledAt?: string;
+            cancelReason?: string;
+            carrier?: string;
+            /** Format: int64 */
+            carrotsRedeemedMinor?: number;
+            /** Format: date-time */
+            confirmedAt?: string;
+            /** Format: uuid */
+            consumerId?: string;
+            currency?: string;
+            /** Format: date-time */
+            deliveredAt?: string;
+            /** Format: int64 */
+            earnCarrotsMinor?: number;
+            /**
+             * Format: int64
+             * @description Bits the order earns the shopper (shown at checkout, posted on confirmation)
+             */
+            earnPoints?: number;
+            /** Format: uuid */
+            earnRulesVersionId?: string;
+            /**
+             * Format: date-time
+             * @description when its earns were posted; null while owed or for an unconfirmed order
+             */
+            earnsPostedAt?: string;
+            events?: components["schemas"]["OrderEventResponse"][];
+            /** Format: date-time */
+            expiredAt?: string;
+            firstOrder?: boolean;
+            freeShipping?: boolean;
+            gstBreakdown?: components["schemas"]["GstRateResponse"][];
+            /** Format: int64 */
+            gstMinor?: number;
+            /** Format: uuid */
+            id?: string;
+            /** @description null until the order is confirmed */
+            invoice?: components["schemas"]["InvoiceResponse"];
+            /** Format: int64 */
+            itemTotalMinor?: number;
+            lines?: components["schemas"]["OrderLineResponse"][];
+            /** Format: uuid */
+            membershipVersionId?: string;
+            /** Format: int64 */
+            mrpTotalMinor?: number;
+            number?: string;
+            /** Format: uuid */
+            orderSettingsVersionId?: string;
+            /** Format: date-time */
+            outForDeliveryAt?: string;
+            /** Format: date-time */
+            packedAt?: string;
+            /** Format: int64 */
+            payableMinor?: number;
+            payment?: components["schemas"]["PaymentResponse"];
+            /** Format: date-time */
+            paymentDueAt?: string;
+            /** Format: date-time */
+            paymentFailedAt?: string;
+            /** @enum {string} */
+            paymentMethod?: "UPI" | "CARD" | "NETBANKING" | "WALLET" | "OTHER";
+            /** Format: date-time */
+            placedAt?: string;
+            /**
+             * @description the pricing version moved between what the shopper was shown and the
+             *          order, and the shown prices were charged (D9.4)
+             */
+            priceHonoured?: boolean;
+            /** Format: uuid */
+            pricingVersionId?: string;
+            /** Format: date-time */
+            refundedAt?: string;
+            /** Format: date-time */
+            shippedAt?: string;
+            /** Format: int64 */
+            shippingMinor?: number;
+            /** @enum {string} */
+            status?: "PENDING_PAYMENT" | "CONFIRMED" | "PACKED" | "SHIPPED" | "OUT_FOR_DELIVERY" | "DELIVERED" | "PAYMENT_FAILED" | "EXPIRED" | "CANCELLED" | "REFUNDED";
+            tierCode?: string;
+            trackingReference?: string;
+            /** Format: int64 */
+            version?: number;
+        };
+        /** @description One step of the order's history. */
+        OrderEventResponse: {
+            /** Format: uuid */
+            actorId?: string;
+            /**
+             * @description <code>CONSUMER</code>, <code>ADMIN</code> (then <code>actorId</code> is the team member),
+             *          <code>SYSTEM</code> or <code>GATEWAY</code>
+             * @enum {string}
+             */
+            actorKind?: "CONSUMER" | "ADMIN" | "SYSTEM" | "GATEWAY";
+            /**
+             * @description null for the placement
+             * @enum {string}
+             */
+            fromStatus?: "PENDING_PAYMENT" | "CONFIRMED" | "PACKED" | "SHIPPED" | "OUT_FOR_DELIVERY" | "DELIVERED" | "PAYMENT_FAILED" | "EXPIRED" | "CANCELLED" | "REFUNDED";
+            /** Format: uuid */
+            id?: string;
+            note?: string;
+            /** Format: date-time */
+            occurredAt?: string;
+            /** @enum {string} */
+            toStatus?: "PENDING_PAYMENT" | "CONFIRMED" | "PACKED" | "SHIPPED" | "OUT_FOR_DELIVERY" | "DELIVERED" | "PAYMENT_FAILED" | "EXPIRED" | "CANCELLED" | "REFUNDED";
+        };
+        /** @description One line, as sold. */
+        OrderLineResponse: {
+            /**
+             * Format: int64
+             * @description the Bits one unit cost on top; null unless <code>paidWithBits</code>
+             */
+            bitsPerUnit?: number;
+            gstRate?: number;
+            /** Format: int64 */
+            lineBits?: number;
+            /** Format: int64 */
+            lineGstMinor?: number;
+            /** Format: int32 */
+            lineNumber?: number;
+            /** Format: int64 */
+            lineTotalMinor?: number;
+            optionLabels?: string[];
+            paidWithBits?: boolean;
+            /**
+             * @description where the price came from: <code>BASE</code>, an override source, or <code>
+             *          BITS_PRICE</code>
+             */
+            priceSource?: string;
+            /** Format: uuid */
+            productId?: string;
+            productName?: string;
+            /** Format: int32 */
+            quantity?: number;
+            /** Format: uuid */
+            reservationId?: string;
+            skuCode?: string;
+            /** Format: int64 */
+            unitMrpMinor?: number;
+            /**
+             * Format: int64
+             * @description what one unit was charged — the Bits price when <code>paidWithBits</code>
+             */
+            unitPriceMinor?: number;
+            /** Format: uuid */
+            variantId?: string;
+            variantName?: string;
+        };
+        /** @description Cancelling, or refunding: why, for the history and the shopper. */
+        OrderReasonRequest: {
+            /** @description optional; shown on the order's history */
+            reason?: string;
+            /** Format: int64 */
+            version: number;
+        };
+        /** @description One version of the order settings. */
+        OrderSettingsResponse: {
+            /** @enum {string} */
+            cancelUntil?: "PACKED" | "SHIPPED";
+            currency?: string;
+            /** Format: date-time */
+            effectiveFrom?: string;
+            /**
+             * Format: int64
+             * @description what every order pays at least (₹1): fixed, there is no zero-payable
+             *          order
+             */
+            minimumPayableMinor?: number;
+            notes?: string;
+            /** Format: int32 */
+            paymentTimeoutMinutes?: number;
+            /** Format: int64 */
+            shippingFeeMinor?: number;
+            /** Format: uuid */
+            versionId?: string;
+        };
+        /** @description A fulfilment step with nothing else to say: pack, out for delivery, deliver. */
+        OrderStepRequest: {
+            /**
+             * Format: int64
+             * @description the <code>version</code> of the order you read. A mismatch is refused with 409 <code>
+             *          VERSION_CONFLICT</code> and nothing changes
+             */
+            version: number;
+        };
+        /** @description An order in the admin list. */
+        OrderSummaryResponse: {
+            /** Format: int64 */
+            bitsSpent?: number;
+            /** Format: int64 */
+            carrotsRedeemedMinor?: number;
+            /** Format: date-time */
+            confirmedAt?: string;
+            /** Format: uuid */
+            consumerId?: string;
+            currency?: string;
+            /** Format: uuid */
+            id?: string;
+            /**
+             * Format: int64
+             * @description the goods, GST included
+             */
+            itemTotalMinor?: number;
+            number?: string;
+            /**
+             * Format: int64
+             * @description what the shopper paid through the gateway
+             */
+            payableMinor?: number;
+            /** @enum {string} */
+            paymentMethod?: "UPI" | "CARD" | "NETBANKING" | "WALLET" | "OTHER";
+            /** Format: date-time */
+            placedAt?: string;
+            /** Format: int64 */
+            shippingMinor?: number;
+            /** @enum {string} */
+            status?: "PENDING_PAYMENT" | "CONFIRMED" | "PACKED" | "SHIPPED" | "OUT_FOR_DELIVERY" | "DELIVERED" | "PAYMENT_FAILED" | "EXPIRED" | "CANCELLED" | "REFUNDED";
+            tierCode?: string;
+            /** Format: int64 */
+            version?: number;
         };
         Pageable: {
             /** Format: int32 */
@@ -7116,6 +7693,64 @@ export interface components {
          *      exposes internals — <code>pageable</code>, <code>sort</code>, <code>numberOfElements</code> — that no client
          *      should be reading.
          */
+        PageResponseOrderSettingsResponse: {
+            content?: components["schemas"]["OrderSettingsResponse"][];
+            /** Format: int32 */
+            page?: number;
+            /** Format: int32 */
+            size?: number;
+            /** Format: int64 */
+            totalElements?: number;
+            /** Format: int32 */
+            totalPages?: number;
+        };
+        /**
+         * @description The paging envelope every paginated response uses.
+         *
+         *      <p>Lives in <code>platform</code> rather than in one domain's DTO folder. It carries no domain meaning
+         *      and every module needs it, so putting it in <code>team/dto/admin</code> — where it started, when team
+         *      was the only module — would make <code>catalog</code> import <code>team</code> to return a page of brands.
+         *      Domain packages depend on <code>platform</code> and never on each other; a shared envelope has to sit
+         *      where both can reach it.
+         *
+         *      <p>It is not an exception to "never share DTOs across surfaces". That rule is about
+         *      <i>representations</i> — the fields of a brand, of a member, of an order — where a shared type
+         *      leaks an admin-only field into an app-facing response. This type has no fields of its own; the
+         *      content it wraps is a per-surface DTO and stays one.
+         *
+         *      <p>Deliberately not Spring Data's <code>Page</code>, whose JSON form is unstable across versions and
+         *      exposes internals — <code>pageable</code>, <code>sort</code>, <code>numberOfElements</code> — that no client
+         *      should be reading.
+         */
+        PageResponseOrderSummaryResponse: {
+            content?: components["schemas"]["OrderSummaryResponse"][];
+            /** Format: int32 */
+            page?: number;
+            /** Format: int32 */
+            size?: number;
+            /** Format: int64 */
+            totalElements?: number;
+            /** Format: int32 */
+            totalPages?: number;
+        };
+        /**
+         * @description The paging envelope every paginated response uses.
+         *
+         *      <p>Lives in <code>platform</code> rather than in one domain's DTO folder. It carries no domain meaning
+         *      and every module needs it, so putting it in <code>team/dto/admin</code> — where it started, when team
+         *      was the only module — would make <code>catalog</code> import <code>team</code> to return a page of brands.
+         *      Domain packages depend on <code>platform</code> and never on each other; a shared envelope has to sit
+         *      where both can reach it.
+         *
+         *      <p>It is not an exception to "never share DTOs across surfaces". That rule is about
+         *      <i>representations</i> — the fields of a brand, of a member, of an order — where a shared type
+         *      leaks an admin-only field into an app-facing response. This type has no fields of its own; the
+         *      content it wraps is a per-surface DTO and stays one.
+         *
+         *      <p>Deliberately not Spring Data's <code>Page</code>, whose JSON form is unstable across versions and
+         *      exposes internals — <code>pageable</code>, <code>sort</code>, <code>numberOfElements</code> — that no client
+         *      should be reading.
+         */
         PageResponsePricingVersionResponse: {
             content?: components["schemas"]["PricingVersionResponse"][];
             /** Format: int32 */
@@ -7565,6 +8200,39 @@ export interface components {
         PasswordResetLinkResponse: {
             resetLink?: string;
         };
+        /** @description The order's payment at the gateway. */
+        PaymentResponse: {
+            /** Format: int64 */
+            amountMinor?: number;
+            /** Format: date-time */
+            capturedAt?: string;
+            currency?: string;
+            /** Format: date-time */
+            failedAt?: string;
+            failureReason?: string;
+            gateway?: string;
+            gatewayOrderId?: string;
+            gatewayPaymentId?: string;
+            gatewayRefundId?: string;
+            /** Format: uuid */
+            id?: string;
+            lastRefundError?: string;
+            /** @enum {string} */
+            method?: "UPI" | "CARD" | "NETBANKING" | "WALLET" | "OTHER";
+            /** Format: int32 */
+            refundAttempts?: number;
+            /** Format: date-time */
+            refundedAt?: string;
+            refundReason?: string;
+            /** Format: date-time */
+            refundRequestedAt?: string;
+            /**
+             * @description <code>CREATED</code>, <code>CAPTURED</code>, <code>FAILED</code>, <code>REFUND_PENDING</code> (owed
+             *          back, being refunded) or <code>REFUNDED</code>
+             * @enum {string}
+             */
+            status?: "CREATED" | "CAPTURED" | "FAILED" | "REFUND_PENDING" | "REFUNDED";
+        };
         /** @description The catalog grouped for the role editor, which renders straight from this. */
         PermissionDomainResponse: {
             domain?: string;
@@ -7878,6 +8546,28 @@ export interface components {
              *          publish is refused with 409 <code>VERSION_CONFLICT</code>
              */
             version: number;
+        };
+        /** @description New order settings, effective as soon as they are published. */
+        PublishOrderSettingsRequest: {
+            /**
+             * @description the first status an order can no longer be cancelled from: <code>SHIPPED</code>
+             *          (cancellable while CONFIRMED or PACKED) or <code>PACKED</code> (only while CONFIRMED)
+             * @enum {string}
+             */
+            cancelUntil: "PACKED" | "SHIPPED";
+            notes?: string;
+            /**
+             * Format: int32
+             * @description how long a placed order waits for payment before it expires, 5 to
+             *          15 — never longer than a stock hold lasts once extended (D9.5)
+             */
+            paymentTimeoutMinutes: number;
+            /**
+             * Format: int64
+             * @description flat shipping for a tier without free shipping, in minor units; 0 or
+             *          more
+             */
+            shippingFeeMinor: number;
         };
         /** @description Publishing a draft. */
         PublishPricingVersionRequest: {
@@ -8346,6 +9036,15 @@ export interface components {
              * Format: int64
              * @description the draft's <code>version</code>; the response carries the new one
              */
+            version: number;
+        };
+        /** @description Shipping: who carries it and the reference the shopper tracks it by. */
+        ShipOrderRequest: {
+            /** @description the courier's name, as the shopper should read it */
+            carrier: string;
+            /** @description the courier's tracking number or link */
+            trackingReference: string;
+            /** Format: int64 */
             version: number;
         };
         /** @description One slide. */
@@ -8872,6 +9571,10 @@ export interface components {
             firstOrderPoints: number;
             name: string;
             notes?: string;
+            /** Format: int64 */
+            orderCarrotsPer100RupeesMinor: number;
+            /** Format: int64 */
+            orderPointsPer100Rupees: number;
             /** Format: int64 */
             profileCompletePoints: number;
             /** Format: int64 */
@@ -11267,10 +11970,10 @@ export interface operations {
     auditList: {
         parameters: {
             query: {
-                action?: "catalog.attribute.created" | "catalog.attribute.deactivated" | "catalog.attribute.reactivated" | "catalog.attribute.reordered" | "catalog.attribute.updated" | "catalog.attribute_group.created" | "catalog.attribute_group.deactivated" | "catalog.attribute_group.reactivated" | "catalog.attribute_group.reordered" | "catalog.attribute_group.updated" | "catalog.attribute_value.created" | "catalog.attribute_value.deactivated" | "catalog.attribute_value.reactivated" | "catalog.attribute_value.reordered" | "catalog.attribute_value.updated" | "catalog.brand.activated" | "catalog.brand.archived" | "catalog.brand.created" | "catalog.brand.published" | "catalog.brand.reordered" | "catalog.brand.unpublished" | "catalog.brand.updated" | "catalog.category.activated" | "catalog.category.archived" | "catalog.category.created" | "catalog.category.moved" | "catalog.category.published" | "catalog.category.reordered" | "catalog.category.unpublished" | "catalog.category.updated" | "catalog.media.confirmed" | "catalog.media.created" | "catalog.media.deleted" | "catalog.media.failed" | "catalog.product.approved" | "catalog.product.archived" | "catalog.product.categories_changed" | "catalog.product.content_changed" | "catalog.product.created" | "catalog.product.customer_allowed" | "catalog.product.customer_disallowed" | "catalog.product.image_added" | "catalog.product.image_removed" | "catalog.product.image_updated" | "catalog.product.images_reordered" | "catalog.product.merchandising_changed" | "catalog.product.option_added" | "catalog.product.option_removed" | "catalog.product.options_reordered" | "catalog.product.published" | "catalog.product.rejected" | "catalog.product.spec_cleared" | "catalog.product.spec_set" | "catalog.product.submitted" | "catalog.product.unpublished" | "catalog.product.updated" | "catalog.product.visibility_changed" | "catalog.tag.created" | "catalog.tag.deleted" | "catalog.tag.updated" | "catalog.variant.created" | "catalog.variant.default_changed" | "catalog.variant.discontinued" | "catalog.variant.image_added" | "catalog.variant.image_removed" | "catalog.variant.image_updated" | "catalog.variant.images_reordered" | "catalog.variant.merchandising_changed" | "catalog.variant.reinstated" | "catalog.variant.reordered" | "catalog.variant.spec_cleared" | "catalog.variant.spec_set" | "catalog.variant.updated" | "catalog.variant.visibility_changed" | "earn.rules_version.created" | "earn.rules_version.published" | "earn.rules_version.updated" | "earn.rules_version.withdrawn" | "identity.user.claimed" | "identity.user.created" | "identity.user.profile_applied" | "identity.user.reinstated" | "identity.user.role_granted" | "identity.user.role_revoked" | "identity.user.suspended" | "identity.user.updated" | "inventory.availability.reconciled" | "inventory.batch.created" | "inventory.movement.recorded" | "inventory.projection.rebuilt" | "inventory.stock.transferred" | "inventory.warehouse.created" | "inventory.warehouse.deactivated" | "inventory.warehouse.reactivated" | "inventory.warehouse.updated" | "invite.claim.processed" | "invite.claim.rejected" | "invite.intake.processed" | "invite.intake.rejected" | "invite.invite.added" | "invite.invite.expired" | "invite.invite.invalidated" | "invite.invite.issued" | "invite.invite.visited" | "invite.referral.attributed" | "invite.referral.blocked" | "membership.cycle_run.completed" | "membership.version.created" | "membership.version.published" | "membership.version.updated" | "membership.version.withdrawn" | "pricing.bits_option.cleared" | "pricing.bits_option.set" | "pricing.price.cleared" | "pricing.price.set" | "pricing.version.created" | "pricing.version.published" | "pricing.version.updated" | "pricing.version.withdrawn" | "procurement.goods_receipt.posted" | "procurement.purchase_order.approved" | "procurement.purchase_order.cancelled" | "procurement.purchase_order.created" | "procurement.purchase_order.updated" | "procurement.supplier.created" | "procurement.supplier.deactivated" | "procurement.supplier.reactivated" | "procurement.supplier.updated" | "team.member.created" | "team.member.forced_logout" | "team.member.invite.accepted" | "team.member.invite.resent" | "team.member.password.changed" | "team.member.password_reset.completed" | "team.member.password_reset.requested" | "team.member.password_reset.triggered" | "team.member.profile.updated" | "team.member.roles.assigned" | "team.member.status.changed" | "team.member.updated" | "team.role.created" | "team.role.deleted" | "team.role.updated";
+                action?: "catalog.attribute.created" | "catalog.attribute.deactivated" | "catalog.attribute.reactivated" | "catalog.attribute.reordered" | "catalog.attribute.updated" | "catalog.attribute_group.created" | "catalog.attribute_group.deactivated" | "catalog.attribute_group.reactivated" | "catalog.attribute_group.reordered" | "catalog.attribute_group.updated" | "catalog.attribute_value.created" | "catalog.attribute_value.deactivated" | "catalog.attribute_value.reactivated" | "catalog.attribute_value.reordered" | "catalog.attribute_value.updated" | "catalog.brand.activated" | "catalog.brand.archived" | "catalog.brand.created" | "catalog.brand.published" | "catalog.brand.reordered" | "catalog.brand.unpublished" | "catalog.brand.updated" | "catalog.category.activated" | "catalog.category.archived" | "catalog.category.created" | "catalog.category.moved" | "catalog.category.published" | "catalog.category.reordered" | "catalog.category.unpublished" | "catalog.category.updated" | "catalog.media.confirmed" | "catalog.media.created" | "catalog.media.deleted" | "catalog.media.failed" | "catalog.product.approved" | "catalog.product.archived" | "catalog.product.categories_changed" | "catalog.product.content_changed" | "catalog.product.created" | "catalog.product.customer_allowed" | "catalog.product.customer_disallowed" | "catalog.product.image_added" | "catalog.product.image_removed" | "catalog.product.image_updated" | "catalog.product.images_reordered" | "catalog.product.merchandising_changed" | "catalog.product.option_added" | "catalog.product.option_removed" | "catalog.product.options_reordered" | "catalog.product.published" | "catalog.product.rejected" | "catalog.product.spec_cleared" | "catalog.product.spec_set" | "catalog.product.submitted" | "catalog.product.unpublished" | "catalog.product.updated" | "catalog.product.visibility_changed" | "catalog.tag.created" | "catalog.tag.deleted" | "catalog.tag.updated" | "catalog.variant.created" | "catalog.variant.default_changed" | "catalog.variant.discontinued" | "catalog.variant.image_added" | "catalog.variant.image_removed" | "catalog.variant.image_updated" | "catalog.variant.images_reordered" | "catalog.variant.merchandising_changed" | "catalog.variant.reinstated" | "catalog.variant.reordered" | "catalog.variant.spec_cleared" | "catalog.variant.spec_set" | "catalog.variant.updated" | "catalog.variant.visibility_changed" | "earn.rules_version.created" | "earn.rules_version.published" | "earn.rules_version.updated" | "earn.rules_version.withdrawn" | "identity.user.claimed" | "identity.user.created" | "identity.user.profile_applied" | "identity.user.reinstated" | "identity.user.role_granted" | "identity.user.role_revoked" | "identity.user.suspended" | "identity.user.updated" | "inventory.availability.reconciled" | "inventory.batch.created" | "inventory.movement.recorded" | "inventory.projection.rebuilt" | "inventory.stock.transferred" | "inventory.warehouse.created" | "inventory.warehouse.deactivated" | "inventory.warehouse.reactivated" | "inventory.warehouse.updated" | "invite.claim.processed" | "invite.claim.rejected" | "invite.intake.processed" | "invite.intake.rejected" | "invite.invite.added" | "invite.invite.expired" | "invite.invite.invalidated" | "invite.invite.issued" | "invite.invite.visited" | "invite.referral.attributed" | "invite.referral.blocked" | "membership.cycle_run.completed" | "membership.version.created" | "membership.version.published" | "membership.version.updated" | "membership.version.withdrawn" | "orders.intake.price_honoured" | "orders.order.cancelled" | "orders.order.confirmation_failed" | "orders.order.confirmed" | "orders.order.delivered" | "orders.order.expired" | "orders.order.late_capture" | "orders.order.out_for_delivery" | "orders.order.packed" | "orders.order.payment_failed" | "orders.order.placed" | "orders.order.price_honoured" | "orders.order.refund_requested" | "orders.order.refunded" | "orders.order.shipped" | "orders.settings.published" | "pricing.bits_option.cleared" | "pricing.bits_option.set" | "pricing.price.cleared" | "pricing.price.set" | "pricing.version.created" | "pricing.version.published" | "pricing.version.updated" | "pricing.version.withdrawn" | "procurement.goods_receipt.posted" | "procurement.purchase_order.approved" | "procurement.purchase_order.cancelled" | "procurement.purchase_order.created" | "procurement.purchase_order.updated" | "procurement.supplier.created" | "procurement.supplier.deactivated" | "procurement.supplier.reactivated" | "procurement.supplier.updated" | "team.member.created" | "team.member.forced_logout" | "team.member.invite.accepted" | "team.member.invite.resent" | "team.member.password.changed" | "team.member.password_reset.completed" | "team.member.password_reset.requested" | "team.member.password_reset.triggered" | "team.member.profile.updated" | "team.member.roles.assigned" | "team.member.status.changed" | "team.member.updated" | "team.role.created" | "team.role.deleted" | "team.role.updated";
                 actorId?: string;
                 entityId?: string;
-                entityType?: "attribute" | "attribute_group" | "attribute_value" | "batch" | "brand" | "category" | "claim_intake" | "earn_rules_version" | "goods_receipt" | "invite" | "invite_intake" | "media" | "membership_cycle_run" | "membership_version" | "pricing_version" | "product" | "purchase_order" | "referral" | "role" | "stock_availability" | "stock_level" | "stock_movement" | "stock_transfer" | "supplier" | "tag" | "team_member" | "user" | "variant" | "warehouse";
+                entityType?: "attribute" | "attribute_group" | "attribute_value" | "batch" | "brand" | "category" | "claim_intake" | "earn_rules_version" | "goods_receipt" | "invite" | "invite_intake" | "media" | "membership_cycle_run" | "membership_version" | "order" | "order_intake" | "order_settings_version" | "pricing_version" | "product" | "purchase_order" | "referral" | "role" | "stock_availability" | "stock_level" | "stock_movement" | "stock_transfer" | "supplier" | "tag" | "team_member" | "user" | "variant" | "warehouse";
                 from?: string;
                 pageable: components["schemas"]["Pageable"];
                 to?: string;
@@ -16216,6 +16919,1004 @@ export interface operations {
             };
             /** @description `ACCESS_DENIED` — Authenticated, but lacking the permission the endpoint declares. The session is valid; do not sign the operator out. */
             403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description `INTERNAL_ERROR` — An unhandled failure. The message is deliberately generic; `traceId` identifies the server log line that explains it. */
+            500: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+        };
+    };
+    orderListOrders: {
+        parameters: {
+            query: {
+                consumerId?: string;
+                from?: string;
+                number?: string;
+                pageable: components["schemas"]["Pageable"];
+                status?: "PENDING_PAYMENT" | "CONFIRMED" | "PACKED" | "SHIPPED" | "OUT_FOR_DELIVERY" | "DELIVERED" | "PAYMENT_FAILED" | "EXPIRED" | "CANCELLED" | "REFUNDED";
+                to?: string;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "*/*": components["schemas"]["PageResponseOrderSummaryResponse"];
+                };
+            };
+            /** @description `VALIDATION_FAILED` — The request body could not be read, a field failed validation, a required header was absent, or a domain validation rule rejected an input the caller can correct. */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description `AUTHENTICATION_FAILED` — No valid credential. Either none was presented, or the session behind it is expired, revoked, or belongs to a member who can no longer sign in. This status means the session is dead and nothing else does (D2.23) — a wrong *current* password on change-password is a 400 with a `currentPassword` field error, not this. */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description `ACCESS_DENIED` — Authenticated, but lacking the permission the endpoint declares. The session is valid; do not sign the operator out. */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description `INTERNAL_ERROR` — An unhandled failure. The message is deliberately generic; `traceId` identifies the server log line that explains it. */
+            500: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+        };
+    };
+    orderGetOrder: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "*/*": components["schemas"]["OrderDetailResponse"];
+                };
+            };
+            /** @description `VALIDATION_FAILED` — The request body could not be read, a field failed validation, a required header was absent, or a domain validation rule rejected an input the caller can correct. */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description `AUTHENTICATION_FAILED` — No valid credential. Either none was presented, or the session behind it is expired, revoked, or belongs to a member who can no longer sign in. This status means the session is dead and nothing else does (D2.23) — a wrong *current* password on change-password is a 400 with a `currentPassword` field error, not this. */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description `ACCESS_DENIED` — Authenticated, but lacking the permission the endpoint declares. The session is valid; do not sign the operator out. */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description `NOT_FOUND` — A referenced entity does not exist, or the URL matches no endpoint. Also returned for a known path called with an unsupported method, as 405. */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description `INTERNAL_ERROR` — An unhandled failure. The message is deliberately generic; `traceId` identifies the server log line that explains it. */
+            500: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+        };
+    };
+    orderCancelOrder: {
+        parameters: {
+            query?: never;
+            header: {
+                "Idempotency-Key": string;
+            };
+            path: {
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["OrderReasonRequest"];
+            };
+        };
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "*/*": components["schemas"]["OrderDetailResponse"];
+                };
+            };
+            /** @description `VALIDATION_FAILED` — The request body could not be read, a field failed validation, a required header was absent, or a domain validation rule rejected an input the caller can correct. */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description `AUTHENTICATION_FAILED` — No valid credential. Either none was presented, or the session behind it is expired, revoked, or belongs to a member who can no longer sign in. This status means the session is dead and nothing else does (D2.23) — a wrong *current* password on change-password is a 400 with a `currentPassword` field error, not this. */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description `ACCESS_DENIED` — Authenticated, but lacking the permission the endpoint declares. The session is valid; do not sign the operator out. */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description `NOT_FOUND` — A referenced entity does not exist, or the URL matches no endpoint. Also returned for a known path called with an unsupported method, as 405. */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description `VERSION_CONFLICT` or `CONFLICT` — The `version` sent with an update is not the version stored — the record was changed by someone else since it was read. Nothing was written. Re-read the record, show the operator what changed, and submit again with the new `version`. */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description `UNSUPPORTED_MEDIA_TYPE` — The request body was sent with a `Content-Type` the endpoint does not read. Every endpoint that takes a body reads `application/json`. */
+            415: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description `BUSINESS_RULE_VIOLATION` — The request was well-formed and the entities exist, but a domain rule forbids it — publishing a product with no price, archiving a brand products still reference, issuing more stock than a location holds. Distinct from 400: nothing about the request is malformed. */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description `INTERNAL_ERROR` — An unhandled failure. The message is deliberately generic; `traceId` identifies the server log line that explains it. */
+            500: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+        };
+    };
+    orderDeliverOrder: {
+        parameters: {
+            query?: never;
+            header: {
+                "Idempotency-Key": string;
+            };
+            path: {
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["OrderStepRequest"];
+            };
+        };
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "*/*": components["schemas"]["OrderDetailResponse"];
+                };
+            };
+            /** @description `VALIDATION_FAILED` — The request body could not be read, a field failed validation, a required header was absent, or a domain validation rule rejected an input the caller can correct. */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description `AUTHENTICATION_FAILED` — No valid credential. Either none was presented, or the session behind it is expired, revoked, or belongs to a member who can no longer sign in. This status means the session is dead and nothing else does (D2.23) — a wrong *current* password on change-password is a 400 with a `currentPassword` field error, not this. */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description `ACCESS_DENIED` — Authenticated, but lacking the permission the endpoint declares. The session is valid; do not sign the operator out. */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description `NOT_FOUND` — A referenced entity does not exist, or the URL matches no endpoint. Also returned for a known path called with an unsupported method, as 405. */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description `VERSION_CONFLICT` or `CONFLICT` — The `version` sent with an update is not the version stored — the record was changed by someone else since it was read. Nothing was written. Re-read the record, show the operator what changed, and submit again with the new `version`. */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description `UNSUPPORTED_MEDIA_TYPE` — The request body was sent with a `Content-Type` the endpoint does not read. Every endpoint that takes a body reads `application/json`. */
+            415: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description `BUSINESS_RULE_VIOLATION` — The request was well-formed and the entities exist, but a domain rule forbids it — publishing a product with no price, archiving a brand products still reference, issuing more stock than a location holds. Distinct from 400: nothing about the request is malformed. */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description `INTERNAL_ERROR` — An unhandled failure. The message is deliberately generic; `traceId` identifies the server log line that explains it. */
+            500: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+        };
+    };
+    orderGetOrderInvoice: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "*/*": components["schemas"]["InvoiceResponse"];
+                };
+            };
+            /** @description `VALIDATION_FAILED` — The request body could not be read, a field failed validation, a required header was absent, or a domain validation rule rejected an input the caller can correct. */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description `AUTHENTICATION_FAILED` — No valid credential. Either none was presented, or the session behind it is expired, revoked, or belongs to a member who can no longer sign in. This status means the session is dead and nothing else does (D2.23) — a wrong *current* password on change-password is a 400 with a `currentPassword` field error, not this. */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description `ACCESS_DENIED` — Authenticated, but lacking the permission the endpoint declares. The session is valid; do not sign the operator out. */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description `NOT_FOUND` — A referenced entity does not exist, or the URL matches no endpoint. Also returned for a known path called with an unsupported method, as 405. */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description `INTERNAL_ERROR` — An unhandled failure. The message is deliberately generic; `traceId` identifies the server log line that explains it. */
+            500: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+        };
+    };
+    orderMarkOrderOutForDelivery: {
+        parameters: {
+            query?: never;
+            header: {
+                "Idempotency-Key": string;
+            };
+            path: {
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["OrderStepRequest"];
+            };
+        };
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "*/*": components["schemas"]["OrderDetailResponse"];
+                };
+            };
+            /** @description `VALIDATION_FAILED` — The request body could not be read, a field failed validation, a required header was absent, or a domain validation rule rejected an input the caller can correct. */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description `AUTHENTICATION_FAILED` — No valid credential. Either none was presented, or the session behind it is expired, revoked, or belongs to a member who can no longer sign in. This status means the session is dead and nothing else does (D2.23) — a wrong *current* password on change-password is a 400 with a `currentPassword` field error, not this. */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description `ACCESS_DENIED` — Authenticated, but lacking the permission the endpoint declares. The session is valid; do not sign the operator out. */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description `NOT_FOUND` — A referenced entity does not exist, or the URL matches no endpoint. Also returned for a known path called with an unsupported method, as 405. */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description `VERSION_CONFLICT` or `CONFLICT` — The `version` sent with an update is not the version stored — the record was changed by someone else since it was read. Nothing was written. Re-read the record, show the operator what changed, and submit again with the new `version`. */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description `UNSUPPORTED_MEDIA_TYPE` — The request body was sent with a `Content-Type` the endpoint does not read. Every endpoint that takes a body reads `application/json`. */
+            415: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description `BUSINESS_RULE_VIOLATION` — The request was well-formed and the entities exist, but a domain rule forbids it — publishing a product with no price, archiving a brand products still reference, issuing more stock than a location holds. Distinct from 400: nothing about the request is malformed. */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description `INTERNAL_ERROR` — An unhandled failure. The message is deliberately generic; `traceId` identifies the server log line that explains it. */
+            500: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+        };
+    };
+    orderPackOrder: {
+        parameters: {
+            query?: never;
+            header: {
+                "Idempotency-Key": string;
+            };
+            path: {
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["OrderStepRequest"];
+            };
+        };
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "*/*": components["schemas"]["OrderDetailResponse"];
+                };
+            };
+            /** @description `VALIDATION_FAILED` — The request body could not be read, a field failed validation, a required header was absent, or a domain validation rule rejected an input the caller can correct. */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description `AUTHENTICATION_FAILED` — No valid credential. Either none was presented, or the session behind it is expired, revoked, or belongs to a member who can no longer sign in. This status means the session is dead and nothing else does (D2.23) — a wrong *current* password on change-password is a 400 with a `currentPassword` field error, not this. */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description `ACCESS_DENIED` — Authenticated, but lacking the permission the endpoint declares. The session is valid; do not sign the operator out. */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description `NOT_FOUND` — A referenced entity does not exist, or the URL matches no endpoint. Also returned for a known path called with an unsupported method, as 405. */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description `VERSION_CONFLICT` or `CONFLICT` — The `version` sent with an update is not the version stored — the record was changed by someone else since it was read. Nothing was written. Re-read the record, show the operator what changed, and submit again with the new `version`. */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description `UNSUPPORTED_MEDIA_TYPE` — The request body was sent with a `Content-Type` the endpoint does not read. Every endpoint that takes a body reads `application/json`. */
+            415: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description `BUSINESS_RULE_VIOLATION` — The request was well-formed and the entities exist, but a domain rule forbids it — publishing a product with no price, archiving a brand products still reference, issuing more stock than a location holds. Distinct from 400: nothing about the request is malformed. */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description `INTERNAL_ERROR` — An unhandled failure. The message is deliberately generic; `traceId` identifies the server log line that explains it. */
+            500: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+        };
+    };
+    orderRefundOrder: {
+        parameters: {
+            query?: never;
+            header: {
+                "Idempotency-Key": string;
+            };
+            path: {
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["OrderReasonRequest"];
+            };
+        };
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "*/*": components["schemas"]["OrderDetailResponse"];
+                };
+            };
+            /** @description `VALIDATION_FAILED` — The request body could not be read, a field failed validation, a required header was absent, or a domain validation rule rejected an input the caller can correct. */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description `AUTHENTICATION_FAILED` — No valid credential. Either none was presented, or the session behind it is expired, revoked, or belongs to a member who can no longer sign in. This status means the session is dead and nothing else does (D2.23) — a wrong *current* password on change-password is a 400 with a `currentPassword` field error, not this. */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description `ACCESS_DENIED` — Authenticated, but lacking the permission the endpoint declares. The session is valid; do not sign the operator out. */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description `NOT_FOUND` — A referenced entity does not exist, or the URL matches no endpoint. Also returned for a known path called with an unsupported method, as 405. */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description `VERSION_CONFLICT` or `CONFLICT` — The `version` sent with an update is not the version stored — the record was changed by someone else since it was read. Nothing was written. Re-read the record, show the operator what changed, and submit again with the new `version`. */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description `UNSUPPORTED_MEDIA_TYPE` — The request body was sent with a `Content-Type` the endpoint does not read. Every endpoint that takes a body reads `application/json`. */
+            415: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description `BUSINESS_RULE_VIOLATION` — The request was well-formed and the entities exist, but a domain rule forbids it — publishing a product with no price, archiving a brand products still reference, issuing more stock than a location holds. Distinct from 400: nothing about the request is malformed. */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description `INTERNAL_ERROR` — An unhandled failure. The message is deliberately generic; `traceId` identifies the server log line that explains it. */
+            500: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+        };
+    };
+    orderShipOrder: {
+        parameters: {
+            query?: never;
+            header: {
+                "Idempotency-Key": string;
+            };
+            path: {
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["ShipOrderRequest"];
+            };
+        };
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "*/*": components["schemas"]["OrderDetailResponse"];
+                };
+            };
+            /** @description `VALIDATION_FAILED` — The request body could not be read, a field failed validation, a required header was absent, or a domain validation rule rejected an input the caller can correct. */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description `AUTHENTICATION_FAILED` — No valid credential. Either none was presented, or the session behind it is expired, revoked, or belongs to a member who can no longer sign in. This status means the session is dead and nothing else does (D2.23) — a wrong *current* password on change-password is a 400 with a `currentPassword` field error, not this. */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description `ACCESS_DENIED` — Authenticated, but lacking the permission the endpoint declares. The session is valid; do not sign the operator out. */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description `NOT_FOUND` — A referenced entity does not exist, or the URL matches no endpoint. Also returned for a known path called with an unsupported method, as 405. */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description `VERSION_CONFLICT` or `CONFLICT` — The `version` sent with an update is not the version stored — the record was changed by someone else since it was read. Nothing was written. Re-read the record, show the operator what changed, and submit again with the new `version`. */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description `UNSUPPORTED_MEDIA_TYPE` — The request body was sent with a `Content-Type` the endpoint does not read. Every endpoint that takes a body reads `application/json`. */
+            415: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description `BUSINESS_RULE_VIOLATION` — The request was well-formed and the entities exist, but a domain rule forbids it — publishing a product with no price, archiving a brand products still reference, issuing more stock than a location holds. Distinct from 400: nothing about the request is malformed. */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description `INTERNAL_ERROR` — An unhandled failure. The message is deliberately generic; `traceId` identifies the server log line that explains it. */
+            500: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+        };
+    };
+    orderCurrentOrderSettings: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "*/*": components["schemas"]["OrderSettingsResponse"];
+                };
+            };
+            /** @description `VALIDATION_FAILED` — The request body could not be read, a field failed validation, a required header was absent, or a domain validation rule rejected an input the caller can correct. */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description `AUTHENTICATION_FAILED` — No valid credential. Either none was presented, or the session behind it is expired, revoked, or belongs to a member who can no longer sign in. This status means the session is dead and nothing else does (D2.23) — a wrong *current* password on change-password is a 400 with a `currentPassword` field error, not this. */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description `ACCESS_DENIED` — Authenticated, but lacking the permission the endpoint declares. The session is valid; do not sign the operator out. */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description `INTERNAL_ERROR` — An unhandled failure. The message is deliberately generic; `traceId` identifies the server log line that explains it. */
+            500: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+        };
+    };
+    orderListOrderSettingsVersions: {
+        parameters: {
+            query: {
+                pageable: components["schemas"]["Pageable"];
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "*/*": components["schemas"]["PageResponseOrderSettingsResponse"];
+                };
+            };
+            /** @description `VALIDATION_FAILED` — The request body could not be read, a field failed validation, a required header was absent, or a domain validation rule rejected an input the caller can correct. */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description `AUTHENTICATION_FAILED` — No valid credential. Either none was presented, or the session behind it is expired, revoked, or belongs to a member who can no longer sign in. This status means the session is dead and nothing else does (D2.23) — a wrong *current* password on change-password is a 400 with a `currentPassword` field error, not this. */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description `ACCESS_DENIED` — Authenticated, but lacking the permission the endpoint declares. The session is valid; do not sign the operator out. */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description `INTERNAL_ERROR` — An unhandled failure. The message is deliberately generic; `traceId` identifies the server log line that explains it. */
+            500: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+        };
+    };
+    orderPublishOrderSettings: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["PublishOrderSettingsRequest"];
+            };
+        };
+        responses: {
+            /** @description Created */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "*/*": components["schemas"]["OrderSettingsResponse"];
+                };
+            };
+            /** @description `VALIDATION_FAILED` — The request body could not be read, a field failed validation, a required header was absent, or a domain validation rule rejected an input the caller can correct. */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description `AUTHENTICATION_FAILED` — No valid credential. Either none was presented, or the session behind it is expired, revoked, or belongs to a member who can no longer sign in. This status means the session is dead and nothing else does (D2.23) — a wrong *current* password on change-password is a 400 with a `currentPassword` field error, not this. */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description `ACCESS_DENIED` — Authenticated, but lacking the permission the endpoint declares. The session is valid; do not sign the operator out. */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description `CONFLICT` — The request collided with current state for a reason other than a version mismatch: a duplicate natural key (a slug, a code, an email), or a database constraint the application did not catch first. */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description `UNSUPPORTED_MEDIA_TYPE` — The request body was sent with a `Content-Type` the endpoint does not read. Every endpoint that takes a body reads `application/json`. */
+            415: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description `BUSINESS_RULE_VIOLATION` — The request was well-formed and the entities exist, but a domain rule forbids it — publishing a product with no price, archiving a brand products still reference, issuing more stock than a location holds. Distinct from 400: nothing about the request is malformed. */
+            422: {
                 headers: {
                     [name: string]: unknown;
                 };

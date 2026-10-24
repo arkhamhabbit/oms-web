@@ -184,10 +184,11 @@ const BITS_FIELDS = [
     'Device connected Bits',
     'Paid when the customer connects a device. Stored; not yet triggered.',
   ],
+  ['firstOrderPoints', 'First order Bits', 'Paid for a customer’s own first confirmed order.'],
   [
-    'firstOrderPoints',
-    'First order Bits',
-    'Paid for a customer’s own first order. Stored; not yet triggered.',
+    'orderPointsPer100Rupees',
+    'Own-order Bits per ₹100',
+    'Earned on goods paid in cash (after Carrots, before shipping), pro rata, rounded down.',
   ],
 ] as const
 
@@ -341,6 +342,20 @@ function DraftEditor({
               />
             </Field>
           ))}
+          <Field
+            id="orderCarrotsPer100RupeesMinor"
+            label="Own-order Carrots per ₹100 (₹)"
+            help="Earned on the same amount as the Bits above — ₹1 means ₹1 back per ₹100 paid in cash."
+            errors={errorsFor('orderCarrotsPer100RupeesMinor')}
+          >
+            <MoneyInput
+              id="orderCarrotsPer100RupeesMinor"
+              valueMinor={draft.orderCarrotsPer100RupeesMinor}
+              onValueMinorChange={(v) =>
+                setDraft((d) => ({ ...d, orderCarrotsPer100RupeesMinor: v }))
+              }
+            />
+          </Field>
           <div className="grid gap-1.5">
             <div className="flex items-center gap-3">
               <Switch

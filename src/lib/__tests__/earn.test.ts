@@ -16,6 +16,16 @@ describe('earn lib', () => {
     const draft = rulesToDraft({ welcomePoints: 500, welcomeCarrotsMinor: 10000 })
     expect(draftToRequest(draft)).toMatchObject({ welcomePoints: 500, welcomeCarrotsMinor: 10000 })
     expect(draftToRequest({ ...draft, firstOrderPoints: null })).toBeNull()
+    expect(draftToRequest({ ...draft, orderPointsPer100Rupees: null })).toBeNull()
+    expect(draftToRequest({ ...draft, orderCarrotsPer100RupeesMinor: null })).toBeNull()
+  })
+
+  it('carries the own-order rates into the request', () => {
+    const draft = rulesToDraft({ orderPointsPer100Rupees: 10, orderCarrotsPer100RupeesMinor: 100 })
+    expect(draftToRequest(draft)).toMatchObject({
+      orderPointsPer100Rupees: 10,
+      orderCarrotsPer100RupeesMinor: 100,
+    })
   })
 
   it('allows edit and publish on a draft and withdraw on a scheduled version', () => {

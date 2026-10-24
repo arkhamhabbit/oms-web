@@ -28,6 +28,9 @@ import MembershipVersionPage from '@/pages/MembershipVersionPage'
 import EarnPage from '@/pages/EarnPage'
 import EarnVersionPage from '@/pages/EarnVersionPage'
 import InvitesPage from '@/pages/InvitesPage'
+import OrdersPage from '@/pages/OrdersPage'
+import OrderDetailPage from '@/pages/OrderDetailPage'
+import OrderSettingsPage from '@/pages/OrderSettingsPage'
 import RequireAuth from '@/auth/RequireAuth'
 import RequirePermission from '@/auth/RequirePermission'
 import { onUnauthorized } from '@/api/client'
@@ -153,6 +156,30 @@ export const router = createBrowserRouter([
             element: (
               <RequirePermission permission="earn.read">
                 <EarnVersionPage />
+              </RequirePermission>
+            ),
+          },
+          {
+            path: '/orders',
+            element: (
+              <RequirePermission permission="orders.read">
+                <OrdersPage />
+              </RequirePermission>
+            ),
+          },
+          {
+            path: '/orders/settings',
+            element: (
+              <RequirePermission permission="orders.read">
+                <OrderSettingsPage />
+              </RequirePermission>
+            ),
+          },
+          {
+            path: '/orders/:id',
+            element: (
+              <RequirePermission permission="orders.read">
+                <OrderDetailPage />
               </RequirePermission>
             ),
           },
