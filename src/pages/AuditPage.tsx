@@ -97,7 +97,7 @@ function DiffView({ entry }: { entry: AuditEntry }) {
         {all.length > changed.length && (
           <button
             type="button"
-            className="text-primary underline-offset-2 hover:underline"
+            className="text-brand-teal-deepest underline-offset-2 hover:underline"
             onClick={() => setShowUnchanged((v) => !v)}
           >
             {showUnchanged ? 'Hide' : 'Show'} {all.length - changed.length} unchanged field
