@@ -31,6 +31,18 @@ import InvitesPage from '@/pages/InvitesPage'
 import OrdersPage from '@/pages/OrdersPage'
 import OrderDetailPage from '@/pages/OrderDetailPage'
 import OrderSettingsPage from '@/pages/OrderSettingsPage'
+import WarehousesPage from '@/pages/WarehousesPage'
+import WarehouseDetailPage from '@/pages/WarehouseDetailPage'
+import StockPage from '@/pages/StockPage'
+import BatchesPage from '@/pages/BatchesPage'
+import BatchDetailPage from '@/pages/BatchDetailPage'
+import SuppliersPage from '@/pages/SuppliersPage'
+import SupplierDetailPage from '@/pages/SupplierDetailPage'
+import PurchaseOrdersPage from '@/pages/PurchaseOrdersPage'
+import PurchaseOrderDetailPage from '@/pages/PurchaseOrderDetailPage'
+import GoodsReceiptsPage from '@/pages/GoodsReceiptsPage'
+import GoodsReceiptNewPage from '@/pages/GoodsReceiptNewPage'
+import GoodsReceiptDetailPage from '@/pages/GoodsReceiptDetailPage'
 import RequireAuth from '@/auth/RequireAuth'
 import RequirePermission from '@/auth/RequirePermission'
 import { onUnauthorized } from '@/api/client'
@@ -180,6 +192,102 @@ export const router = createBrowserRouter([
             element: (
               <RequirePermission permission="orders.read">
                 <OrderDetailPage />
+              </RequirePermission>
+            ),
+          },
+          {
+            path: '/inventory/warehouses',
+            element: (
+              <RequirePermission permission="warehouse.read">
+                <WarehousesPage />
+              </RequirePermission>
+            ),
+          },
+          {
+            path: '/inventory/warehouses/:id',
+            element: (
+              <RequirePermission permission="warehouse.read">
+                <WarehouseDetailPage />
+              </RequirePermission>
+            ),
+          },
+          {
+            path: '/inventory/stock',
+            element: (
+              <RequirePermission permission="inventory.read">
+                <StockPage />
+              </RequirePermission>
+            ),
+          },
+          {
+            path: '/inventory/batches',
+            element: (
+              <RequirePermission permission="inventory.read">
+                <BatchesPage />
+              </RequirePermission>
+            ),
+          },
+          {
+            path: '/inventory/batches/:id',
+            element: (
+              <RequirePermission permission="inventory.read">
+                <BatchDetailPage />
+              </RequirePermission>
+            ),
+          },
+          {
+            path: '/procurement/suppliers',
+            element: (
+              <RequirePermission permission="procurement.supplier.read">
+                <SuppliersPage />
+              </RequirePermission>
+            ),
+          },
+          {
+            path: '/procurement/suppliers/:id',
+            element: (
+              <RequirePermission permission="procurement.supplier.read">
+                <SupplierDetailPage />
+              </RequirePermission>
+            ),
+          },
+          {
+            path: '/procurement/purchase-orders',
+            element: (
+              <RequirePermission permission="procurement.po.read">
+                <PurchaseOrdersPage />
+              </RequirePermission>
+            ),
+          },
+          {
+            path: '/procurement/purchase-orders/:id',
+            element: (
+              <RequirePermission permission="procurement.po.read">
+                <PurchaseOrderDetailPage />
+              </RequirePermission>
+            ),
+          },
+          {
+            path: '/procurement/goods-receipts',
+            element: (
+              <RequirePermission permission="procurement.grn.read">
+                <GoodsReceiptsPage />
+              </RequirePermission>
+            ),
+          },
+          {
+            path: '/procurement/goods-receipts/new',
+            element: (
+              <RequirePermission permission="procurement.grn.create">
+                <GoodsReceiptNewPage />
+              </RequirePermission>
+            ),
+          },
+          {
+            path: '/procurement/goods-receipts/:id',
+            element: (
+              <RequirePermission permission="procurement.grn.read">
+                <GoodsReceiptDetailPage />
               </RequirePermission>
             ),
           },
