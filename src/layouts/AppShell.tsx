@@ -4,6 +4,7 @@ import { ChevronRight, LogOut } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import { Button } from '@/components/ui/button'
 import { Separator } from '@/components/ui/separator'
+import lockupHorizontal from '@/assets/brand/habbit-lockup-horizontal.svg'
 import { navItems } from '@/layouts/nav-items'
 import { BreadcrumbProvider, useBreadcrumbContext } from '@/layouts/breadcrumb-context'
 import { useLogoutMutation, useProfileQuery } from '@/api/auth'
@@ -18,8 +19,9 @@ function Sidebar() {
 
   return (
     <aside className="hidden w-56 shrink-0 flex-col border-r bg-card md:flex">
-      <div className="flex h-14 items-center border-b px-4">
-        <span className="text-sm font-semibold tracking-tight">OMS Admin</span>
+      <div className="flex h-14 items-center gap-2 border-b px-4">
+        <img src={lockupHorizontal} alt="Habbit" className="h-6 w-auto" />
+        <span className="text-sm font-medium text-muted-foreground">Admin</span>
       </div>
       <nav className="flex flex-1 flex-col gap-1 overflow-y-auto p-2">
         {visibleItems.map((item) => (

@@ -187,7 +187,7 @@ function RoleEditorForm({ onOpenChange, role, canManage }: Omit<RoleEditorDialog
                     {!readOnly && (
                       <button
                         type="button"
-                        className="text-xs font-normal text-primary underline-offset-2 hover:underline"
+                        className="text-xs font-normal text-brand-teal-deepest underline-offset-2 hover:underline"
                         onClick={() => keys.forEach((k) => toggle(k, checkedCount !== keys.length))}
                       >
                         {checkedCount === keys.length ? 'Clear' : 'Select all'}

@@ -84,7 +84,7 @@ function ProductMerchandisingCard({
             <div className="flex flex-col gap-1.5">
               <div className="flex items-center justify-between">
                 <Label htmlFor="merch-tags">Tags</Label>
-                <Link to="/tags" className="text-xs text-primary underline">
+                <Link to="/tags" className="text-xs text-brand-teal-deepest underline">
                   Manage tags
                 </Link>
               </div>

@@ -184,3 +184,12 @@ tree-splicing testable as plain functions instead of through the DnD library.
   `npm create vite`'s own dependency resolution) currently default to a `9.x` pre-release
   with a completely different, breaking API — don't let a future `npm update` drift back to
   it without deliberately porting `DataTable.tsx`.
+
+## Brand
+
+The console wears the Habbit look; the consumer app has its own design system and is not touched here.
+
+- **Logo.** `src/assets/brand/` holds `habbit-mark.svg` (rabbit + teal circle), `habbit-lockup.svg` (stacked, with the ® mark, used on the auth pages) and `habbit-lockup-horizontal.svg` (sidebar header). `public/favicon.svg` is the mark; `public/favicon-32.png` is its 32 px fallback. All are vector paths, with no raster, no page background and no font reference (the serif wordmark is outlined).
+- **Extraction.** From the vector master `Habbit Final Logo Unit Square.pdf` in the brand-assets folder, with PyMuPDF (`page.get_svg_image`). The page's 38 filled paths were split into mark (first 28) and wordmark (last 10), their flip transforms made explicit, and the viewBoxes cut to the artwork. The horizontal lockup is composed from the same paths (wordmark at 70% of the mark's height). Re-extract the same way if the master changes.
+- **Tokens.** `src/index.css` `:root` carries the shadcn roles in the Habbit palette (light mode only; `.dark` is unused) plus `--brand-teal*`, `--brand-mauve*` and `--tier-sprout|active|apex|legend|locked` (each with a `-tint`). They are exposed to Tailwind as `bg-brand-teal`, `text-brand-teal-deepest`, `bg-tier-apex-tint` and so on. Links use `text-brand-teal-deepest`.
+- **Font.** Libre Franklin (SIL OFL 1.1, licence in `public/fonts/LibreFranklin-OFL.txt`), weights 400/500/600/700, self-hosted as woff2 under `public/fonts/` (latin and latin-ext subsets, from the `@fontsource/libre-franklin` package; there is no runtime fetch from Google). The brand's own display and text faces (Dala Floda, Mercury Display, ITC Franklin Gothic) are licensed desktop fonts with no web licence on file, so **they are not embedded**; the wordmark carries Dala Floda as outlines inside the SVG.
