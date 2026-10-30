@@ -57,7 +57,13 @@ export function useDeleteMediaMutation() {
   return useMutation({
     mutationFn: (id: string) =>
       unwrap<void>(api.DELETE('/api/admin/media/{id}', { params: { path: { id } } })),
-    onSuccess: () => queryClient.invalidateQueries({ queryKey: [MEDIA_KEY] }),
+    // Refresh the lists, but never the queries about the id that was just removed: refetching
+    // its references or detail only earns a 404 while the dialog that asked is still closing.
+    onSuccess: (_data, id) =>
+      queryClient.invalidateQueries({
+        queryKey: [MEDIA_KEY],
+        predicate: (query) => !query.queryKey.includes(id),
+      }),
   })
 }
 

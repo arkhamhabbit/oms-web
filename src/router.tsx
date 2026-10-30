@@ -45,7 +45,9 @@ import GoodsReceiptNewPage from '@/pages/GoodsReceiptNewPage'
 import GoodsReceiptDetailPage from '@/pages/GoodsReceiptDetailPage'
 import RequireAuth from '@/auth/RequireAuth'
 import RequirePermission from '@/auth/RequirePermission'
+import NotFoundPage from '@/pages/NotFoundPage'
 import { onUnauthorized } from '@/api/client'
+import { markSessionEnded } from '@/auth/session-hint'
 
 export const router = createBrowserRouter([
   {
@@ -349,6 +351,8 @@ export const router = createBrowserRouter([
           },
           // No permission required beyond a live session — see ProfileResponse in the spec.
           { path: '/profile', element: <ProfilePage /> },
+          // Anything else inside a live session: a real page in the shell, not the router's default.
+          { path: '*', element: <NotFoundPage /> },
         ],
       },
     ],
@@ -360,6 +364,8 @@ export const router = createBrowserRouter([
 // that into one. See the doc comment on `onUnauthorized` in api/client.ts for why the
 // registration runs in this direction.
 onUnauthorized(() => {
+  // Remember that a session existed, so the login page can say why the admin is back there.
+  markSessionEnded()
   if (router.state.location.pathname !== '/login') {
     router.navigate('/login')
   }

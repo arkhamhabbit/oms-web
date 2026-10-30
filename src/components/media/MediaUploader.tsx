@@ -22,6 +22,8 @@ export interface MediaUploaderProps {
   /** Offered beside the result once the item is READY; omit both to just show the result. */
   useLabel?: string
   onUse?: (media: Media) => void
+  /** An item deleted elsewhere on the page: its result line goes away instead of reading "Ready". */
+  removedId?: string
 }
 
 const STAGE_LABELS: Record<UploadProgress['stage'], string> = {
@@ -35,7 +37,7 @@ const STAGE_LABELS: Record<UploadProgress['stage'], string> = {
  * and the server's own sentence when it refuses the size, the type or the file itself. An item
  * the server is still processing (PENDING) is polled until it is READY.
  */
-function MediaUploader({ kinds, onReady, useLabel, onUse }: MediaUploaderProps) {
+function MediaUploader({ kinds, onReady, useLabel, onUse, removedId }: MediaUploaderProps) {
   const inputRef = React.useRef<HTMLInputElement>(null)
   const invalidateMedia = useInvalidateMedia()
   const [progress, setProgress] = React.useState<UploadProgress | null>(null)
@@ -43,9 +45,10 @@ function MediaUploader({ kinds, onReady, useLabel, onUse }: MediaUploaderProps) 
   const [uploaded, setUploaded] = React.useState<Media | null>(null)
   const [dragging, setDragging] = React.useState(false)
 
-  const pending = uploaded?.status === 'PENDING'
+  const pending = uploaded?.status === 'PENDING' && uploaded.id !== removedId
   const polled = useMediaItemQuery(uploaded?.id, pending)
-  const current = pending && polled.data ? polled.data : uploaded
+  const latest = pending && polled.data ? polled.data : uploaded
+  const current = latest && latest.id !== removedId ? latest : null
 
   // Notify the parent exactly once per item, when it first shows as READY.
   const notifiedRef = React.useRef<string | undefined>(undefined)
@@ -160,7 +163,7 @@ function MediaUploader({ kinds, onReady, useLabel, onUse }: MediaUploaderProps) 
 
       {current && (
         <div className="flex items-center gap-3 rounded-md border p-2" data-testid="uploaded-media">
-          <MediaThumb media={current} className="size-16" />
+          <MediaThumb media={current} alt={current.filename} className="size-16" />
           <div className="flex-1 text-sm">
             <p className="truncate font-medium">{current.filename}</p>
             <p className="text-xs text-muted-foreground">

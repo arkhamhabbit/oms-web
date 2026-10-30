@@ -2,6 +2,7 @@ import { Navigate, Outlet, useLocation } from 'react-router-dom'
 
 import { useProfileQuery } from '@/api/auth'
 import { Button } from '@/components/ui/button'
+import { markSessionEnded } from '@/auth/session-hint'
 import { ApiClientError } from '@/lib/api-error'
 
 function FullPageLoader() {
@@ -47,6 +48,7 @@ function RequireAuth() {
   if (profile.isError) {
     const sessionIsDead = profile.error instanceof ApiClientError && profile.error.status === 401
     if (sessionIsDead) {
+      markSessionEnded()
       return <Navigate to="/login" replace state={{ from: location }} />
     }
     return <FullPageErrorState onRetry={() => profile.refetch()} />

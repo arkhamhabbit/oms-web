@@ -127,6 +127,48 @@ export function useOrderActionMutation(id: string) {
   })
 }
 
+export interface RefundSettlementInput {
+  action: 'retry' | 'mark-refunded'
+  version: number
+  idempotencyKey: string
+  /** How a manual settlement was paid (mark-refunded only; required there). */
+  reference?: string
+  reason?: string
+}
+
+/**
+ * D9.6 — the two admin actions on a refund the gateway keeps refusing: start a fresh round of
+ * attempts, or record that the shopper was paid back outside the gateway. Both are idempotent per key.
+ */
+export function useRefundSettlementMutation(id: string) {
+  const queryClient = useQueryClient()
+  return useMutation({
+    mutationFn: (input: RefundSettlementInput) => {
+      const base = {
+        params: { path: { id }, header: { 'Idempotency-Key': input.idempotencyKey } },
+      }
+      return input.action === 'retry'
+        ? unwrap<OrderDetail>(
+            api.POST('/api/admin/orders/{id}/refund/retry', {
+              ...base,
+              body: { version: input.version },
+            })
+          )
+        : unwrap<OrderDetail>(
+            api.POST('/api/admin/orders/{id}/refund/mark-refunded', {
+              ...base,
+              body: {
+                version: input.version,
+                reference: input.reference ?? '',
+                reason: input.reason || undefined,
+              },
+            })
+          )
+    },
+    onSuccess: () => queryClient.invalidateQueries({ queryKey: [ORDERS_KEY] }),
+  })
+}
+
 export function useCurrentOrderSettingsQuery() {
   return useQuery({
     queryKey: [ORDERS_KEY, 'settings', 'current'],

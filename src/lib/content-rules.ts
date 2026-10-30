@@ -54,9 +54,23 @@ export function hasOverride(block: ContentBlock, variantId: string): boolean {
   return !!block.overrides?.some((o) => o.variantId === variantId && (o.slides?.length ?? 0) > 0)
 }
 
-/** The wall (D4.20): the in-wall blocks in display order. Wall-only blocks are in-wall blocks with no circle. */
+/**
+ * What OMS publishes (0.10 confirmed it): a block with no *product* slide is not published at all,
+ * so it is in neither the highlights nor the wall, and its variant overrides go with it. OMS serves
+ * no preview endpoint, so the console applies the same rule here.
+ */
+export function publishedBlocks(blocks: ContentBlock[]): ContentBlock[] {
+  return blocks.filter((b) => (b.slides?.length ?? 0) > 0)
+}
+
+/** The highlight circles (D4.20): published blocks that carry an icon. */
+export function highlightBlocks(blocks: ContentBlock[]): ContentBlock[] {
+  return publishedBlocks(blocks).filter((b) => b.iconMediaId || b.icon)
+}
+
+/** The wall (D4.20): the published in-wall blocks in display order. Wall-only blocks are those with no circle. */
 export function wallBlocks(blocks: ContentBlock[]): ContentBlock[] {
-  return blocks.filter((b) => b.inWall)
+  return publishedBlocks(blocks).filter((b) => b.inWall)
 }
 
 /** Moves the item at `from` to position `to`; the same array when nothing would change. */

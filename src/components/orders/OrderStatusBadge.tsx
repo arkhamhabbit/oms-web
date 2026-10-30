@@ -1,6 +1,6 @@
 import { Badge } from '@/components/ui/badge'
 import type { OrderStatus } from '@/api/orders'
-import { ORDER_STATUS_LABEL } from '@/lib/orders'
+import { ORDER_STATUS_LABEL } from '@/lib/labels'
 
 const VARIANT: Record<OrderStatus, 'default' | 'secondary' | 'destructive' | 'outline'> = {
   PENDING_PAYMENT: 'outline',

@@ -123,7 +123,7 @@ function SlideFormDialog({
               rows={3}
               value={body}
               onChange={(event) => setBody(event.target.value)}
-              className="rounded-md border border-input bg-transparent px-3 py-2 text-sm shadow-xs outline-none focus-visible:ring-[3px] focus-visible:ring-ring/50"
+              className="rounded-md border border-input bg-transparent px-3 py-2 text-sm shadow-xs outline-none focus-visible:ring-[3px] focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-background"
             />
           </div>
           <div className="flex flex-col gap-1.5">

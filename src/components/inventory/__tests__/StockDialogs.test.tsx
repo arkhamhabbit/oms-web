@@ -3,13 +3,15 @@ import { installRadixPolyfills } from '@/test/polyfills'
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
 import { render as rtlRender, screen, waitFor, within } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
-import { beforeEach, describe, expect, it } from 'vitest'
+import { beforeEach, describe, expect, it, vi } from 'vitest'
 
 import { StockAdjustDialog } from '@/components/inventory/StockAdjustDialog'
 import { StockTransferDialog } from '@/components/inventory/StockTransferDialog'
 import { TransferDrawer } from '@/components/inventory/TransferDrawer'
 
 installRadixPolyfills()
+// These drive Radix selects and typed input through jsdom; a full parallel run is slower than 5 s.
+vi.setConfig({ testTimeout: 20000 })
 
 const W31 = { id: 'w-31', code: 'W31', name: 'W3.1 Warehouse', active: true }
 const VERIFY = { id: 'w-v', code: 'VERIFY', name: 'Verify Warehouse', active: true }
@@ -261,5 +263,54 @@ describe('TransferDrawer', () => {
     respondWith(() => refusal(404, 'NOT_FOUND', 'Transfer ref-9 was not found.'))
     render(<TransferDrawer referenceId="ref-9" onClose={() => {}} />)
     expect(await screen.findByText('Transfer ref-9 was not found.')).toBeInTheDocument()
+  })
+})
+
+describe('StockAdjustDialog refusals and reasons (W3.2)', () => {
+  it('offers only the reasons that belong to the chosen movement type', async () => {
+    const user = userEvent.setup()
+    render(<StockAdjustDialog open onOpenChange={() => {}} seed={seed} />)
+
+    await user.click(await screen.findByRole('combobox', { name: 'Reason code' }))
+    expect(await screen.findByRole('option', { name: 'Cycle count' })).toBeInTheDocument()
+    expect(screen.queryByRole('option', { name: 'Damaged in transit' })).not.toBeInTheDocument()
+    await user.keyboard('{Escape}')
+
+    await chooseOption(user, 'Movement type', 'Damage')
+    await user.click(await screen.findByRole('combobox', { name: 'Reason code' }))
+    expect(await screen.findByRole('option', { name: 'Damaged in transit' })).toBeInTheDocument()
+    expect(screen.queryByRole('option', { name: 'Cycle count' })).not.toBeInTheDocument()
+  })
+
+  it('drops the refusal sentence as soon as the admin changes the type, the reason or a figure', async () => {
+    const sentence = 'Cannot remove 10 from W31: only 3 on hand.'
+    respondWith((call) =>
+      call.method === 'POST'
+        ? refusal(422, 'BUSINESS_RULE_VIOLATION', sentence)
+        : call.url.pathname === '/api/admin/warehouses'
+          ? page([W31])
+          : page([])
+    )
+    const user = userEvent.setup()
+    render(<StockAdjustDialog open onOpenChange={() => {}} seed={seed} />)
+    await chooseOption(user, 'Reason code', 'Cycle count')
+    await user.type(screen.getByLabelText('Quantity'), '-10')
+    await user.click(screen.getByRole('button', { name: 'Post movement' }))
+    expect(await screen.findByText(sentence)).toBeInTheDocument()
+
+    // changing the reason answers it
+    await chooseOption(user, 'Reason code', 'Lost stock')
+    expect(screen.queryByText(sentence)).not.toBeInTheDocument()
+
+    // so does changing the quantity, and so does changing the type
+    await user.click(screen.getByRole('button', { name: 'Post movement' }))
+    expect(await screen.findByText(sentence)).toBeInTheDocument()
+    await user.type(screen.getByLabelText('Quantity'), '0')
+    expect(screen.queryByText(sentence)).not.toBeInTheDocument()
+
+    await user.click(screen.getByRole('button', { name: 'Post movement' }))
+    expect(await screen.findByText(sentence)).toBeInTheDocument()
+    await chooseOption(user, 'Movement type', 'Damage')
+    expect(screen.queryByText(sentence)).not.toBeInTheDocument()
   })
 })

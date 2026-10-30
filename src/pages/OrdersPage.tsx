@@ -18,19 +18,16 @@ import {
 import { useBreadcrumb } from '@/layouts/breadcrumb-context'
 import { isApiError } from '@/lib/api-error'
 import { minorToMajorString } from '@/lib/money'
-import {
-  formatDateTime,
-  isUuid,
-  istDayStart,
-  ORDER_STATUSES,
-  ORDER_STATUS_LABEL,
-} from '@/lib/orders'
+import { isUuid, istDayStart, ORDER_STATUSES } from '@/lib/orders'
 import {
   useCurrentOrderSettingsQuery,
   useOrdersQuery,
   type OrderStatus,
   type OrderSummary,
 } from '@/api/orders'
+import { formatDateTime } from '@/lib/dates'
+import { ANY_STATUS, ORDER_STATUS_LABEL } from '@/lib/labels'
+import { ConsumerLink } from '@/components/orders/ConsumerLink'
 
 const PAGE_SIZE = 20
 
@@ -82,18 +79,14 @@ function OrdersPage() {
     {
       id: 'consumer',
       header: 'Consumer',
-      cell: ({ row }) =>
-        row.original.consumerId ? (
-          <Link
-            to={`/users/${row.original.consumerId}`}
-            onClick={(e) => e.stopPropagation()}
-            className="font-mono text-xs underline"
-          >
-            {row.original.consumerId.slice(0, 8)}…
-          </Link>
-        ) : (
-          ''
-        ),
+      cell: ({ row }) => (
+        <ConsumerLink
+          consumerId={row.original.consumerId}
+          name={row.original.consumerName}
+          mobile={row.original.consumerMobile}
+          stopPropagation
+        />
+      ),
     },
     {
       id: 'payable',
@@ -169,7 +162,7 @@ function OrdersPage() {
             <SelectValue placeholder="Status" />
           </SelectTrigger>
           <SelectContent>
-            <SelectItem value="ALL">All statuses</SelectItem>
+            <SelectItem value="ALL">{ANY_STATUS}</SelectItem>
             {ORDER_STATUSES.map((s) => (
               <SelectItem key={s} value={s}>
                 {ORDER_STATUS_LABEL[s]}

@@ -13,9 +13,9 @@ import {
 import { usePermissions } from '@/auth/usePermissions'
 import { useBreadcrumb } from '@/layouts/breadcrumb-context'
 import { useGoodsReceiptQuery } from '@/api/procurement'
-import { formatDate } from '@/lib/inventory'
+import { formatDate } from '@/lib/dates'
 import { minorToMajorString } from '@/lib/money'
-import { formatDateTime } from '@/lib/orders'
+import { formatDateTime } from '@/lib/dates'
 
 const rupees = (money: { amountMinor?: number } | undefined) =>
   money?.amountMinor === undefined ? '—' : `₹${minorToMajorString(money.amountMinor)}`

@@ -5,6 +5,7 @@ import { Badge } from '@/components/ui/badge'
 import { cn } from '@/lib/utils'
 import type { CategoryNode } from '@/fixtures/categories'
 import { reparentTree } from '@/components/tree/reparent'
+import { CATALOG_STATUS_LABEL, labelOf } from '@/lib/labels'
 
 export interface CategoryTreeProps {
   data: CategoryNode[]
@@ -62,11 +63,11 @@ function CategoryTreeNode({ node, style, dragHandle }: NodeRendererProps<Categor
       <Folder className="size-3.5 shrink-0 text-muted-foreground" />
       <span className="truncate">{node.data.name}</span>
       <Badge variant={statusVariant(node.data.status)} className="ml-1 text-[10px]">
-        {node.data.status}
+        {labelOf(CATALOG_STATUS_LABEL, node.data.status)}
       </Badge>
       {node.data.live && (
         <Badge variant="secondary" className="text-[10px]">
-          LIVE
+          Live
         </Badge>
       )}
     </div>

@@ -22,9 +22,9 @@ import {
   usePurchaseOrderReceiptsQuery,
   type PurchaseOrderAction,
 } from '@/api/procurement'
-import { formatDate } from '@/lib/inventory'
+import { formatDate } from '@/lib/dates'
 import { minorToMajorString } from '@/lib/money'
-import { formatDateTime } from '@/lib/orders'
+import { formatDateTime } from '@/lib/dates'
 import {
   PO_ACTION_LABEL,
   PO_ACTION_PERMISSION,

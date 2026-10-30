@@ -1,5 +1,6 @@
 import { Badge } from '@/components/ui/badge'
 import type { CatalogStatus } from '@/lib/catalog-transitions'
+import { CATALOG_STATUS_LABEL } from '@/lib/labels'
 
 export function statusBadgeVariant(status: CatalogStatus) {
   switch (status) {
@@ -16,8 +17,8 @@ export function statusBadgeVariant(status: CatalogStatus) {
 export function CatalogStatusBadges({ status, live }: { status: CatalogStatus; live: boolean }) {
   return (
     <span className="flex items-center gap-1.5">
-      <Badge variant={statusBadgeVariant(status)}>{status}</Badge>
-      {live && <Badge variant="secondary">LIVE</Badge>}
+      <Badge variant={statusBadgeVariant(status)}>{CATALOG_STATUS_LABEL[status]}</Badge>
+      {live && <Badge variant="secondary">Live</Badge>}
     </span>
   )
 }

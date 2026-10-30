@@ -13,8 +13,8 @@ import { Input } from '@/components/ui/input'
 import { usePermissions } from '@/auth/usePermissions'
 import { useBreadcrumb } from '@/layouts/breadcrumb-context'
 import { useBatchesQuery, type Batch } from '@/api/inventory'
-import { formatDate } from '@/lib/inventory'
-import { formatDateTime } from '@/lib/orders'
+import { formatDate } from '@/lib/dates'
+import { formatDateTime } from '@/lib/dates'
 
 const PAGE_SIZE = 20
 

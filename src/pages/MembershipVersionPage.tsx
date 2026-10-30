@@ -15,6 +15,7 @@ import { TierLadderTable } from '@/components/membership/TierLadderTable'
 import { useBreadcrumb } from '@/layouts/breadcrumb-context'
 import { usePermissions } from '@/auth/usePermissions'
 import { isApiError, type ApiFieldError } from '@/lib/api-error'
+import { describeFieldError, MEMBERSHIP_VERSION_LABELS } from '@/lib/field-labels'
 import { localInputToInstant } from '@/lib/pricing'
 import { draftsToRequest, membershipActions, tierToDraft, type TierDraft } from '@/lib/membership'
 import {
@@ -25,6 +26,7 @@ import {
   type MembershipVersion,
   type MembershipVersionState,
 } from '@/api/membership'
+import { formatDateTime } from '@/lib/dates'
 
 /** A withdrawn version never took effect — it was only ever scheduled. */
 const EFFECTIVE_VERB: Partial<Record<MembershipVersionState, string>> = {
@@ -32,9 +34,6 @@ const EFFECTIVE_VERB: Partial<Record<MembershipVersionState, string>> = {
   WITHDRAWN: 'Was scheduled for',
 }
 
-function formatDate(value: string | undefined) {
-  return value ? new Date(value).toLocaleString() : ''
-}
 
 function BackLink() {
   return (
@@ -112,11 +111,11 @@ function MembershipVersionPage() {
       </div>
       <p className="-mt-2 text-sm text-muted-foreground">
         {version.effectiveFrom
-          ? `${EFFECTIVE_VERB[version.state!] ?? 'Took effect'} ${formatDate(version.effectiveFrom)}`
+          ? `${EFFECTIVE_VERB[version.state!] ?? 'Took effect'} ${formatDateTime(version.effectiveFrom)}`
           : 'Not published'}
         {' · '}
         {version.tiers?.length ?? 0} tiers
-        {version.withdrawnAt && ` · withdrawn ${formatDate(version.withdrawnAt)}`}
+        {version.withdrawnAt && ` · withdrawn ${formatDateTime(version.withdrawnAt)}`}
       </p>
 
       {notice && (
@@ -258,7 +257,7 @@ function DraftEditor({
             <ul className="mt-1 list-disc pl-5">
               {fieldErrors.map((e) => (
                 <li key={`${e.field}-${e.message}`}>
-                  <span className="font-mono text-xs">{e.field}</span> — {e.message}
+                  {describeFieldError(e, MEMBERSHIP_VERSION_LABELS)}
                 </li>
               ))}
             </ul>
@@ -415,7 +414,7 @@ function LifecycleActions({
         onConfirm={runWithdraw}
       >
         <p>
-          {version.name} was due to take effect {formatDate(version.effectiveFrom)}. Withdrawing it
+          {version.name} was due to take effect {formatDateTime(version.effectiveFrom)}. Withdrawing it
           is final: it will never take effect, and the version in effect now is untouched. No member
           has been resolved against it, so nothing is lost.
         </p>

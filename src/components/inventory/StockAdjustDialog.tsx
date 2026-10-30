@@ -32,15 +32,14 @@ import {
 import { isApiError } from '@/lib/api-error'
 import {
   ADJUSTABLE_TYPES,
-  MOVEMENT_TYPE_LABEL,
   optionalText,
   quantitySignFor,
-  REASON_CODE_LABEL,
-  REASON_CODES,
+  reasonsFor,
   REASON_REQUIRED_TYPES,
   signedQuantity,
 } from '@/lib/inventory'
 import { fieldMessage, toRefusal, type Refusal } from '@/lib/refusal'
+import { MOVEMENT_TYPE_LABEL, REASON_CODE_LABEL } from '@/lib/labels'
 
 export interface StockFormSeed {
   variant?: ChosenVariant
@@ -82,6 +81,15 @@ function AdjustBody({ seed, onClose }: { seed?: StockFormSeed; onClose: () => vo
   const [quantity, setQuantity] = React.useState('')
   const [note, setNote] = React.useState('')
   const [refusal, setRefusal] = React.useState<Refusal | undefined>()
+
+  // A refusal describes the form as it was sent. Once any field changes it no longer applies, so it
+  // goes (W3.1: the sentence used to outlive the change that answered it).
+  function changed<T>(set: (value: T) => void) {
+    return (value: T) => {
+      setRefusal(undefined)
+      set(value)
+    }
+  }
 
   const batches = useBatchesQuery({ page: 0, size: 100, variantId: variant?.id }, !!variant)
   const batchList = batches.data?.content ?? []
@@ -138,6 +146,7 @@ function AdjustBody({ seed, onClose }: { seed?: StockFormSeed; onClose: () => vo
           <VariantChoice
             value={variant}
             onChange={(next) => {
+              setRefusal(undefined)
               setVariant(next)
               setBatchId('')
             }}
@@ -155,7 +164,7 @@ function AdjustBody({ seed, onClose }: { seed?: StockFormSeed; onClose: () => vo
           <WarehouseSelect
             id="adjust-warehouse"
             value={warehouseId}
-            onChange={setWarehouseId}
+            onChange={changed(setWarehouseId)}
             ariaLabel="Warehouse"
             className="w-full"
           />
@@ -172,7 +181,7 @@ function AdjustBody({ seed, onClose }: { seed?: StockFormSeed; onClose: () => vo
               id="adjust-batch"
               batches={batchList}
               value={batchId}
-              onChange={setBatchId}
+              onChange={changed(setBatchId)}
               ariaLabel="Batch"
               className="w-full"
             />
@@ -194,6 +203,7 @@ function AdjustBody({ seed, onClose }: { seed?: StockFormSeed; onClose: () => vo
             <Select
               value={type}
               onValueChange={(next) => {
+                setRefusal(undefined)
                 setType(next as MovementType)
                 setReason('')
               }}
@@ -214,14 +224,14 @@ function AdjustBody({ seed, onClose }: { seed?: StockFormSeed; onClose: () => vo
             <Label htmlFor="adjust-reason">Reason{needsReason ? '' : ' (not used)'}</Label>
             <Select
               value={reason}
-              onValueChange={(next) => setReason(next as ReasonCode)}
+              onValueChange={changed((next: string) => setReason(next as ReasonCode))}
               disabled={!needsReason}
             >
               <SelectTrigger id="adjust-reason" className="w-full" aria-label="Reason code">
                 <SelectValue placeholder={needsReason ? 'Choose a reason' : '—'} />
               </SelectTrigger>
               <SelectContent>
-                {REASON_CODES.map((code) => (
+                {reasonsFor(type).map((code) => (
                   <SelectItem key={code} value={code}>
                     {REASON_CODE_LABEL[code]}
                   </SelectItem>
@@ -241,7 +251,7 @@ function AdjustBody({ seed, onClose }: { seed?: StockFormSeed; onClose: () => vo
             label="Quantity"
             inputMode="numeric"
             value={quantity}
-            onValueChange={setQuantity}
+            onValueChange={changed(setQuantity)}
             hint={SIGN_HINT[quantitySignFor(type)]}
             error={fieldMessage(refusal, 'quantity')}
           />
@@ -260,7 +270,7 @@ function AdjustBody({ seed, onClose }: { seed?: StockFormSeed; onClose: () => vo
           id="adjust-note"
           label="Note (optional)"
           value={note}
-          onValueChange={setNote}
+          onValueChange={changed(setNote)}
           maxLength={500}
           error={fieldMessage(refusal, 'note')}
         />

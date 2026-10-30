@@ -17,10 +17,8 @@ import { NoticeBanner, noticeFromError, type Notice } from '@/components/common/
 import { InviteLinkPanel } from '@/components/invites/InviteLinkPanel'
 import { INVITE_STATUS, InviteStatusBadge } from '@/components/invites/InviteStatusBadge'
 import { useInvalidateInviteMutation, useInviteQuery, type Invite } from '@/api/invites'
+import { formatDateTime } from '@/lib/dates'
 
-function formatDate(value: string | undefined) {
-  return value ? new Date(value).toLocaleString() : undefined
-}
 
 /** Only an open invite (not yet claimed, expired or invalid) can be marked INVALID. */
 function isOpen(invite: Invite) {
@@ -75,11 +73,11 @@ function Detail({ inviteId, canWrite }: { inviteId: string; canWrite: boolean })
   }
 
   const timeline: [string, string | undefined][] = [
-    ['Issued', formatDate(invite.issuedAt)],
-    ['Link opened', formatDate(invite.visitedAt)],
-    ['Claimed', formatDate(invite.addedAt)],
-    ['Closed', formatDate(invite.closedAt)],
-    ['Expires', formatDate(invite.expiresAt)],
+    ['Issued', formatDateTime(invite.issuedAt)],
+    ['Link opened', formatDateTime(invite.visitedAt)],
+    ['Claimed', formatDateTime(invite.addedAt)],
+    ['Closed', formatDateTime(invite.closedAt)],
+    ['Expires', formatDateTime(invite.expiresAt)],
   ]
 
   return (

@@ -20,13 +20,12 @@ import { useBreadcrumb } from '@/layouts/breadcrumb-context'
 import { usePermissions } from '@/auth/usePermissions'
 import { useRolesQuery } from '@/api/roles'
 import { useTeamMembersQuery, type TeamMember, type TeamMemberStatus } from '@/api/team'
+import { ANY_STATUS, TEAM_STATUS_LABEL } from '@/lib/labels'
+import { formatDateTime } from '@/lib/dates'
 
 const PAGE_SIZE = 20
 const STATUS_OPTIONS: TeamMemberStatus[] = ['INVITED', 'ACTIVE', 'SUSPENDED', 'DEACTIVATED']
 
-function formatLastActive(value: string | undefined) {
-  return value ? new Date(value).toLocaleString() : 'Never'
-}
 
 function TeamPage() {
   useBreadcrumb([{ label: 'Team' }])
@@ -82,7 +81,7 @@ function TeamPage() {
     {
       id: 'lastActive',
       header: 'Last active',
-      cell: ({ row }) => formatLastActive(row.original.lastActiveAt),
+      cell: ({ row }) => formatDateTime(row.original.lastActiveAt) || 'Never',
     },
   ]
 
@@ -110,10 +109,10 @@ function TeamPage() {
               <SelectValue placeholder="Status" />
             </SelectTrigger>
             <SelectContent>
-              <SelectItem value="ALL">All statuses</SelectItem>
+              <SelectItem value="ALL">{ANY_STATUS}</SelectItem>
               {STATUS_OPTIONS.map((s) => (
                 <SelectItem key={s} value={s}>
-                  {s}
+                  {TEAM_STATUS_LABEL[s]}
                 </SelectItem>
               ))}
             </SelectContent>

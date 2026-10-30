@@ -31,8 +31,11 @@ import {
   type CategoryStatus,
   type CategoryTreeNode,
 } from '@/api/categories'
+import { ANY_STATUS, ANY_VISIBILITY, CATALOG_STATUS_LABEL } from '@/lib/labels'
 
 const PAGE_SIZE = 20
+const CATEGORY_ARCHIVE_CONSEQUENCE =
+  'archiving cannot be undone. An archived category leaves the pickers, takes no new subcategories and cannot be brought back. A live parent may be refused.'
 const STATUS_OPTIONS: CategoryStatus[] = ['DRAFT', 'IN_REVIEW', 'ACTIVE', 'ARCHIVED']
 
 function CategoryDetailPanel({
@@ -75,13 +78,19 @@ function CategoryDetailPanel({
           <Button variant="outline" size="sm" disabled={!canWrite} onClick={onEdit}>
             <PencilIcon /> Edit
           </Button>
-          <Button variant="outline" size="sm" disabled={!canWrite} onClick={onAddChild}>
-            <PlusIcon /> Add subcategory
-          </Button>
+          {/* An archived category takes no new children, and there is no way back from archived. */}
+          {node.status !== 'ARCHIVED' && (
+            <Button variant="outline" size="sm" disabled={!canWrite} onClick={onAddChild}>
+              <PlusIcon /> Add subcategory
+            </Button>
+          )}
           <TransitionMenu
             status={(node.status ?? 'DRAFT') as CatalogStatus}
             live={!!node.live}
             canPublish={canPublish}
+            noun="category"
+            name={node.name ?? 'This category'}
+            archiveConsequence={CATEGORY_ARCHIVE_CONSEQUENCE}
             onTransition={runTransition}
           />
         </div>
@@ -268,6 +277,9 @@ function SearchView() {
             status={row.original.status as CatalogStatus}
             live={!!row.original.live}
             canPublish={canPublish}
+            noun="category"
+            name={row.original.name ?? 'This category'}
+            archiveConsequence={CATEGORY_ARCHIVE_CONSEQUENCE}
             onTransition={(action) => runTransition(row.original, action)}
           />
         </div>
@@ -298,10 +310,10 @@ function SearchView() {
             <SelectValue placeholder="Status" />
           </SelectTrigger>
           <SelectContent>
-            <SelectItem value="ALL">All statuses</SelectItem>
+            <SelectItem value="ALL">{ANY_STATUS}</SelectItem>
             {STATUS_OPTIONS.map((s) => (
               <SelectItem key={s} value={s}>
-                {s}
+                {CATALOG_STATUS_LABEL[s]}
               </SelectItem>
             ))}
           </SelectContent>
@@ -317,7 +329,7 @@ function SearchView() {
             <SelectValue placeholder="Live" />
           </SelectTrigger>
           <SelectContent>
-            <SelectItem value="ALL">Live or not</SelectItem>
+            <SelectItem value="ALL">{ANY_VISIBILITY}</SelectItem>
             <SelectItem value="true">Live</SelectItem>
             <SelectItem value="false">Not live</SelectItem>
           </SelectContent>

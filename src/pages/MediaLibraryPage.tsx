@@ -12,7 +12,15 @@ import { usePermissions } from '@/auth/usePermissions'
 import { toastApiError } from '@/lib/api-error'
 import { useDeleteMediaMutation, useMediaReferencesQuery, type Media } from '@/api/media'
 
-function DeleteMediaDialog({ media, onClose }: { media: Media | null; onClose: () => void }) {
+function DeleteMediaDialog({
+  media,
+  onClose,
+  onDeleted,
+}: {
+  media: Media | null
+  onClose: () => void
+  onDeleted: (id: string) => void
+}) {
   const references = useMediaReferencesQuery(media?.id)
   const deleteMedia = useDeleteMediaMutation()
   const used = references.data ?? []
@@ -31,6 +39,7 @@ function DeleteMediaDialog({ media, onClose }: { media: Media | null; onClose: (
           .mutateAsync(media!.id!)
           .then(() => {
             toast.success('File deleted')
+            onDeleted(media!.id!)
             onClose()
           })
           .catch((error) => toastApiError(error))
@@ -66,6 +75,7 @@ function MediaLibraryPage() {
   const { has } = usePermissions()
   const canWrite = has('catalog.media.write')
   const [deleting, setDeleting] = React.useState<Media | null>(null)
+  const [removedId, setRemovedId] = React.useState<string | undefined>()
 
   return (
     <div className="flex flex-col gap-4">
@@ -80,7 +90,7 @@ function MediaLibraryPage() {
             </CardDescription>
           </CardHeader>
           <CardContent>
-            <MediaUploader kinds={['IMAGE', 'VIDEO']} />
+            <MediaUploader kinds={['IMAGE', 'VIDEO']} removedId={removedId} />
           </CardContent>
         </Card>
       )}
@@ -105,7 +115,11 @@ function MediaLibraryPage() {
           />
         </CardContent>
       </Card>
-      <DeleteMediaDialog media={deleting} onClose={() => setDeleting(null)} />
+      <DeleteMediaDialog
+        media={deleting}
+        onClose={() => setDeleting(null)}
+        onDeleted={setRemovedId}
+      />
     </div>
   )
 }

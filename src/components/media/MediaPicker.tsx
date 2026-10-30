@@ -88,6 +88,7 @@ function MediaPicker({
     <div className="flex items-center gap-3">
       <MediaThumb
         media={value?.preview}
+        alt={value?.filename}
         fallbackUrl={value ? undefined : legacyUrl}
         className="size-14"
         round={round}

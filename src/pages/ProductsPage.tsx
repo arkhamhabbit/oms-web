@@ -25,6 +25,7 @@ import {
   type ProductAudience,
   type ProductStatus,
 } from '@/api/products'
+import { ANY_AUDIENCE, ANY_STATUS, ANY_VISIBILITY, CATALOG_STATUS_LABEL, PRODUCT_AUDIENCE_LABEL, labelOf } from '@/lib/labels'
 
 const PAGE_SIZE = 20
 const STATUS_OPTIONS: ProductStatus[] = ['DRAFT', 'IN_REVIEW', 'ACTIVE', 'ARCHIVED']
@@ -86,7 +87,11 @@ function ProductsPage() {
       header: 'Variants',
       cell: ({ row }) => row.original.variantCount ?? '—',
     },
-    { accessorKey: 'audience', header: 'Audience' },
+    {
+      id: 'audience',
+      header: 'Audience',
+      cell: ({ row }) => labelOf(PRODUCT_AUDIENCE_LABEL, row.original.audience),
+    },
   ]
 
   return (
@@ -113,10 +118,10 @@ function ProductsPage() {
               <SelectValue placeholder="Status" />
             </SelectTrigger>
             <SelectContent>
-              <SelectItem value="ALL">All statuses</SelectItem>
+              <SelectItem value="ALL">{ANY_STATUS}</SelectItem>
               {STATUS_OPTIONS.map((s) => (
                 <SelectItem key={s} value={s}>
-                  {s}
+                  {CATALOG_STATUS_LABEL[s]}
                 </SelectItem>
               ))}
             </SelectContent>
@@ -132,7 +137,7 @@ function ProductsPage() {
               <SelectValue placeholder="Live" />
             </SelectTrigger>
             <SelectContent>
-              <SelectItem value="ALL">Live or not</SelectItem>
+              <SelectItem value="ALL">{ANY_VISIBILITY}</SelectItem>
               <SelectItem value="true">Live</SelectItem>
               <SelectItem value="false">Not live</SelectItem>
             </SelectContent>
@@ -167,10 +172,10 @@ function ProductsPage() {
               <SelectValue placeholder="Audience" />
             </SelectTrigger>
             <SelectContent>
-              <SelectItem value="ALL">All audiences</SelectItem>
+              <SelectItem value="ALL">{ANY_AUDIENCE}</SelectItem>
               {AUDIENCE_OPTIONS.map((a) => (
                 <SelectItem key={a} value={a}>
-                  {a}
+                  {PRODUCT_AUDIENCE_LABEL[a]}
                 </SelectItem>
               ))}
             </SelectContent>

@@ -11,7 +11,7 @@ import { Input } from '@/components/ui/input'
 import { usePermissions } from '@/auth/usePermissions'
 import { useBreadcrumb } from '@/layouts/breadcrumb-context'
 import { useGoodsReceiptsQuery, type GoodsReceipt } from '@/api/procurement'
-import { formatDate } from '@/lib/inventory'
+import { formatDate } from '@/lib/dates'
 import { minorToMajorString } from '@/lib/money'
 
 const PAGE_SIZE = 20

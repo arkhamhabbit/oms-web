@@ -21,12 +21,10 @@ import {
   type CycleRun,
   type MembershipVersion,
 } from '@/api/membership'
+import { formatDateTime } from '@/lib/dates'
 
 const PAGE_SIZE = 20
 
-function formatDate(value: string | undefined) {
-  return value ? new Date(value).toLocaleString() : ''
-}
 
 function MembershipPage() {
   useBreadcrumb([{ label: 'Membership' }])
@@ -50,9 +48,9 @@ function MembershipPage() {
     {
       id: 'effectiveFrom',
       header: 'Effective from',
-      cell: ({ row }) => formatDate(row.original.effectiveFrom) || '—',
+      cell: ({ row }) => formatDateTime(row.original.effectiveFrom) || '—',
     },
-    { id: 'updatedAt', header: 'Updated', cell: ({ row }) => formatDate(row.original.updatedAt) },
+    { id: 'updatedAt', header: 'Updated', cell: ({ row }) => formatDateTime(row.original.updatedAt) },
   ]
 
   return (
@@ -72,7 +70,7 @@ function MembershipPage() {
             </CardTitle>
             <CardDescription>
               {effective.data?.effectiveFrom
-                ? `Took effect ${formatDate(effective.data.effectiveFrom)}`
+                ? `Took effect ${formatDateTime(effective.data.effectiveFrom)}`
                 : 'The ladder every member is resolved against today.'}
             </CardDescription>
           </div>

@@ -2,13 +2,9 @@ import type { ColumnDef } from '@tanstack/react-table'
 
 import { DataTable, type ServerPagination } from '@/components/data-table/DataTable'
 import type { StockMovement } from '@/api/inventory'
-import {
-  formatSigned,
-  isTransferHalf,
-  MOVEMENT_TYPE_LABEL,
-  REASON_CODE_LABEL,
-} from '@/lib/inventory'
-import { formatDateTime } from '@/lib/orders'
+import { formatSigned, isTransferHalf } from '@/lib/inventory'
+import { formatDateTime } from '@/lib/dates'
+import { MOVEMENT_TYPE_LABEL, REASON_CODE_LABEL } from '@/lib/labels'
 
 /** The ledger, newest first. A transfer's reference id is a button that opens both halves. */
 function MovementsTable({

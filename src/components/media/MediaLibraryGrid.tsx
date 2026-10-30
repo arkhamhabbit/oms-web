@@ -14,6 +14,7 @@ import { MediaThumb } from '@/components/media/MediaThumb'
 import { useMediaQuery, type Media, type MediaKind, type MediaStatus } from '@/api/media'
 import { formatBytes, formatDuration } from '@/lib/content-rules'
 import { cn } from '@/lib/utils'
+import { MEDIA_STATUS_LABEL, labelOf } from '@/lib/labels'
 
 const PAGE_SIZE = 24
 /** Searching by filename filters what is loaded, so it loads a wide page rather than a narrow one. */
@@ -105,9 +106,9 @@ function MediaLibraryGrid({
             </SelectTrigger>
             <SelectContent>
               <SelectItem value={ALL}>Any status</SelectItem>
-              <SelectItem value="READY">Ready</SelectItem>
-              <SelectItem value="PENDING">Pending</SelectItem>
-              <SelectItem value="FAILED">Failed</SelectItem>
+              <SelectItem value="READY">{MEDIA_STATUS_LABEL.READY}</SelectItem>
+              <SelectItem value="PENDING">{MEDIA_STATUS_LABEL.PENDING}</SelectItem>
+              <SelectItem value="FAILED">{MEDIA_STATUS_LABEL.FAILED}</SelectItem>
             </SelectContent>
           </Select>
         )}
@@ -138,7 +139,12 @@ function MediaLibraryGrid({
                   className="text-left disabled:cursor-default"
                   aria-label={selectable ? `Choose ${media.filename}` : (media.filename ?? 'Media')}
                 >
-                  <MediaThumb media={media} size="card" className="aspect-square h-auto w-full" />
+                  <MediaThumb
+                    media={media}
+                    size="card"
+                    alt={media.filename}
+                    className="aspect-square h-auto w-full"
+                  />
                 </button>
                 <p className="truncate text-xs font-medium" title={media.filename}>
                   {media.filename}
@@ -146,7 +152,7 @@ function MediaLibraryGrid({
                 <p className="flex flex-wrap items-center gap-1 text-[11px] text-muted-foreground">
                   {media.status !== 'READY' && (
                     <Badge variant={media.status === 'FAILED' ? 'destructive' : 'outline'}>
-                      {media.status}
+                      {labelOf(MEDIA_STATUS_LABEL, media.status)}
                     </Badge>
                   )}
                   {media.kind === 'VIDEO' && media.durationMs !== undefined && (

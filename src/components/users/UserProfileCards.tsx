@@ -15,9 +15,10 @@ import {
 import { isApiError } from '@/lib/api-error'
 import { useUserAddressesQuery, useUserProfileIntakeQuery, type ProfileIntake } from '@/api/users'
 import { INTAKE_KIND, summarizeIntakePayload } from './intake-summary'
+import { formatDateTime } from '@/lib/dates'
 
 const PAGE_SIZE = 10
-const when = (value: string | undefined) => (value ? new Date(value).toLocaleString() : '—')
+const when = (value: string | undefined) => formatDateTime(value) || '—'
 
 const OUTCOME: Record<
   NonNullable<ProfileIntake['outcome']>,
@@ -121,7 +122,7 @@ function UserProfileChangesCard({ userId }: { userId: string }) {
                     <TableCell className="whitespace-normal">
                       <div className="font-medium">{row.kind ? INTAKE_KIND[row.kind] : '—'}</div>
                       <div className="text-muted-foreground">
-                        {summarizeIntakePayload(row.kind, row.payload)}
+                        {summarizeIntakePayload(row.kind, row.payload, row.address)}
                       </div>
                     </TableCell>
                     <TableCell className="whitespace-normal">

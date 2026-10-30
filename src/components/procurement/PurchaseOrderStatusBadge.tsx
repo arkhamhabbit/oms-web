@@ -1,6 +1,6 @@
 import { Badge } from '@/components/ui/badge'
 import type { PurchaseOrderStatus } from '@/api/procurement'
-import { PO_STATUS_LABEL } from '@/lib/procurement'
+import { PO_STATUS_LABEL } from '@/lib/labels'
 
 function PurchaseOrderStatusBadge({ status }: { status: PurchaseOrderStatus | undefined }) {
   if (!status) {

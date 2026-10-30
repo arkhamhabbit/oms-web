@@ -19,7 +19,7 @@ describe('CategoryTree', () => {
   it('shows status and live badges for a node', () => {
     render(<CategoryTree data={categoryTreeFixture} height={600} />)
 
-    expect(screen.getAllByText('ACTIVE').length).toBeGreaterThan(0)
-    expect(screen.getAllByText('LIVE').length).toBeGreaterThan(0)
+    expect(screen.getAllByText('Active').length).toBeGreaterThan(0)
+    expect(screen.getAllByText('Live').length).toBeGreaterThan(0)
   })
 })

@@ -108,7 +108,9 @@
   --destructive-foreground: #ffffff;
   --border: #efefef;
   --input: #dad8d6;
-  --ring: #00c1d2;
+  /* Focus ring: 4.57:1 on white and 4.2:1 on the canvas (non-text contrast needs 3:1). The brand teal
+     #00c1d2 it replaces was 2.2:1. Same value as --primary. */
+  --ring: #008290;
 
   /* Habbit palette (locked 2026-10-21, shared with the consumer product) */
   --brand-teal: #00c1d2;
@@ -179,7 +181,7 @@
 
 @layer base {
   * {
-    @apply border-border outline-ring/50;
+    @apply border-border outline-ring;
   }
   body {
     @apply bg-background text-foreground;

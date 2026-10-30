@@ -20,6 +20,7 @@ import {
   useDisallowCustomerMutation,
   type AllowedCustomer,
 } from '@/api/products'
+import { formatDateTime } from '@/lib/dates'
 
 const PAGE_SIZE = 20
 
@@ -89,7 +90,7 @@ function ProductAllowlistCard({
       id: 'addedAt',
       header: 'Added',
       cell: ({ row }) =>
-        row.original.addedAt ? new Date(row.original.addedAt).toLocaleString() : '',
+        formatDateTime(row.original.addedAt),
     },
     {
       id: 'actions',

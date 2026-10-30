@@ -7,8 +7,9 @@ import {
 } from '@/components/ui/dialog'
 import { useTransferQuery, type StockMovement } from '@/api/inventory'
 import { isApiError } from '@/lib/api-error'
-import { formatDateTime } from '@/lib/orders'
-import { formatSigned, MOVEMENT_TYPE_LABEL } from '@/lib/inventory'
+import { formatDateTime } from '@/lib/dates'
+import { formatSigned } from '@/lib/inventory'
+import { MOVEMENT_TYPE_LABEL } from '@/lib/labels'
 
 function Half({ title, movement }: { title: string; movement: StockMovement | undefined }) {
   return (

@@ -13,7 +13,8 @@ import { Input } from '@/components/ui/input'
 import { usePermissions } from '@/auth/usePermissions'
 import { useBreadcrumb } from '@/layouts/breadcrumb-context'
 import { useWarehousesQuery, type Warehouse, type WarehouseType } from '@/api/inventory'
-import { WAREHOUSE_TYPE_LABEL, WAREHOUSE_TYPES } from '@/lib/inventory'
+import { WAREHOUSE_TYPES } from '@/lib/inventory'
+import { WAREHOUSE_TYPE_LABEL } from '@/lib/labels'
 
 const PAGE_SIZE = 20
 

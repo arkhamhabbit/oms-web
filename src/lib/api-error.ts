@@ -1,6 +1,8 @@
 import type { FieldValues, Path, UseFormReturn } from 'react-hook-form'
 import { toast } from 'sonner'
 
+import { describeFieldError, type FieldLabels } from '@/lib/field-labels'
+
 /** The one error response shape across every API — D3.4. Locked; safe to build against pre-API. */
 export interface ApiFieldError {
   field: string
@@ -76,13 +78,28 @@ export function networkError(cause: unknown): ApiClientError {
 }
 
 /**
+ * The same error with some field names renamed, for a server that names a field differently from
+ * the request property the form holds (change-password answers `password` for `newPassword`).
+ */
+export function remapFieldErrors(error: ApiError, aliases: Record<string, string>): ApiError {
+  return {
+    code: error.code,
+    message: error.message,
+    traceId: error.traceId,
+    existingId: error.existingId,
+    fieldErrors: error.fieldErrors.map((f) => ({ ...f, field: aliases[f.field] ?? f.field })),
+  }
+}
+
+/**
  * Applies an ApiError's fieldErrors to the matching react-hook-form fields. Any field error
  * that doesn't match a known field, plus the top-level message, surfaces as a toast — always
  * carrying the traceId, since that's what turns a support report into something actionable.
  */
 export function applyApiErrorToForm<TFieldValues extends FieldValues>(
   error: ApiError,
-  form: UseFormReturn<TFieldValues>
+  form: UseFormReturn<TFieldValues>,
+  labels?: FieldLabels
 ): void {
   // D2.24 — a stale `version` isn't a field the operator can correct by re-typing; no amount of
   // editing the form fixes it. Branch on the code, not the message, and never on `error.fieldErrors`
@@ -93,7 +110,7 @@ export function applyApiErrorToForm<TFieldValues extends FieldValues>(
   }
 
   const knownFields = new Set(Object.keys(form.getValues() as object))
-  let unmatchedCount = 0
+  const unmatched: string[] = []
 
   for (const fieldError of error.fieldErrors) {
     if (knownFields.has(fieldError.field)) {
@@ -102,15 +119,16 @@ export function applyApiErrorToForm<TFieldValues extends FieldValues>(
         message: fieldError.message,
       })
     } else {
-      unmatchedCount += 1
+      unmatched.push(describeFieldError(fieldError, labels))
     }
   }
 
-  const shouldToast = error.fieldErrors.length === 0 || unmatchedCount > 0
-  if (shouldToast) {
-    toast.error(error.message, {
-      description: `Trace ID: ${error.traceId}`,
-    })
+  // A refusal that names no field keeps the banner-style toast with its Trace ID. Fields with no
+  // control on this form are listed by label, in place of the generic "some fields" line.
+  if (error.fieldErrors.length === 0) {
+    toast.error(error.message, { description: `Trace ID: ${error.traceId}` })
+  } else if (unmatched.length > 0) {
+    toast.error(unmatched.join(' '), { description: `Trace ID: ${error.traceId}` })
   }
 }
 

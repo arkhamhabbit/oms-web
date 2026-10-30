@@ -15,14 +15,6 @@ export const PO_STATUSES: PurchaseOrderStatus[] = [
   'CANCELLED',
 ]
 
-export const PO_STATUS_LABEL: Record<PurchaseOrderStatus, string> = {
-  DRAFT: 'Draft',
-  APPROVED: 'Approved',
-  PARTIALLY_RECEIVED: 'Partially received',
-  RECEIVED: 'Received',
-  CANCELLED: 'Cancelled',
-}
-
 export type PoAction = 'edit' | 'approve' | 'cancel' | 'receive'
 
 export const PO_ACTION_LABEL: Record<PoAction, string> = {

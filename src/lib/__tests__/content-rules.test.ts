@@ -10,6 +10,8 @@ import {
   moveTo,
   parseRating,
   slideProblem,
+  highlightBlocks,
+  publishedBlocks,
   slidesFor,
   wallBlocks,
 } from '@/lib/content-rules'
@@ -63,11 +65,30 @@ describe('per-variant override', () => {
 describe('wall and reorder', () => {
   it('takes the in-wall blocks in display order', () => {
     const blocks: ContentBlock[] = [
-      { id: 'a', inWall: true },
-      { id: 'b', inWall: false },
-      { id: 'c', inWall: true },
+      { id: 'a', inWall: true, slides: [{ id: 's1' }] },
+      { id: 'b', inWall: false, slides: [{ id: 's2' }] },
+      { id: 'c', inWall: true, slides: [{ id: 's3' }] },
     ]
     expect(wallBlocks(blocks).map((b) => b.id)).toEqual(['a', 'c'])
+  })
+
+  it('leaves out a block with no product slide, from the wall and the highlights alike', () => {
+    const blocks: ContentBlock[] = [
+      { id: 'icon-with-slide', inWall: true, iconMediaId: 'm1', slides: [{ id: 's1' }] },
+      { id: 'icon-no-slides', inWall: true, iconMediaId: 'm2', slides: [] },
+      { id: 'never-had-slides', inWall: true },
+      // an override alone does not publish the block: the product's own slides decide
+      {
+        id: 'override-only',
+        inWall: true,
+        iconMediaId: 'm3',
+        slides: [],
+        overrides: [{ variantId: 'v1', slides: [{ id: 'o1' }] }],
+      },
+    ]
+    expect(publishedBlocks(blocks).map((b) => b.id)).toEqual(['icon-with-slide'])
+    expect(highlightBlocks(blocks).map((b) => b.id)).toEqual(['icon-with-slide'])
+    expect(wallBlocks(blocks).map((b) => b.id)).toEqual(['icon-with-slide'])
   })
 
   it('moves an item to a position, and ignores no-ops', () => {

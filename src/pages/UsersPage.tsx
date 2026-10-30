@@ -19,6 +19,7 @@ import { useBreadcrumb } from '@/layouts/breadcrumb-context'
 import { usePermissions } from '@/auth/usePermissions'
 import { isApiError } from '@/lib/api-error'
 import { useUsersQuery, type UserRole, type UserStatus, type UserSummary } from '@/api/users'
+import { ANY_STATUS, USER_STATUS_LABEL } from '@/lib/labels'
 
 const PAGE_SIZE = 20
 const STATUS_OPTIONS: UserStatus[] = ['INVITED', 'ACTIVE', 'SUSPENDED']
@@ -96,10 +97,10 @@ function UsersPage() {
               <SelectValue placeholder="Status" />
             </SelectTrigger>
             <SelectContent>
-              <SelectItem value="ALL">All statuses</SelectItem>
+              <SelectItem value="ALL">{ANY_STATUS}</SelectItem>
               {STATUS_OPTIONS.map((s) => (
                 <SelectItem key={s} value={s}>
-                  {s}
+                  {USER_STATUS_LABEL[s]}
                 </SelectItem>
               ))}
             </SelectContent>

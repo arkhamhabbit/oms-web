@@ -18,6 +18,7 @@ import {
   useUserTierQuery,
   type TierTransition,
 } from '@/api/membership'
+import { formatDate, formatDateTime } from '@/lib/dates'
 
 const HISTORY_PAGE_SIZE = 10
 
@@ -31,8 +32,8 @@ const REASON: Record<NonNullable<TierTransition['reason']>, string> = {
 }
 
 const points = (value: number | undefined) => (value ?? 0).toLocaleString('en-IN')
-const when = (value: string | undefined) => (value ? new Date(value).toLocaleString() : '—')
-const date = (value: string | undefined) => (value ? new Date(value).toLocaleDateString() : '—')
+const when = (value: string | undefined) => formatDateTime(value) || '—'
+const date = (value: string | undefined) => formatDate(value) || '—'
 
 /**
  * A member's tier, read-only (D7.15). The tier is OMS state that only the server transitions —

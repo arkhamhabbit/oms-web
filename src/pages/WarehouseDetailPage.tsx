@@ -10,8 +10,8 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { usePermissions } from '@/auth/usePermissions'
 import { useBreadcrumb } from '@/layouts/breadcrumb-context'
 import { useWarehouseActiveMutation, useWarehouseQuery } from '@/api/inventory'
-import { formatDateTime } from '@/lib/orders'
-import { WAREHOUSE_TYPE_LABEL } from '@/lib/inventory'
+import { formatDateTime } from '@/lib/dates'
+import { WAREHOUSE_TYPE_LABEL } from '@/lib/labels'
 
 function WarehouseDetailPage() {
   const { id = '' } = useParams()

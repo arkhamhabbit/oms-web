@@ -26,8 +26,9 @@ import {
   type Warehouse,
   type WarehouseType,
 } from '@/api/inventory'
-import { optionalText, WAREHOUSE_TYPE_LABEL, WAREHOUSE_TYPES } from '@/lib/inventory'
+import { optionalText, WAREHOUSE_TYPES } from '@/lib/inventory'
 import { fieldMessage, toRefusal, type Refusal } from '@/lib/refusal'
+import { WAREHOUSE_TYPE_LABEL } from '@/lib/labels'
 
 const FIELDS = [
   'code',

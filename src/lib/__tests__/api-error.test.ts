@@ -64,20 +64,40 @@ describe('applyApiErrorToForm', () => {
     })
   })
 
-  it('toasts with the traceId when a fieldError does not match any known field', () => {
+  it('toasts a response that names no field with the traceId', () => {
     const form = setupForm()
     const error: ApiError = {
-      code: 'VALIDATION_ERROR',
-      message: 'Invalid request',
+      code: 'BUSINESS_RULE_VIOLATION',
+      message: 'That cannot be done right now.',
       traceId: 'trace-def',
-      fieldErrors: [{ field: 'unknownField', message: 'Unexpected field' }],
+      fieldErrors: [],
     }
 
     applyApiErrorToForm(error, form)
 
-    expect(toast.error).toHaveBeenCalledWith('Invalid request', {
+    expect(toast.error).toHaveBeenCalledWith('That cannot be done right now.', {
       description: 'Trace ID: trace-def',
     })
+  })
+
+  it('names a field with no control on the form by its label, never its camelCase name', () => {
+    const form = setupForm()
+    const error: ApiError = {
+      code: 'VALIDATION_FAILED',
+      message: 'Some fields are not valid. Correct them and retry.',
+      traceId: 'trace-def',
+      fieldErrors: [
+        { field: 'paymentTimeoutMinutes', message: 'Must be at most 15.' },
+        { field: 'orderPointsPer100Rupees', message: 'Must be at least 1.' },
+      ],
+    }
+
+    applyApiErrorToForm(error, form, { paymentTimeoutMinutes: 'Payment timeout' })
+
+    expect(toast.error).toHaveBeenCalledWith(
+      'Payment timeout: Must be at most 15. Order points per 100 rupees: Must be at least 1.',
+      { description: 'Trace ID: trace-def' }
+    )
   })
 
   it('does not toast when every fieldError matches a known field', () => {

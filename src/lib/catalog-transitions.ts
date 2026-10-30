@@ -7,6 +7,14 @@ export interface CatalogTransitionDef {
   label: string
 }
 
+/** The past tense for the success toast: "Apparel archived". */
+export const TRANSITION_DONE: Record<CatalogTransitionAction, string> = {
+  activate: 'activated',
+  publish: 'published',
+  unpublish: 'unpublished',
+  archive: 'archived',
+}
+
 const ALL_TRANSITIONS: Record<CatalogTransitionAction, string> = {
   activate: 'Activate',
   publish: 'Publish',
