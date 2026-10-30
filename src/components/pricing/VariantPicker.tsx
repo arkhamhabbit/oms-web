@@ -3,13 +3,22 @@ import * as React from 'react'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { formatMoney } from '@/lib/money'
-import { useProductsQuery, useVariantsQuery } from '@/api/products'
+import { useProductsQuery, useVariantsQuery, type Variant } from '@/api/products'
 
 /**
- * Finds a variant to price: search the catalog by product name or SKU, then choose one of the
- * product's variants. Needs `catalog.product.read`, which any pricing operator reading SKUs has.
+ * Finds a variant: search the catalog by product name or SKU, then choose one of the product's
+ * variants. Needs `catalog.product.read`, which any pricing operator reading SKUs has. Pricing
+ * reads only the id; stock and procurement also take the variant (SKU, name, `batchTracked`).
  */
-function VariantPicker({ onPick }: { onPick: (variantId: string) => void }) {
+function VariantPicker({
+  onPick,
+  actionLabel = 'Price this',
+  ariaLabel = 'Find a product to price',
+}: {
+  onPick: (variantId: string, variant: Variant) => void
+  actionLabel?: string
+  ariaLabel?: string
+}) {
   const [search, setSearch] = React.useState('')
   const [productId, setProductId] = React.useState<string | undefined>()
   const trimmed = search.trim()
@@ -18,7 +27,7 @@ function VariantPicker({ onPick }: { onPick: (variantId: string) => void }) {
     <div className="flex flex-col gap-2">
       <Input
         placeholder="Find a product by name or SKU…"
-        aria-label="Find a product to price"
+        aria-label={ariaLabel}
         value={search}
         onChange={(event) => {
           setSearch(event.target.value)
@@ -29,7 +38,9 @@ function VariantPicker({ onPick }: { onPick: (variantId: string) => void }) {
       {trimmed.length >= 2 && !productId && (
         <ProductResults search={trimmed} onPick={setProductId} />
       )}
-      {productId && <VariantResults productId={productId} onPick={onPick} />}
+      {productId && (
+        <VariantResults productId={productId} onPick={onPick} actionLabel={actionLabel} />
+      )}
     </div>
   )
 }
@@ -66,9 +77,11 @@ function ProductResults({ search, onPick }: { search: string; onPick: (id: strin
 function VariantResults({
   productId,
   onPick,
+  actionLabel,
 }: {
   productId: string
-  onPick: (variantId: string) => void
+  onPick: (variantId: string, variant: Variant) => void
+  actionLabel: string
 }) {
   const variants = useVariantsQuery(productId)
   const rows = variants.data ?? []
@@ -84,8 +97,8 @@ function VariantResults({
           <span className="text-xs text-muted-foreground">
             base {formatMoney(v.baseSellingPrice)}
           </span>
-          <Button size="sm" variant="outline" onClick={() => onPick(v.id!)}>
-            Price this
+          <Button size="sm" variant="outline" onClick={() => onPick(v.id!, v)}>
+            {actionLabel}
           </Button>
         </li>
       ))}

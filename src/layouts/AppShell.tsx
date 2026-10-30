@@ -1,3 +1,4 @@
+import { Fragment } from 'react'
 import { NavLink, Outlet, Link, useNavigate } from 'react-router-dom'
 import { ChevronRight, LogOut } from 'lucide-react'
 
@@ -24,22 +25,28 @@ function Sidebar() {
         <span className="text-sm font-medium text-muted-foreground">Admin</span>
       </div>
       <nav className="flex flex-1 flex-col gap-1 overflow-y-auto p-2">
-        {visibleItems.map((item) => (
-          <NavLink
-            key={item.to}
-            to={item.to}
-            end={item.to === '/'}
-            className={({ isActive }) =>
-              cn(
-                'flex items-center gap-2 rounded-md px-3 py-2 text-sm font-medium transition-colors',
-                'hover:bg-accent hover:text-accent-foreground',
-                isActive ? 'bg-accent text-accent-foreground' : 'text-muted-foreground'
-              )
-            }
-          >
-            <item.icon className="size-4" />
-            {item.label}
-          </NavLink>
+        {visibleItems.map((item, index) => (
+          <Fragment key={item.to}>
+            {item.group && item.group !== visibleItems[index - 1]?.group && (
+              <p className="px-3 pt-3 pb-1 text-xs font-semibold tracking-wide text-muted-foreground uppercase">
+                {item.group}
+              </p>
+            )}
+            <NavLink
+              to={item.to}
+              end={item.to === '/'}
+              className={({ isActive }) =>
+                cn(
+                  'flex items-center gap-2 rounded-md px-3 py-2 text-sm font-medium transition-colors',
+                  'hover:bg-accent hover:text-accent-foreground',
+                  isActive ? 'bg-accent text-accent-foreground' : 'text-muted-foreground'
+                )
+              }
+            >
+              <item.icon className="size-4" />
+              {item.label}
+            </NavLink>
+          </Fragment>
         ))}
       </nav>
     </aside>

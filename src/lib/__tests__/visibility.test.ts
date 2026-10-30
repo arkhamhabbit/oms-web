@@ -49,7 +49,9 @@ describe('variant tier rule (D4.18)', () => {
   })
 
   it('refuses any variant tier on a customer-restricted product', () => {
-    expect(variantTierProblem('CUSTOMER_RESTRICTED', undefined, 'APEX', ladder)).toMatch(/allowlist/)
+    expect(variantTierProblem('CUSTOMER_RESTRICTED', undefined, 'APEX', ladder)).toMatch(
+      /allowlist/
+    )
     expect(variantTierChoices('CUSTOMER_RESTRICTED', undefined, ladder)).toEqual([])
   })
 

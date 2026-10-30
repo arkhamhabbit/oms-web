@@ -9,7 +9,14 @@ function leaf(id: string): CategoryNode {
 
 function makeTree(): CategoryNode[] {
   return [
-    { id: 'a', name: 'A', slug: 'a', status: 'ACTIVE', live: true, children: [leaf('a1'), leaf('a2')] },
+    {
+      id: 'a',
+      name: 'A',
+      slug: 'a',
+      status: 'ACTIVE',
+      live: true,
+      children: [leaf('a1'), leaf('a2')],
+    },
     { id: 'b', name: 'B', slug: 'b', status: 'ACTIVE', live: true, children: [leaf('b1')] },
   ]
 }
