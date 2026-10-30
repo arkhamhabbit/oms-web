@@ -22,8 +22,11 @@ export interface PickedMedia {
 }
 
 /** A response's media reference as a picked value; null for none, or for a legacy URL (no library id). */
-export function pickedFromRef(ref: MediaRef | undefined, mediaId?: string): PickedMedia | null {
-  const id = ref?.mediaId ?? mediaId
+export function pickedFromRef(
+  ref: MediaRef | null | undefined,
+  mediaId?: string | null
+): PickedMedia | null {
+  const id = ref?.mediaId ?? mediaId ?? undefined
   if (!ref || !id || ref.legacy) {
     return null
   }
