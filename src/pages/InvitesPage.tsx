@@ -28,12 +28,11 @@ import {
   type InviteStatus,
   type WaitlistEntry,
 } from '@/api/invites'
+import { formatDateTime } from '@/lib/dates'
+import { ANY_STATUS } from '@/lib/labels'
 
 const PAGE_SIZE = 20
 
-function formatDate(value: string | undefined) {
-  return value ? new Date(value).toLocaleString() : ''
-}
 
 type Tab = 'invites' | 'waitlist'
 
@@ -95,8 +94,8 @@ function InvitesTab({ canWrite }: { canWrite: boolean }) {
       header: 'Issued by',
       cell: ({ row }) => (row.original.issuerKind === 'INSIDER' ? 'Insider' : 'Admin'),
     },
-    { id: 'issuedAt', header: 'Issued', cell: ({ row }) => formatDate(row.original.issuedAt) },
-    { id: 'expiresAt', header: 'Expires', cell: ({ row }) => formatDate(row.original.expiresAt) },
+    { id: 'issuedAt', header: 'Issued', cell: ({ row }) => formatDateTime(row.original.issuedAt) },
+    { id: 'expiresAt', header: 'Expires', cell: ({ row }) => formatDateTime(row.original.expiresAt) },
   ]
 
   return (
@@ -113,7 +112,7 @@ function InvitesTab({ canWrite }: { canWrite: boolean }) {
             <SelectValue />
           </SelectTrigger>
           <SelectContent>
-            <SelectItem value="ALL">All statuses</SelectItem>
+            <SelectItem value="ALL">{ANY_STATUS}</SelectItem>
             {INVITE_STATUSES.map((s) => (
               <SelectItem key={s} value={s}>
                 {INVITE_STATUS[s].label}
@@ -173,13 +172,13 @@ function WaitlistTab({ canWrite }: { canWrite: boolean }) {
     {
       id: 'firstSeen',
       header: 'First seen',
-      cell: ({ row }) => formatDate(row.original.firstSeenAt),
+      cell: ({ row }) => formatDateTime(row.original.firstSeenAt),
     },
-    { id: 'lastSeen', header: 'Last seen', cell: ({ row }) => formatDate(row.original.lastSeenAt) },
+    { id: 'lastSeen', header: 'Last seen', cell: ({ row }) => formatDateTime(row.original.lastSeenAt) },
     {
       id: 'invited',
       header: 'Invited',
-      cell: ({ row }) => formatDate(row.original.invitedAt) || 'Waiting',
+      cell: ({ row }) => formatDateTime(row.original.invitedAt) || 'Waiting',
     },
     {
       id: 'actions',

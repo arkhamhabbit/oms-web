@@ -23,10 +23,22 @@ import {
   ACTION_LABEL,
   ACTION_PERMISSION,
   actionsFor,
-  formatDateTime,
-  ORDER_STATUS_LABEL,
+  isRefundPending,
+  REFUND_SETTLEMENT_PERMISSION,
 } from '@/lib/orders'
 import { useOrderQuery, type FulfilAction, type OrderDetail } from '@/api/orders'
+import { formatDateTime } from '@/lib/dates'
+import {
+  labelOf,
+  ORDER_STATUS_LABEL,
+  PAYMENT_STATUS_LABEL,
+  REFUND_METHOD_LABEL,
+} from '@/lib/labels'
+import {
+  RefundSettlementDialog,
+  type RefundSettlementKind,
+} from '@/components/orders/RefundSettlementDialog'
+import { ConsumerLink } from '@/components/orders/ConsumerLink'
 
 const rupees = (minor: number | undefined) => `₹${minorToMajorString(minor ?? 0)}`
 
@@ -63,6 +75,7 @@ function OrderDetailPage() {
   useBreadcrumb([{ label: 'Orders', to: '/orders' }, { label: order?.number ?? 'Order' }])
 
   const [action, setAction] = React.useState<FulfilAction | undefined>()
+  const [settlement, setSettlement] = React.useState<RefundSettlementKind | undefined>()
 
   if (orderQuery.isLoading) {
     return <p className="text-sm text-muted-foreground">Loading…</p>
@@ -94,9 +107,11 @@ function OrderDetailPage() {
       </div>
       <p className="-mt-2 text-sm text-muted-foreground">
         Placed {formatDateTime(order.placedAt)} · Consumer{' '}
-        <Link to={`/users/${order.consumerId}`} className="font-mono text-xs underline">
-          {order.consumerId}
-        </Link>
+        <ConsumerLink
+          consumerId={order.consumerId}
+          name={order.consumerName}
+          mobile={order.consumerMobile}
+        />
         {order.tierCode ? ` · Tier ${order.tierCode}` : ''}
       </p>
 
@@ -123,6 +138,47 @@ function OrderDetailPage() {
                 </Button>
               )
             })}
+          </CardContent>
+        </Card>
+      )}
+
+      {isRefundPending(order.payment) && (
+        <Card className="border-destructive/40">
+          <CardHeader>
+            <CardTitle>Refund needs attention</CardTitle>
+            <CardDescription>
+              The gateway has not completed this refund. Retry it, or record that the shopper was
+              paid back outside the gateway.
+            </CardDescription>
+          </CardHeader>
+          <CardContent className="flex flex-col gap-3">
+            {order.payment?.lastRefundError && (
+              <p role="status" className="text-sm">
+                {order.payment.lastRefundError}
+              </p>
+            )}
+            <p className="text-xs text-muted-foreground">
+              Attempts so far: {order.payment?.refundAttempts ?? 0}
+              {order.payment?.refundNextAttemptAt
+                ? ` · next automatic attempt ${formatDateTime(order.payment.refundNextAttemptAt)}`
+                : ' · automatic attempts have stopped'}
+            </p>
+            <div className="flex flex-wrap items-center gap-2">
+              {(['retry', 'mark-refunded'] as const).map((kind) => {
+                const allowed = has(REFUND_SETTLEMENT_PERMISSION)
+                return (
+                  <Button
+                    key={kind}
+                    variant={kind === 'retry' ? 'default' : 'outline'}
+                    disabled={!allowed}
+                    title={allowed ? undefined : `Needs ${REFUND_SETTLEMENT_PERMISSION}`}
+                    onClick={() => setSettlement(kind)}
+                  >
+                    {kind === 'retry' ? 'Retry refund' : 'Mark as refunded'}
+                  </Button>
+                )
+              })}
+            </div>
           </CardContent>
         </Card>
       )}
@@ -227,7 +283,7 @@ function OrderDetailPage() {
           <CardContent>
             <Facts
               rows={[
-                ['Status', order.payment?.status],
+                ['Status', labelOf(PAYMENT_STATUS_LABEL, order.payment?.status)],
                 ['Method', order.payment?.method ?? order.paymentMethod],
                 ['Amount', rupees(order.payment?.amountMinor)],
                 ['Gateway', order.payment?.gateway],
@@ -237,6 +293,9 @@ function OrderDetailPage() {
                 ['Refund', order.payment?.gatewayRefundId],
                 ['Refund requested', formatDateTime(order.payment?.refundRequestedAt)],
                 ['Refunded', formatDateTime(order.payment?.refundedAt)],
+                ['Refund method', labelOf(REFUND_METHOD_LABEL, order.payment?.refundMethod ?? undefined)],
+                ['Refund reference', order.payment?.refundReference],
+                ['Refund attempts', isRefundPending(order.payment) ? order.payment?.refundAttempts : undefined],
                 ['Last refund error', order.payment?.lastRefundError],
               ]}
             />
@@ -335,6 +394,12 @@ function OrderDetailPage() {
         </CardContent>
       </Card>
 
+      <RefundSettlementDialog
+        order={order}
+        kind={settlement}
+        onClose={() => setSettlement(undefined)}
+        onStale={() => void orderQuery.refetch()}
+      />
       <OrderActionDialog
         order={order}
         action={action}

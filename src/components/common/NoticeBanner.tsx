@@ -2,6 +2,7 @@ import { AlertTriangleIcon } from 'lucide-react'
 
 import { Button } from '@/components/ui/button'
 import { isApiError, isVersionConflict } from '@/lib/api-error'
+import { describeFieldError, type FieldLabels } from '@/lib/field-labels'
 
 /** A refusal to show inline: the server's own sentence, plus the traceId a support report needs. */
 export interface Notice {
@@ -17,7 +18,11 @@ export interface Notice {
  * branched on by **code** (D2.24), never by message, and gets one standard sentence naming what
  * moved — `subject` is "This user", "This draft", ….
  */
-export function noticeFromError(error: unknown, subject: string): Notice {
+export function noticeFromError(
+  error: unknown,
+  subject: string,
+  labels?: FieldLabels
+): Notice {
   if (isVersionConflict(error)) {
     return {
       text: `${subject} was changed by someone else — reload to see the latest, then try again.`,
@@ -26,7 +31,13 @@ export function noticeFromError(error: unknown, subject: string): Notice {
     }
   }
   if (isApiError(error)) {
-    return { text: error.message, traceId: error.traceId, stale: false }
+    // 0.10: a field failure is one fixed line plus a field error each; name the fields by label.
+    const fields = error.fieldErrors.map((f) => describeFieldError(f, labels))
+    return {
+      text: fields.length > 0 ? `${error.message} ${fields.join(' ')}` : error.message,
+      traceId: error.traceId,
+      stale: false,
+    }
   }
   return { text: error instanceof Error ? error.message : 'Something went wrong', stale: false }
 }

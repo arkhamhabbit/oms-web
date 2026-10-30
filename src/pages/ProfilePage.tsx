@@ -18,8 +18,13 @@ import {
   FormMessage,
 } from '@/components/ui/form'
 import { useBreadcrumb } from '@/layouts/breadcrumb-context'
-import { applyApiErrorToForm, ApiClientError } from '@/lib/api-error'
+import { applyApiErrorToForm, ApiClientError, remapFieldErrors } from '@/lib/api-error'
+import { CHANGE_PASSWORD_LABELS } from '@/lib/field-labels'
 import { useChangePasswordMutation, useProfileQuery, useUpdateProfileMutation } from '@/api/auth'
+import { labelOf, TEAM_STATUS_LABEL } from '@/lib/labels'
+
+// OMS answers a too-short password on `password`; the form's control is `newPassword` (OMS 0.11 item).
+const CHANGE_PASSWORD_FIELD_ALIASES = { password: 'newPassword' }
 
 const profileSchema = z.object({
   name: z.string().min(1, 'Name is required').max(200),
@@ -75,7 +80,7 @@ function ProfileDetailsCard() {
       <CardContent className="flex flex-col gap-6">
         {profile.data && (
           <div className="flex flex-wrap gap-2">
-            <Badge variant="outline">{profile.data.status}</Badge>
+            <Badge variant="outline">{labelOf(TEAM_STATUS_LABEL, profile.data.status)}</Badge>
             {(profile.data.roles ?? []).map((role) => (
               <Badge key={role.id} variant="secondary">
                 {role.name}
@@ -144,7 +149,11 @@ function ChangePasswordCard() {
       },
       onError: (error) => {
         if (error instanceof ApiClientError) {
-          applyApiErrorToForm(error, form)
+          applyApiErrorToForm(
+            remapFieldErrors(error, CHANGE_PASSWORD_FIELD_ALIASES),
+            form,
+            CHANGE_PASSWORD_LABELS
+          )
         }
       },
     })

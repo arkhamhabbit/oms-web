@@ -3,6 +3,7 @@ import { toast } from 'sonner'
 
 import { Button } from '@/components/ui/button'
 import type { Invite } from '@/api/invites'
+import { formatDateTime } from '@/lib/dates'
 
 function copy(text: string, what: string) {
   navigator.clipboard
@@ -45,7 +46,7 @@ function InviteLinkPanel({ invite }: { invite: Invite }) {
       )}
       <p className="text-xs text-muted-foreground">
         Nothing has been sent — share this yourself. Valid until{' '}
-        {invite.expiresAt ? new Date(invite.expiresAt).toLocaleString() : '—'}.
+        {formatDateTime(invite.expiresAt) || '—'}.
       </p>
     </div>
   )

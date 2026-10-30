@@ -16,6 +16,7 @@ import { EarnRulesSummary } from '@/components/earn/EarnRulesSummary'
 import { useBreadcrumb } from '@/layouts/breadcrumb-context'
 import { usePermissions } from '@/auth/usePermissions'
 import { isApiError, type ApiFieldError } from '@/lib/api-error'
+import { describeFieldError, EARN_VERSION_LABELS } from '@/lib/field-labels'
 import { localInputToInstant } from '@/lib/pricing'
 import {
   draftToRequest,
@@ -32,6 +33,7 @@ import {
   type EarnRules,
   type EarnRulesState,
 } from '@/api/earn'
+import { formatDateTime } from '@/lib/dates'
 
 /** A withdrawn version never took effect — it was only ever scheduled. */
 const EFFECTIVE_VERB: Partial<Record<EarnRulesState, string>> = {
@@ -39,9 +41,6 @@ const EFFECTIVE_VERB: Partial<Record<EarnRulesState, string>> = {
   WITHDRAWN: 'Was scheduled for',
 }
 
-function formatDate(value: string | undefined) {
-  return value ? new Date(value).toLocaleString() : ''
-}
 
 function BackLink() {
   return (
@@ -119,9 +118,9 @@ function EarnVersionPage() {
       </div>
       <p className="-mt-2 text-sm text-muted-foreground">
         {version.effectiveFrom
-          ? `${EFFECTIVE_VERB[version.state!] ?? 'Took effect'} ${formatDate(version.effectiveFrom)}`
+          ? `${EFFECTIVE_VERB[version.state!] ?? 'Took effect'} ${formatDateTime(version.effectiveFrom)}`
           : 'Not published'}
-        {version.withdrawnAt && ` · withdrawn ${formatDate(version.withdrawnAt)}`}
+        {version.withdrawnAt && ` · withdrawn ${formatDateTime(version.withdrawnAt)}`}
       </p>
 
       {notice && (
@@ -385,7 +384,7 @@ function DraftEditor({
             <ul className="mt-1 list-disc pl-5">
               {fieldErrors.map((e) => (
                 <li key={`${e.field}-${e.message}`}>
-                  <span className="font-mono text-xs">{e.field}</span> — {e.message}
+                  {describeFieldError(e, EARN_VERSION_LABELS)}
                 </li>
               ))}
             </ul>
@@ -588,7 +587,7 @@ function LifecycleActions({
         onConfirm={runWithdraw}
       >
         <p>
-          {version.name} was due to take effect {formatDate(version.effectiveFrom)}. Withdrawing it
+          {version.name} was due to take effect {formatDateTime(version.effectiveFrom)}. Withdrawing it
           is final: it will never take effect, and the version in effect now is untouched. No earn
           has cited it, so nothing is lost.
         </p>

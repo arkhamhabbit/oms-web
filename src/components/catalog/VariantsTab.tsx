@@ -25,6 +25,7 @@ import { minorToMajorString } from '@/lib/money'
 import { toastApiError } from '@/lib/api-error'
 import { moveItem } from '@/lib/reorder'
 import { useKeyedState } from '@/lib/use-keyed-state'
+import { Label } from '@/components/ui/label'
 import { useAttributesQuery, useAttributeValuesQuery } from '@/api/attributes'
 import {
   useCreateVariantMutation,
@@ -37,6 +38,7 @@ import {
   type ProductOption,
   type Variant,
 } from '@/api/products'
+import { isActiveFlag } from '@/lib/active-only'
 
 export interface VariantsTabProps {
   productId: string
@@ -87,8 +89,9 @@ function NewVariantDialog({
         </DialogHeader>
         <div className="flex flex-col gap-4">
           <div className="flex flex-col gap-1.5">
-            <span className="text-sm font-medium">SKU code</span>
+            <Label htmlFor="new-variant-sku">SKU code</Label>
             <input
+              id="new-variant-sku"
               className="h-9 rounded-md border px-3 font-mono text-sm"
               value={skuCode}
               onChange={(e) => setSkuCode(e.target.value)}
@@ -132,15 +135,16 @@ function OptionValuePicker({
   onChange: (valueId: string) => void
 }) {
   const valuesQuery = useAttributeValuesQuery(attributeId)
+  const triggerId = `new-variant-${attributeId}`
   return (
     <div className="flex flex-col gap-1.5">
-      <span className="text-sm font-medium">{attributeName}</span>
+      <Label htmlFor={triggerId}>{attributeName}</Label>
       <Select value={value} onValueChange={onChange}>
-        <SelectTrigger>
+        <SelectTrigger id={triggerId}>
           <SelectValue placeholder="Choose a value" />
         </SelectTrigger>
         <SelectContent>
-          {(valuesQuery.data ?? []).map((v) => (
+          {(valuesQuery.data ?? []).filter(isActiveFlag).map((v) => (
             <SelectItem key={v.id} value={v.id!}>
               {v.label}
             </SelectItem>

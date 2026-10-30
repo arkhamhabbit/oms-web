@@ -8,6 +8,9 @@ import {
   DropdownMenuItem,
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu'
+import { toast } from 'sonner'
+
+import { ConfirmDialog } from '@/components/common/ConfirmDialog'
 import { toastApiError } from '@/lib/api-error'
 import {
   availableProductTransitions,
@@ -23,6 +26,15 @@ import {
   useUnpublishProductMutation,
   type Product,
 } from '@/api/products'
+
+const PRODUCT_TRANSITION_DONE: Record<ProductTransitionAction, string> = {
+  submit: 'submitted for review',
+  approve: 'approved',
+  reject: 'sent back to draft',
+  publish: 'published',
+  unpublish: 'unpublished',
+  archive: 'archived',
+}
 
 export interface ProductTransitionMenuProps {
   product: Product
@@ -46,6 +58,7 @@ function ProductTransitionMenu({
   canPublish,
 }: ProductTransitionMenuProps) {
   const [pending, setPending] = React.useState(false)
+  const [confirmArchive, setConfirmArchive] = React.useState(false)
   const submit = useSubmitProductMutation(product.id!)
   const approve = useApproveProductMutation(product.id!)
   const reject = useRejectProductMutation(product.id!)
@@ -71,21 +84,33 @@ function ProductTransitionMenu({
     archive: canPublish,
   }
 
-  async function handleSelect(action: ProductTransitionAction) {
+  async function run(action: ProductTransitionAction) {
     const mutation = { submit, approve, reject, publish, unpublish, archive }[action]
     setPending(true)
     try {
       await mutation.mutateAsync()
+      toast.success(`${product.name ?? 'Product'} ${PRODUCT_TRANSITION_DONE[action]}`)
     } catch (error) {
       toastApiError(error)
     } finally {
       setPending(false)
+      setConfirmArchive(false)
     }
+  }
+
+  // Archive is one-way, so it names what it does and waits for a confirm.
+  function handleSelect(action: ProductTransitionAction) {
+    if (action === 'archive') {
+      setConfirmArchive(true)
+      return
+    }
+    void run(action)
   }
 
   const anyAllowed = transitions.some((t) => permissionGranted[t.action])
 
   return (
+    <>
     <DropdownMenu>
       <DropdownMenuTrigger asChild>
         <Button variant="outline" size="sm" disabled={!anyAllowed || pending}>
@@ -106,6 +131,21 @@ function ProductTransitionMenu({
         ))}
       </DropdownMenuContent>
     </DropdownMenu>
+    <ConfirmDialog
+      open={confirmArchive}
+      onOpenChange={setConfirmArchive}
+      title="Archive this product"
+      confirmLabel="Archive"
+      destructive
+      pending={pending}
+      onConfirm={() => void run('archive')}
+    >
+      <p>
+        {product.name}: archiving cannot be undone. An archived product comes off sale and cannot
+        be brought back.
+      </p>
+    </ConfirmDialog>
+    </>
   )
 }
 

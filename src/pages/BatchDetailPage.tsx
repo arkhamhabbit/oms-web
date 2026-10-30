@@ -8,8 +8,8 @@ import { Badge } from '@/components/ui/badge'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { useBreadcrumb } from '@/layouts/breadcrumb-context'
 import { useBatchQuery, useStockMovementsQuery } from '@/api/inventory'
-import { formatDate } from '@/lib/inventory'
-import { formatDateTime } from '@/lib/orders'
+import { formatDate } from '@/lib/dates'
+import { formatDateTime } from '@/lib/dates'
 
 function BatchDetailPage() {
   const { id = '' } = useParams()

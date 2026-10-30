@@ -6,6 +6,7 @@ import { DataTable } from '@/components/data-table/DataTable'
 import { isApiError } from '@/lib/api-error'
 import { formatMoney } from '@/lib/money'
 import { usePriceMatrixQuery, type TierPrice } from '@/api/pricing'
+import { formatDateTime } from '@/lib/dates'
 
 const SOURCE_COPY: Record<NonNullable<TierPrice['source']>, string> = {
   TIER_PRICE: 'Tier price',
@@ -95,9 +96,9 @@ function PriceMatrixCard({
           <CardDescription>
             <span className="font-mono">{matrix.data.skuCode}</span> · MRP{' '}
             {formatMoney(matrix.data.mrp)} · base {formatMoney(matrix.data.baseSellingPrice)} ·
-            resolved {new Date(matrix.data.resolvedAt!).toLocaleString()}
+            resolved {formatDateTime(matrix.data.resolvedAt)}
             {matrix.data.validUntil &&
-              ` · changes ${new Date(matrix.data.validUntil).toLocaleString()} when a scheduled version takes over`}
+              ` · changes ${formatDateTime(matrix.data.validUntil)} when a scheduled version takes over`}
           </CardDescription>
         )}
       </CardHeader>

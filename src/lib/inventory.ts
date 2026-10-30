@@ -6,15 +6,9 @@ import type {
   StockMovement,
   WarehouseType,
 } from '@/api/inventory'
-
-// One local label map per area, so W3.2's shared enum labels can lift them out in one go.
+import { formatDate } from '@/lib/dates'
 
 export const WAREHOUSE_TYPES: WarehouseType[] = ['OWN', 'THIRD_PARTY']
-
-export const WAREHOUSE_TYPE_LABEL: Record<WarehouseType, string> = {
-  OWN: 'Own',
-  THIRD_PARTY: 'Third party',
-}
 
 export const MOVEMENT_TYPES: MovementType[] = [
   'RECEIPT',
@@ -26,17 +20,6 @@ export const MOVEMENT_TYPES: MovementType[] = [
   'RETURN',
   'SALE',
 ]
-
-export const MOVEMENT_TYPE_LABEL: Record<MovementType, string> = {
-  RECEIPT: 'Receipt',
-  ADJUSTMENT: 'Adjustment',
-  TRANSFER_OUT: 'Transfer out',
-  TRANSFER_IN: 'Transfer in',
-  DAMAGE: 'Damage',
-  EXPIRY_WRITE_OFF: 'Expiry write-off',
-  RETURN: 'Return',
-  SALE: 'Sale',
-}
 
 /** The types the adjust endpoint takes; the transfer halves exist only as a pair and SALE is the storefront's. */
 export const ADJUSTABLE_TYPES: MovementType[] = [
@@ -62,26 +45,31 @@ export const REASON_CODES: ReasonCode[] = [
   'CANCELLED_ORDER',
 ]
 
-export const REASON_CODE_LABEL: Record<ReasonCode, string> = {
-  CYCLE_COUNT: 'Cycle count',
-  DATA_CORRECTION: 'Data correction',
-  FOUND_STOCK: 'Found stock',
-  LOST_STOCK: 'Lost stock',
-  THEFT: 'Theft',
-  CONSUMED_INTERNALLY: 'Consumed internally',
-  DAMAGED_IN_TRANSIT: 'Damaged in transit',
-  DAMAGED_IN_WAREHOUSE: 'Damaged in warehouse',
-  DAMAGED_ON_RETURN: 'Damaged on return',
-  CUSTOMER_RETURN: 'Customer return',
-  COURIER_RTO: 'Courier RTO',
-  CANCELLED_ORDER: 'Cancelled order',
+/**
+ * The contract says a reason is required for these types and rejected on the rest, but it does not
+ * publish which code belongs to which type (the server refuses a mismatch with its own sentence:
+ * W3.1 found Adjustment with a damage reason refused, type Damage accepted). This is the pairing the
+ * adjust dialog offers, kept in one local map until OMS publishes it (recorded for OMS 0.11); the
+ * server stays authoritative.
+ */
+export const REASONS_BY_TYPE: Partial<Record<MovementType, ReasonCode[]>> = {
+  ADJUSTMENT: [
+    'CYCLE_COUNT',
+    'DATA_CORRECTION',
+    'FOUND_STOCK',
+    'LOST_STOCK',
+    'THEFT',
+    'CONSUMED_INTERNALLY',
+  ],
+  DAMAGE: ['DAMAGED_IN_TRANSIT', 'DAMAGED_IN_WAREHOUSE', 'DAMAGED_ON_RETURN'],
+  RETURN: ['CUSTOMER_RETURN', 'COURIER_RTO', 'CANCELLED_ORDER'],
 }
 
-/**
- * The contract says a reason is required for these types and rejected on the rest. It does not
- * publish which code belongs to which type (the server refuses a mismatch with its own
- * sentence), so the picker offers every code and does not guess a pairing.
- */
+/** The reason codes to offer for a movement type: none for a type that takes no reason. */
+export function reasonsFor(type: MovementType): ReasonCode[] {
+  return REASONS_BY_TYPE[type] ?? []
+}
+
 export const REASON_REQUIRED_TYPES: MovementType[] = ['ADJUSTMENT', 'DAMAGE', 'RETURN']
 
 /** How the sign of the typed quantity is fixed by the movement type. `either` is an adjustment. */
@@ -144,24 +132,6 @@ export function formatSigned(quantity: number | undefined): string {
   return quantity > 0 ? `+${quantity}` : quantity < 0 ? `−${Math.abs(quantity)}` : '0'
 }
 
-/** A calendar date (YYYY-MM-DD) for display, without a timezone shift. */
-export function formatDate(value: string | undefined): string {
-  if (!value) {
-    return ''
-  }
-  const match = /^(\d{4})-(\d{2})-(\d{2})$/.exec(value)
-  if (!match) {
-    return value
-  }
-  const date = new Date(Date.UTC(Number(match[1]), Number(match[2]) - 1, Number(match[3])))
-  return date.toLocaleDateString('en-IN', {
-    day: '2-digit',
-    month: 'short',
-    year: 'numeric',
-    timeZone: 'UTC',
-  })
-}
-
 /** Today in the operators' calendar (Asia/Kolkata) as YYYY-MM-DD, for date inputs and receipt dates. */
 export function todayIst(now: Date = new Date()): string {
   const parts = new Intl.DateTimeFormat('en-CA', {
@@ -209,12 +179,3 @@ export function summariseAvailability(result: AvailabilityReconcileResult): Avai
   }
 }
 
-export const AVAILABILITY_ACTION_LABEL: Record<string, string> = {
-  IN_SYNC: 'In sync',
-  POPULATED: 'Counter created',
-  CORRECTED_DOWN: 'Lowered',
-  CORRECTED_UP: 'Raised',
-  UPWARD_DEFERRED: 'Raise deferred',
-  CHANGED_DURING_CHECK: 'Changed during the check',
-  REMOVED: 'Counter removed',
-}

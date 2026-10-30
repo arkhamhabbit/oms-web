@@ -2,6 +2,9 @@ import * as React from 'react'
 import type { ColumnDef } from '@tanstack/react-table'
 import { ArrowDownIcon, ArrowUpIcon, PencilIcon, PlusIcon } from 'lucide-react'
 
+import { toast } from 'sonner'
+
+import { ConfirmDialog } from '@/components/common/ConfirmDialog'
 import { DataTable } from '@/components/data-table/DataTable'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
@@ -35,6 +38,7 @@ import {
   type AttributeGroup,
   type AttributeKind,
 } from '@/api/attributes'
+import { ANY_KIND, ANY_STATE, ATTRIBUTE_DATA_TYPE_LABEL, ATTRIBUTE_KIND_LABEL, labelOf } from '@/lib/labels'
 
 const PAGE_SIZE = 20
 const KIND_OPTIONS: AttributeKind[] = ['OPTION', 'SPEC']
@@ -80,9 +84,29 @@ function AttributesTab() {
     setFormOpen(true)
   }
 
+  const [toDeactivate, setToDeactivate] = React.useState<Attribute | undefined>()
+
   function toggleActive(attribute: Attribute) {
-    const mutation = attribute.active ? deactivate : reactivate
-    mutation.mutateAsync(attribute.id!).catch((error) => toastApiError(error))
+    if (attribute.active) {
+      setToDeactivate(attribute)
+      return
+    }
+    reactivate
+      .mutateAsync(attribute.id!)
+      .then(() => toast.success(`${attribute.name} reactivated`))
+      .catch((error) => toastApiError(error))
+  }
+
+  function confirmDeactivate() {
+    const attribute = toDeactivate
+    if (!attribute) {
+      return
+    }
+    deactivate
+      .mutateAsync(attribute.id!)
+      .then(() => toast.success(`${attribute.name} deactivated`))
+      .catch((error) => toastApiError(error))
+      .finally(() => setToDeactivate(undefined))
   }
 
   function move(index: number, direction: -1 | 1) {
@@ -98,8 +122,16 @@ function AttributesTab() {
   const columns: ColumnDef<Attribute, unknown>[] = [
     { accessorKey: 'code', header: 'Code' },
     { accessorKey: 'name', header: 'Name' },
-    { accessorKey: 'kind', header: 'Kind' },
-    { accessorKey: 'dataType', header: 'Data type' },
+    {
+      id: 'kind',
+      header: 'Kind',
+      cell: ({ row }) => labelOf(ATTRIBUTE_KIND_LABEL, row.original.kind),
+    },
+    {
+      id: 'dataType',
+      header: 'Data type',
+      cell: ({ row }) => labelOf(ATTRIBUTE_DATA_TYPE_LABEL, row.original.dataType),
+    },
     {
       id: 'group',
       header: 'Group',
@@ -190,10 +222,10 @@ function AttributesTab() {
               <SelectValue placeholder="Kind" />
             </SelectTrigger>
             <SelectContent>
-              <SelectItem value="ALL">All kinds</SelectItem>
+              <SelectItem value="ALL">{ANY_KIND}</SelectItem>
               {KIND_OPTIONS.map((k) => (
                 <SelectItem key={k} value={k}>
-                  {k}
+                  {ATTRIBUTE_KIND_LABEL[k]}
                 </SelectItem>
               ))}
             </SelectContent>
@@ -228,7 +260,7 @@ function AttributesTab() {
               <SelectValue placeholder="Active" />
             </SelectTrigger>
             <SelectContent>
-              <SelectItem value="ALL">Active or not</SelectItem>
+              <SelectItem value="ALL">{ANY_STATE}</SelectItem>
               <SelectItem value="true">Active</SelectItem>
               <SelectItem value="false">Inactive</SelectItem>
             </SelectContent>
@@ -249,7 +281,8 @@ function AttributesTab() {
             <AttributeValuesPanel attributeId={attribute.id!} canWrite={canWrite} />
           ) : (
             <p className="p-3 text-sm text-muted-foreground">
-              {attribute.kind} attributes of type {attribute.dataType} do not have values.
+              {labelOf(ATTRIBUTE_KIND_LABEL, attribute.kind)} attributes of type{' '}
+              {labelOf(ATTRIBUTE_DATA_TYPE_LABEL, attribute.dataType).toLowerCase()} do not have values.
             </p>
           )
         }
@@ -262,6 +295,20 @@ function AttributesTab() {
         }}
       />
 
+      <ConfirmDialog
+        open={!!toDeactivate}
+        onOpenChange={(open) => !open && setToDeactivate(undefined)}
+        title="Deactivate this attribute"
+        confirmLabel="Deactivate"
+        destructive
+        pending={deactivate.isPending}
+        onConfirm={confirmDeactivate}
+      >
+        <p>
+          {toDeactivate?.name} stops being offered on products and variants. Values already set
+          stay on the records that carry them, marked Inactive. Reactivate brings it back.
+        </p>
+      </ConfirmDialog>
       <AttributeFormDialog
         open={formOpen}
         onOpenChange={setFormOpen}
@@ -294,9 +341,29 @@ function GroupsTab() {
     setFormOpen(true)
   }
 
+  const [toDeactivate, setToDeactivate] = React.useState<AttributeGroup | undefined>()
+
   function toggleActive(group: AttributeGroup) {
-    const mutation = group.active ? deactivate : reactivate
-    mutation.mutateAsync(group.id!).catch((error) => toastApiError(error))
+    if (group.active) {
+      setToDeactivate(group)
+      return
+    }
+    reactivate
+      .mutateAsync(group.id!)
+      .then(() => toast.success(`${group.name} reactivated`))
+      .catch((error) => toastApiError(error))
+  }
+
+  function confirmDeactivate() {
+    const group = toDeactivate
+    if (!group) {
+      return
+    }
+    deactivate
+      .mutateAsync(group.id!)
+      .then(() => toast.success(`${group.name} deactivated`))
+      .catch((error) => toastApiError(error))
+      .finally(() => setToDeactivate(undefined))
   }
 
   function move(index: number, direction: -1 | 1) {
@@ -384,6 +451,20 @@ function GroupsTab() {
         emptyMessage="No attribute groups yet."
       />
 
+      <ConfirmDialog
+        open={!!toDeactivate}
+        onOpenChange={(open) => !open && setToDeactivate(undefined)}
+        title="Deactivate this group"
+        confirmLabel="Deactivate"
+        destructive
+        pending={deactivate.isPending}
+        onConfirm={confirmDeactivate}
+      >
+        <p>
+          {toDeactivate?.name} stops being offered for new attributes. Attributes already in it
+          stay as they are. Reactivate brings it back.
+        </p>
+      </ConfirmDialog>
       <AttributeGroupFormDialog open={formOpen} onOpenChange={setFormOpen} group={editingGroup} />
     </div>
   )

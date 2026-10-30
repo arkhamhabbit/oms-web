@@ -13,12 +13,10 @@ import { useBreadcrumb } from '@/layouts/breadcrumb-context'
 import { usePermissions } from '@/auth/usePermissions'
 import { isApiError } from '@/lib/api-error'
 import { useEarnRulesVersionsQuery, useEffectiveEarnRulesQuery, type EarnRules } from '@/api/earn'
+import { formatDateTime } from '@/lib/dates'
 
 const PAGE_SIZE = 20
 
-function formatDate(value: string | undefined) {
-  return value ? new Date(value).toLocaleString() : ''
-}
 
 function EarnPage() {
   useBreadcrumb([{ label: 'Earn rules' }])
@@ -46,9 +44,9 @@ function EarnPage() {
     {
       id: 'effectiveFrom',
       header: 'Effective from',
-      cell: ({ row }) => formatDate(row.original.effectiveFrom) || '—',
+      cell: ({ row }) => formatDateTime(row.original.effectiveFrom) || '—',
     },
-    { id: 'updatedAt', header: 'Updated', cell: ({ row }) => formatDate(row.original.updatedAt) },
+    { id: 'updatedAt', header: 'Updated', cell: ({ row }) => formatDateTime(row.original.updatedAt) },
   ]
 
   return (
@@ -66,7 +64,7 @@ function EarnPage() {
           </CardTitle>
           <CardDescription>
             {effective.data?.effectiveFrom
-              ? `Took effect ${formatDate(effective.data.effectiveFrom)}`
+              ? `Took effect ${formatDateTime(effective.data.effectiveFrom)}`
               : 'The amounts every new earn uses today.'}
           </CardDescription>
         </CardHeader>

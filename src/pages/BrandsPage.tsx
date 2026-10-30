@@ -23,6 +23,7 @@ import {
   type Brand,
   type BrandStatus,
 } from '@/api/brands'
+import { ANY_STATUS, ANY_VISIBILITY, CATALOG_STATUS_LABEL } from '@/lib/labels'
 
 const PAGE_SIZE = 20
 const STATUS_OPTIONS: BrandStatus[] = ['DRAFT', 'IN_REVIEW', 'ACTIVE', 'ARCHIVED']
@@ -138,6 +139,9 @@ function BrandsPage() {
               status={row.original.status as CatalogStatus}
               live={!!row.original.live}
               canPublish={canPublish}
+              noun="brand"
+              name={row.original.name ?? 'This brand'}
+              archiveConsequence="archiving cannot be undone. An archived brand leaves the pickers and cannot be brought back. A brand that is live may be refused."
               onTransition={(action) => runTransition(row.original, action)}
             />
           </div>
@@ -170,10 +174,10 @@ function BrandsPage() {
               <SelectValue placeholder="Status" />
             </SelectTrigger>
             <SelectContent>
-              <SelectItem value="ALL">All statuses</SelectItem>
+              <SelectItem value="ALL">{ANY_STATUS}</SelectItem>
               {STATUS_OPTIONS.map((s) => (
                 <SelectItem key={s} value={s}>
-                  {s}
+                  {CATALOG_STATUS_LABEL[s]}
                 </SelectItem>
               ))}
             </SelectContent>
@@ -189,7 +193,7 @@ function BrandsPage() {
               <SelectValue placeholder="Live" />
             </SelectTrigger>
             <SelectContent>
-              <SelectItem value="ALL">Live or not</SelectItem>
+              <SelectItem value="ALL">{ANY_VISIBILITY}</SelectItem>
               <SelectItem value="true">Live</SelectItem>
               <SelectItem value="false">Not live</SelectItem>
             </SelectContent>

@@ -22,8 +22,9 @@ import {
   type DriftRow,
   type RebuildResult,
 } from '@/api/inventory'
-import { AVAILABILITY_ACTION_LABEL, summariseAvailability } from '@/lib/inventory'
+import { summariseAvailability } from '@/lib/inventory'
 import { toRefusal, type Refusal } from '@/lib/refusal'
+import { AVAILABILITY_ACTION_LABEL, labelOf } from '@/lib/labels'
 
 function DriftTable({ rows }: { rows: DriftRow[] }) {
   return (
@@ -217,7 +218,7 @@ function ReconcileTab({ canAdjust }: { canAdjust: boolean }) {
                           {r.variantId?.slice(0, 8)}…
                         </TableCell>
                         <TableCell>
-                          {AVAILABILITY_ACTION_LABEL[r.action ?? ''] ?? r.action}
+                          {labelOf(AVAILABILITY_ACTION_LABEL, r.action)}
                         </TableCell>
                         <TableCell className="text-right">{r.counterBefore}</TableCell>
                         <TableCell className="text-right">{r.expected}</TableCell>

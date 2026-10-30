@@ -11,8 +11,10 @@ import {
   useSetProductSpecMutation,
   useSetVariantSpecMutation,
   useVariantSpecsQuery,
+  type SpecValue,
   type Variant,
 } from '@/api/products'
+import { isActiveFlag } from '@/lib/active-only'
 
 function groupAttributes(attributes: Attribute[], groups: { id?: string; name?: string }[]) {
   const groupsById = new Map(groups.map((g) => [g.id, g.name]))
@@ -31,6 +33,14 @@ function groupAttributes(attributes: Attribute[], groups: { id?: string; name?: 
   }))
 }
 
+/**
+ * A deactivated attribute is not offered for new values; one the record already carries a value
+ * for stays, marked Inactive, so that value can still be seen and cleared.
+ */
+function specAttributesToShow(attributes: Attribute[], values: SpecValue[]): Attribute[] {
+  return attributes.filter((a) => isActiveFlag(a) || values.some((v) => v.attributeId === a.id))
+}
+
 function ProductLevelSpecs({ productId }: { productId: string }) {
   const attributesQuery = useAttributesQuery({ page: 0, size: 200, kind: 'SPEC' })
   const groupsQuery = useAttributeGroupsQuery()
@@ -38,11 +48,12 @@ function ProductLevelSpecs({ productId }: { productId: string }) {
   const setSpec = useSetProductSpecMutation(productId)
   const clearSpec = useClearProductSpecMutation(productId)
 
-  const productAttributes = (attributesQuery.data?.content ?? []).filter(
-    (a) => a.appliesTo === 'PRODUCT'
+  const values = specsQuery.data ?? []
+  const productAttributes = specAttributesToShow(
+    (attributesQuery.data?.content ?? []).filter((a) => a.appliesTo === 'PRODUCT'),
+    values
   )
   const groups = groupAttributes(productAttributes, groupsQuery.data ?? [])
-  const values = specsQuery.data ?? []
 
   if (groups.length === 0) {
     return (
@@ -64,6 +75,7 @@ function ProductLevelSpecs({ productId }: { productId: string }) {
               <SpecAttributeField
                 key={attribute.id}
                 attribute={attribute}
+                inactive={!isActiveFlag(attribute)}
                 values={values}
                 mutations={{
                   set: (body) => setSpec.mutateAsync(body),
@@ -85,11 +97,14 @@ function VariantLevelSpecs({ productId, variant }: { productId: string; variant:
   const setSpec = useSetVariantSpecMutation(productId, variant.id!)
   const clearSpec = useClearVariantSpecMutation(productId, variant.id!)
 
-  const variantAttributes = (attributesQuery.data?.content ?? []).filter(
-    (a) => a.appliesTo === 'VARIANT' && a.kind === 'SPEC'
+  const values = specsQuery.data ?? []
+  const variantAttributes = specAttributesToShow(
+    (attributesQuery.data?.content ?? []).filter(
+      (a) => a.appliesTo === 'VARIANT' && a.kind === 'SPEC'
+    ),
+    values
   )
   const groups = groupAttributes(variantAttributes, groupsQuery.data ?? [])
-  const values = specsQuery.data ?? []
 
   if (groups.length === 0) {
     return (
@@ -111,6 +126,7 @@ function VariantLevelSpecs({ productId, variant }: { productId: string; variant:
               <SpecAttributeField
                 key={attribute.id}
                 attribute={attribute}
+                inactive={!isActiveFlag(attribute)}
                 values={values}
                 mutations={{
                   set: (body) => setSpec.mutateAsync(body),

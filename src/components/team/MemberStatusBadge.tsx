@@ -1,14 +1,15 @@
 import { Badge } from '@/components/ui/badge'
 import type { TeamMember } from '@/api/team'
+import { TEAM_STATUS_LABEL } from '@/lib/labels'
 
 const STATUS_STYLE: Record<
   NonNullable<TeamMember['status']>,
   { label: string; variant: 'default' | 'secondary' | 'destructive' | 'outline' }
 > = {
-  INVITED: { label: 'Invited', variant: 'outline' },
-  ACTIVE: { label: 'Active', variant: 'default' },
-  SUSPENDED: { label: 'Suspended', variant: 'secondary' },
-  DEACTIVATED: { label: 'Deactivated', variant: 'destructive' },
+  INVITED: { label: TEAM_STATUS_LABEL.INVITED, variant: 'outline' },
+  ACTIVE: { label: TEAM_STATUS_LABEL.ACTIVE, variant: 'default' },
+  SUSPENDED: { label: TEAM_STATUS_LABEL.SUSPENDED, variant: 'secondary' },
+  DEACTIVATED: { label: TEAM_STATUS_LABEL.DEACTIVATED, variant: 'destructive' },
 }
 
 function MemberStatusBadge({ status, locked }: { status: TeamMember['status']; locked?: boolean }) {

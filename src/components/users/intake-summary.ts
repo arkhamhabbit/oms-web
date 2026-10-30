@@ -12,7 +12,8 @@ const text = (value: unknown) => (typeof value === 'string' && value !== '' ? va
 /** One line describing what a change asked for; payload shapes per kind are published in intake.json. */
 export function summarizeIntakePayload(
   kind: ProfileIntake['kind'],
-  payload: ProfileIntake['payload']
+  payload: ProfileIntake['payload'],
+  address?: ProfileIntake['address']
 ): string {
   const p = payload ?? {}
   switch (kind) {
@@ -25,8 +26,12 @@ export function summarizeIntakePayload(
       return parts.length > 0 ? parts.join(' · ') : '—'
     }
     case 'ADDRESS_DELETE': {
-      const id = text(p.addressId)
-      return id ? `address ${id.slice(0, 8)}…` : '—'
+      // OMS reads the address back (it is never erased), so a deleted one still has its label.
+      const named = address ? [text(address.label), text(address.line1)].filter(Boolean) : []
+      if (named.length > 0) {
+        return named.join(' · ')
+      }
+      return text(p.addressId) ? 'An address that is no longer on record' : '—'
     }
     default:
       return '—'

@@ -43,6 +43,7 @@ import {
   useUpdateAttributeMutation,
   type Attribute,
 } from '@/api/attributes'
+import { ATTRIBUTE_APPLIES_TO_LABEL, ATTRIBUTE_DATA_TYPE_LABEL, ATTRIBUTE_KIND_LABEL } from '@/lib/labels'
 
 const NONE = '__none__'
 
@@ -286,7 +287,7 @@ function AttributeFormDialog({ open, onOpenChange, attribute }: AttributeFormDia
                         <SelectContent>
                           {KIND_OPTIONS.map((k) => (
                             <SelectItem key={k} value={k}>
-                              {k}
+                              {ATTRIBUTE_KIND_LABEL[k]}
                             </SelectItem>
                           ))}
                         </SelectContent>
@@ -332,7 +333,7 @@ function AttributeFormDialog({ open, onOpenChange, attribute }: AttributeFormDia
                         <SelectContent>
                           {DATA_TYPE_OPTIONS.map((d) => (
                             <SelectItem key={d} value={d}>
-                              {d}
+                              {ATTRIBUTE_DATA_TYPE_LABEL[d]}
                             </SelectItem>
                           ))}
                         </SelectContent>
@@ -427,14 +428,14 @@ function AttributeFormDialog({ open, onOpenChange, attribute }: AttributeFormDia
                     <SelectContent>
                       {APPLIES_TO_OPTIONS.map((a) => (
                         <SelectItem key={a} value={a}>
-                          {a}
+                          {ATTRIBUTE_APPLIES_TO_LABEL[a]}
                         </SelectItem>
                       ))}
                     </SelectContent>
                   </Select>
                   {locked && (
                     <p className="text-sm text-muted-foreground">
-                      Locked to VARIANT because kind is OPTION — an option always defines a variant
+                      Locked to Variant because kind is Option — an option always defines a variant
                       axis.
                     </p>
                   )}

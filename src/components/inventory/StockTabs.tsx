@@ -24,14 +24,11 @@ import {
   type StockLevel,
   type StockTotal,
 } from '@/api/inventory'
-import {
-  MOVEMENT_TYPE_LABEL,
-  MOVEMENT_TYPES,
-  REASON_CODE_LABEL,
-  REASON_CODES,
-} from '@/lib/inventory'
-import { formatDateTime, istDayStart } from '@/lib/orders'
+import { MOVEMENT_TYPES, REASON_CODES } from '@/lib/inventory'
+import { istDayStart } from '@/lib/orders'
 import type { ReasonCode } from '@/api/inventory'
+import { formatDateTime } from '@/lib/dates'
+import { MOVEMENT_TYPE_LABEL, REASON_CODE_LABEL } from '@/lib/labels'
 
 const PAGE_SIZE = 20
 /** SKU search has no server filter (contract gap): it reads this many rows and matches here. */

@@ -15,7 +15,9 @@ import {
   FormMessage,
 } from '@/components/ui/form'
 import { useLoginMutation, useProfileQuery } from '@/api/auth'
+import { hasSessionHint, sessionExpiredNoticeShown, SESSION_EXPIRED_NOTICE } from '@/auth/session-hint'
 import { applyApiErrorToForm, ApiClientError } from '@/lib/api-error'
+import { LOGIN_LABELS } from '@/lib/field-labels'
 
 const schema = z.object({
   email: z.string().min(1, 'Email is required').email('Enter a valid email'),
@@ -30,7 +32,10 @@ function LoginPage() {
   const login = useLoginMutation()
   // If a live session already exists (e.g. back-button after logging in elsewhere in the
   // same browser), skip straight past the form instead of asking for credentials again.
-  const profile = useProfileQuery()
+  // Only when this browser remembers a session: a logged-out visitor's probe could only
+  // answer 401, and the browser logs every 401 in the console.
+  const profile = useProfileQuery({ enabled: hasSessionHint() })
+  const sessionExpired = sessionExpiredNoticeShown()
 
   const form = useForm<FormValues>({
     resolver: zodResolver(schema),
@@ -54,7 +59,7 @@ function LoginPage() {
       },
       onError: (error) => {
         if (error instanceof ApiClientError) {
-          applyApiErrorToForm(error, form)
+          applyApiErrorToForm(error, form, LOGIN_LABELS)
         }
       },
     })
@@ -67,6 +72,11 @@ function LoginPage() {
         <CardDescription>OMS admin access.</CardDescription>
       </CardHeader>
       <CardContent>
+        {sessionExpired && (
+          <p role="status" className="mb-4 rounded-md border bg-muted p-3 text-sm">
+            {SESSION_EXPIRED_NOTICE}
+          </p>
+        )}
         <Form {...form}>
           <form onSubmit={form.handleSubmit(onSubmit)} className="flex flex-col gap-4">
             <FormField

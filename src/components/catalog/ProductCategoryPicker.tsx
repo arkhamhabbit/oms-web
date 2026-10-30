@@ -1,6 +1,7 @@
 import { Checkbox } from '@/components/ui/checkbox'
 import { cn } from '@/lib/utils'
-import { flattenCategoryTree } from '@/lib/category-tree-adapter'
+import { flattenCategoryTree, type FlatCategoryOption } from '@/lib/category-tree-adapter'
+import { isActiveStatus, markInactive } from '@/lib/active-only'
 import type { CategoryTreeNode } from '@/api/categories'
 
 export interface ProductCategoryPickerProps {
@@ -19,6 +20,27 @@ export interface ProductCategoryPickerProps {
  * yet primary and is the only one selected auto-marks it primary; unchecking the primary clears it
  * and, if others remain selected, promotes the first remaining one rather than leaving none set.
  */
+/**
+ * Active categories only, plus any already chosen. An inactive category that has an active one
+ * beneath it stays as a greyed row so the indentation still reads; it cannot be newly chosen.
+ */
+export function visibleCategoryOptions(
+  options: FlatCategoryOption[],
+  selected: ReadonlySet<string>
+): FlatCategoryOption[] {
+  return options.filter((option, index) => {
+    if (isActiveStatus(option.node) || selected.has(option.id)) {
+      return true
+    }
+    for (let next = index + 1; next < options.length && options[next].depth > option.depth; next++) {
+      if (isActiveStatus(options[next].node) || selected.has(options[next].id)) {
+        return true
+      }
+    }
+    return false
+  })
+}
+
 function ProductCategoryPicker({
   tree,
   selectedIds,
@@ -26,8 +48,8 @@ function ProductCategoryPicker({
   onChange,
   disabled,
 }: ProductCategoryPickerProps) {
-  const options = flattenCategoryTree(tree)
   const selected = new Set(selectedIds)
+  const options = visibleCategoryOptions(flattenCategoryTree(tree), selected)
 
   function toggle(id: string) {
     if (selected.has(id)) {
@@ -64,10 +86,12 @@ function ProductCategoryPicker({
           >
             <Checkbox
               checked={isSelected}
-              disabled={disabled}
+              disabled={disabled || (!isSelected && !isActiveStatus(option.node))}
               onCheckedChange={() => toggle(option.id)}
             />
-            <span className="flex-1 truncate">{option.node.name}</span>
+            <span className="flex-1 truncate">
+              {markInactive(option.node.name, isActiveStatus(option.node))}
+            </span>
             {isSelected && (
               <label className="flex items-center gap-1 text-xs text-muted-foreground">
                 <input

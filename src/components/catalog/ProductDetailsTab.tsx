@@ -27,6 +27,7 @@ import {
   type Product,
   type ProductCategory,
 } from '@/api/products'
+import { isActiveStatus, keepActive, markInactive } from '@/lib/active-only'
 
 const detailsFormSchema = z.object({
   name: z.string().trim().min(1, 'Name is required').max(200),
@@ -195,9 +196,11 @@ function ProductDetailsTab({ product, categories, canWrite }: ProductDetailsTabP
                         </SelectTrigger>
                       </FormControl>
                       <SelectContent>
-                        {(brandsQuery.data?.content ?? []).map((brand) => (
+                        {keepActive(brandsQuery.data?.content ?? [], isActiveStatus, [
+                          product.brandId,
+                        ]).map((brand) => (
                           <SelectItem key={brand.id} value={brand.id!}>
-                            {brand.name}
+                            {markInactive(brand.name, isActiveStatus(brand))}
                           </SelectItem>
                         ))}
                       </SelectContent>

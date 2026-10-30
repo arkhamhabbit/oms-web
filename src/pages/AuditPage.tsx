@@ -17,15 +17,33 @@ import { AUDIT_ACTIONS, AUDIT_ENTITY_TYPES } from '@/api/enums.gen'
 import {
   Select,
   SelectContent,
+  SelectGroup,
   SelectItem,
+  SelectLabel,
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select'
+import { domainLabel, titleCaseCode } from '@/lib/labels'
+import { isUuid } from '@/lib/orders'
 import { isApiError } from '@/lib/api-error'
 import { diffSnapshots, formatDiffValue, type DiffRow } from '@/lib/audit-diff'
 import { cn } from '@/lib/utils'
+import { formatDateTime } from '@/lib/dates'
 
 const PAGE_SIZE = 25
+const NOT_A_UUID = 'Enter a UUID'
+
+/** The log's actions grouped by the domain they belong to, in the order the domains first appear. */
+const ACTION_GROUPS: { domain: string; actions: AuditAction[] }[] = (() => {
+  const groups = new Map<string, AuditAction[]>()
+  for (const action of AUDIT_ACTIONS) {
+    const domain = domainLabel(action)
+    groups.set(domain, [...(groups.get(domain) ?? []), action])
+  }
+  return [...groups.entries()]
+    .map(([domain, actions]) => ({ domain, actions }))
+    .sort((a, b) => a.domain.localeCompare(b.domain))
+})()
 
 interface Filters {
   entityType: AuditEntityType | ''
@@ -45,12 +63,12 @@ const emptyFilters: Filters = {
   to: '',
 }
 
-/** `datetime-local` gives a wall-clock value with no zone; the API wants a UTC instant. */
+/** `datetime-local` gives a wall-clock value with no zone; it is read as IST (the console's zone) and sent as a UTC instant. */
 function toInstant(local: string): string | undefined {
   if (!local) {
     return undefined
   }
-  const date = new Date(local)
+  const date = new Date(`${local.length === 16 ? `${local}:00` : local}+05:30`)
   return Number.isNaN(date.getTime()) ? undefined : date.toISOString()
 }
 
@@ -160,14 +178,26 @@ function AuditPage() {
   function set<K extends keyof Filters>(key: K, value: string) {
     setDraft((prev) => ({ ...prev, [key]: value }))
   }
+  // An id the server cannot read is refused here, beside the box, rather than sent for a 400.
+  const [idErrors, setIdErrors] = React.useState<{ entityId?: string; actorId?: string }>({})
+
   function apply(event: React.FormEvent) {
     event.preventDefault()
+    const errors = {
+      entityId: draft.entityId.trim() && !isUuid(draft.entityId) ? NOT_A_UUID : undefined,
+      actorId: draft.actorId.trim() && !isUuid(draft.actorId) ? NOT_A_UUID : undefined,
+    }
+    setIdErrors(errors)
+    if (errors.entityId || errors.actorId) {
+      return
+    }
     setPageIndex(0)
     setApplied(draft)
   }
   function clear() {
     setDraft(emptyFilters)
     setApplied(emptyFilters)
+    setIdErrors({})
     setPageIndex(0)
   }
 
@@ -176,7 +206,7 @@ function AuditPage() {
       id: 'occurredAt',
       header: 'When',
       cell: ({ row }) =>
-        row.original.occurredAt ? new Date(row.original.occurredAt).toLocaleString() : '',
+        formatDateTime(row.original.occurredAt),
     },
     { id: 'actor', header: 'Actor', cell: ({ row }) => <ActorCell entry={row.original} /> },
     {
@@ -184,7 +214,11 @@ function AuditPage() {
       header: 'Action',
       cell: ({ row }) => <code className="text-xs">{row.original.action}</code>,
     },
-    { accessorKey: 'entityType', header: 'Entity' },
+    {
+      id: 'entityType',
+      header: 'Entity',
+      cell: ({ row }) => (row.original.entityType ? titleCaseCode(row.original.entityType) : ''),
+    },
   ]
 
   return (
@@ -203,7 +237,7 @@ function AuditPage() {
               <SelectItem value="ALL">All entity types</SelectItem>
               {AUDIT_ENTITY_TYPES.map((t) => (
                 <SelectItem key={t} value={t}>
-                  {t}
+                  {titleCaseCode(t)}
                 </SelectItem>
               ))}
             </SelectContent>
@@ -216,7 +250,14 @@ function AuditPage() {
             placeholder="UUID"
             value={draft.entityId}
             onChange={(e) => set('entityId', e.target.value)}
+            aria-invalid={idErrors.entityId ? true : undefined}
+            aria-describedby="audit-entity-id-error"
           />
+          {idErrors.entityId && (
+            <p id="audit-entity-id-error" className="text-sm text-destructive">
+              {idErrors.entityId}
+            </p>
+          )}
         </div>
         <div className="grid gap-1.5">
           <Label htmlFor="audit-actor">Actor ID</Label>
@@ -225,7 +266,14 @@ function AuditPage() {
             placeholder="Team member UUID"
             value={draft.actorId}
             onChange={(e) => set('actorId', e.target.value)}
+            aria-invalid={idErrors.actorId ? true : undefined}
+            aria-describedby="audit-actor-error"
           />
+          {idErrors.actorId && (
+            <p id="audit-actor-error" className="text-sm text-destructive">
+              {idErrors.actorId}
+            </p>
+          )}
         </div>
         <div className="grid gap-1.5">
           <Label htmlFor="audit-action">Action</Label>
@@ -238,10 +286,15 @@ function AuditPage() {
             </SelectTrigger>
             <SelectContent>
               <SelectItem value="ALL">All actions</SelectItem>
-              {AUDIT_ACTIONS.map((a) => (
-                <SelectItem key={a} value={a}>
-                  {a}
-                </SelectItem>
+              {ACTION_GROUPS.map((group) => (
+                <SelectGroup key={group.domain}>
+                  <SelectLabel>{group.domain}</SelectLabel>
+                  {group.actions.map((a) => (
+                    <SelectItem key={a} value={a}>
+                      {a}
+                    </SelectItem>
+                  ))}
+                </SelectGroup>
               ))}
             </SelectContent>
           </Select>
@@ -270,7 +323,7 @@ function AuditPage() {
             Clear
           </Button>
           <span className="self-center text-xs text-muted-foreground">
-            Times are in your local zone. The log is read-only.
+            Times are in India Standard Time. The log is read-only.
           </span>
         </div>
       </form>

@@ -1,4 +1,5 @@
 import { isApiError, isVersionConflict, type ApiError } from '@/lib/api-error'
+import { describeFieldError, type FieldLabels } from '@/lib/field-labels'
 
 /** A server refusal as a dialog holds it: the whole error, so each control can pick out its own field. */
 export type Refusal = ApiError | { message: string; stale?: boolean; fieldErrors: [] }
@@ -41,9 +42,10 @@ export function generalMessage(refusal: Refusal | undefined): string | undefined
 /** Field errors the dialog has no control for, so they are not silently dropped. */
 export function unplacedFieldMessages(
   refusal: Refusal | undefined,
-  knownFields: string[]
+  knownFields: string[],
+  labels?: FieldLabels
 ): string[] {
   return (refusal?.fieldErrors ?? [])
     .filter((e) => !knownFields.includes(e.field))
-    .map((e) => (e.field ? `${e.field}: ${e.message}` : e.message))
+    .map((e) => describeFieldError(e, labels))
 }

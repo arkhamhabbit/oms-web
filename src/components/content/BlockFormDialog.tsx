@@ -28,6 +28,7 @@ import {
 } from '@/api/content'
 import { FORMAT_HINTS, FORMAT_LABELS } from '@/lib/content-rules'
 import { ApiClientError } from '@/lib/api-error'
+import { describeFieldError, type FieldLabels } from '@/lib/field-labels'
 import { useKeyedState } from '@/lib/use-keyed-state'
 
 const FORMATS: BlockFormat[] = ['SINGLE', 'TITLED', 'CAROUSEL', 'STORY']
@@ -41,9 +42,9 @@ export interface BlockFormDialogProps {
 }
 
 /** The server's refusal as one readable sentence: its message, plus any field it points at. */
-export function describeApiError(error: unknown): string {
+export function describeApiError(error: unknown, labels?: FieldLabels): string {
   if (error instanceof ApiClientError) {
-    const fields = error.fieldErrors.map((f) => f.message).filter((m) => m && m !== error.message)
+    const fields = error.fieldErrors.map((f) => describeFieldError(f, labels))
     return [error.message, ...fields].join(' ')
   }
   return error instanceof Error ? error.message : 'Something went wrong.'

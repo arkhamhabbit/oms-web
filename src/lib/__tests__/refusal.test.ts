@@ -33,8 +33,13 @@ describe('refusals', () => {
     expect(fieldMessage(refusal, 'note')).toBeUndefined()
     expect(generalMessage(refusal)).toBeUndefined()
     expect(unplacedFieldMessages(refusal, ['quantity'])).toEqual([
-      'lines[0].quantityOrdered: must be at least 1',
+      'Lines 1 quantity ordered: must be at least 1',
     ])
+    expect(
+      unplacedFieldMessages(refusal, ['quantity'], {
+        'lines[].quantityOrdered': 'Quantity ordered',
+      })
+    ).toEqual(['Quantity ordered, row 1: must be at least 1'])
   })
 
   it('treats a field-less rule as the general sentence', () => {

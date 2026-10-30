@@ -21,8 +21,9 @@ import {
 import { useBreadcrumb } from '@/layouts/breadcrumb-context'
 import { usePermissions } from '@/auth/usePermissions'
 import { isApiError, type ApiFieldError } from '@/lib/api-error'
+import { describeFieldError, ORDER_SETTINGS_LABELS } from '@/lib/field-labels'
 import { minorToMajorString } from '@/lib/money'
-import { formatDateTime } from '@/lib/orders'
+import { formatDateTime } from '@/lib/dates'
 import {
   useCurrentOrderSettingsQuery,
   useOrderSettingsVersionsQuery,
@@ -32,6 +33,10 @@ import {
 } from '@/api/orders'
 
 const PAGE_SIZE = 20
+const TIMEOUT_MIN = 5
+const TIMEOUT_MAX = 15
+/** Field errors that sit beside their own control; the rest are listed in the banner. */
+const PLACED_FIELDS = ['shippingFeeMinor', 'paymentTimeoutMinutes']
 
 const rupees = (minor: number | undefined) => `₹${minorToMajorString(minor ?? 0)}`
 
@@ -141,7 +146,12 @@ function NewVersionForm({ current, canWrite }: { current: OrderSettings; canWrit
   const [fieldErrors, setFieldErrors] = React.useState<ApiFieldError[]>([])
 
   const timeout = /^\d+$/.test(timeoutText.trim()) ? Number.parseInt(timeoutText.trim(), 10) : null
-  const ready = shippingMinor !== null && timeout !== null
+  // The server's 5-15 rule stays authoritative; this only spares a confirm dialog and a round trip.
+  const timeoutProblem =
+    timeout === null || timeout < TIMEOUT_MIN || timeout > TIMEOUT_MAX
+      ? `Enter a whole number of minutes from ${TIMEOUT_MIN} to ${TIMEOUT_MAX}.`
+      : undefined
+  const ready = shippingMinor !== null && timeout !== null && !timeoutProblem
 
   function submit() {
     if (!ready) {
@@ -214,7 +224,14 @@ function NewVersionForm({ current, canWrite }: { current: OrderSettings; canWrit
               value={timeoutText}
               onChange={(e) => setTimeoutText(e.target.value)}
               disabled={!canWrite}
+              aria-invalid={timeoutProblem ? true : undefined}
+              aria-describedby="paymentTimeout-problem"
             />
+            {timeoutProblem && (
+              <p id="paymentTimeout-problem" className="text-sm text-destructive">
+                {timeoutProblem}
+              </p>
+            )}
             <p className="text-xs text-muted-foreground">
               How long a placed order waits for payment before it expires: 5 to 15 minutes — never
               longer than a stock hold lasts once extended.
@@ -258,12 +275,17 @@ function NewVersionForm({ current, canWrite }: { current: OrderSettings; canWrit
           </div>
 
           {refusal && (
-            <p
+            <div
               role="alert"
               className="rounded-md border border-destructive/40 bg-destructive/5 p-3 text-sm"
             >
-              {refusal}
-            </p>
+              <p>{refusal}</p>
+              {fieldErrors
+                .filter((e) => !PLACED_FIELDS.includes(e.field))
+                .map((e) => (
+                  <p key={`${e.field}-${e.message}`}>{describeFieldError(e, ORDER_SETTINGS_LABELS)}</p>
+                ))}
+            </div>
           )}
 
           <div>

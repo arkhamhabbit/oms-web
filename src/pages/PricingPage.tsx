@@ -23,12 +23,10 @@ import {
   type PricingVersion,
   type PricingVersionStatus,
 } from '@/api/pricing'
+import { formatDateTime } from '@/lib/dates'
 
 const PAGE_SIZE = 20
 
-function formatDate(value: string | undefined) {
-  return value ? new Date(value).toLocaleString() : ''
-}
 
 function PricingPage() {
   useBreadcrumb([{ label: 'Pricing' }])
@@ -56,10 +54,10 @@ function PricingPage() {
     {
       id: 'effectiveFrom',
       header: 'Effective from',
-      cell: ({ row }) => formatDate(row.original.effectiveFrom) || '—',
+      cell: ({ row }) => formatDateTime(row.original.effectiveFrom) || '—',
     },
     { id: 'priceCount', header: 'Prices set', cell: ({ row }) => row.original.priceCount ?? 0 },
-    { id: 'updatedAt', header: 'Updated', cell: ({ row }) => formatDate(row.original.updatedAt) },
+    { id: 'updatedAt', header: 'Updated', cell: ({ row }) => formatDateTime(row.original.updatedAt) },
   ]
 
   return (

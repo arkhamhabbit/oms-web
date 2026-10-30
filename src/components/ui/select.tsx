@@ -22,7 +22,7 @@ function SelectTrigger({
       data-slot="select-trigger"
       className={cn(
         'flex h-9 w-full items-center justify-between gap-2 rounded-md border border-input bg-transparent px-3 py-2 text-sm shadow-xs outline-none',
-        'focus-visible:border-ring focus-visible:ring-2 focus-visible:ring-ring/50',
+        'focus-visible:border-ring focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-background',
         'disabled:cursor-not-allowed disabled:opacity-50',
         'data-[placeholder]:text-muted-foreground',
         className
@@ -102,4 +102,32 @@ function SelectItem({
   )
 }
 
-export { Select, SelectValue, SelectTrigger, SelectContent, SelectItem }
+function SelectGroup(props: React.ComponentProps<typeof SelectPrimitive.Group>) {
+  return <SelectPrimitive.Group data-slot="select-group" {...props} />
+}
+
+function SelectLabel({
+  className,
+  ...props
+}: React.ComponentProps<typeof SelectPrimitive.Label>) {
+  return (
+    <SelectPrimitive.Label
+      data-slot="select-label"
+      className={cn(
+        'px-2 pt-2 pb-1 text-xs font-semibold tracking-wide text-muted-foreground uppercase',
+        className
+      )}
+      {...props}
+    />
+  )
+}
+
+export {
+  Select,
+  SelectValue,
+  SelectTrigger,
+  SelectContent,
+  SelectItem,
+  SelectGroup,
+  SelectLabel,
+}

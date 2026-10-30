@@ -17,7 +17,28 @@ describe('summarizeIntakePayload', () => {
       summarizeIntakePayload('ADDRESS_DELETE', {
         addressId: '0190aaaa-bbbb-cccc-dddd-eeeeffff0000',
       })
-    ).toBe('address 0190aaaa…')
+    ).toBe('An address that is no longer on record')
+  })
+
+  it('names a deleted address by its label, never by its id', () => {
+    const payload = { addressId: '0190aaaa-bbbb-cccc-dddd-eeeeffff0000' }
+    expect(
+      summarizeIntakePayload('ADDRESS_DELETE', payload, {
+        addressId: payload.addressId,
+        label: 'Home',
+        line1: '12 MG Road',
+        pincode: '560001',
+        deleted: true,
+      })
+    ).toBe('Home · 12 MG Road')
+    expect(
+      summarizeIntakePayload('ADDRESS_DELETE', payload, {
+        addressId: payload.addressId,
+        label: null,
+        line1: '12 MG Road',
+        deleted: true,
+      })
+    ).toBe('12 MG Road')
   })
 
   it('tolerates a missing or malformed payload', () => {

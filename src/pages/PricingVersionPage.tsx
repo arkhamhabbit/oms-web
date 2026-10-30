@@ -33,6 +33,7 @@ import {
   type PricingVersion,
   type PricingVersionState,
 } from '@/api/pricing'
+import { formatDateTime } from '@/lib/dates'
 
 const PRICES_PAGE_SIZE = 20
 
@@ -42,9 +43,6 @@ const EFFECTIVE_VERB: Partial<Record<PricingVersionState, string>> = {
   WITHDRAWN: 'Was scheduled for',
 }
 
-function formatDate(value: string | undefined) {
-  return value ? new Date(value).toLocaleString() : ''
-}
 
 function BackLink() {
   return (
@@ -123,13 +121,13 @@ function PricingVersionPage() {
       </div>
       <p className="-mt-2 text-sm text-muted-foreground">
         {version.effectiveFrom
-          ? `${EFFECTIVE_VERB[version.state!] ?? 'Took effect'} ${formatDate(version.effectiveFrom)}`
+          ? `${EFFECTIVE_VERB[version.state!] ?? 'Took effect'} ${formatDateTime(version.effectiveFrom)}`
           : 'Not published'}
         {' · '}
         {version.priceCount ?? 0} price{version.priceCount === 1 ? '' : 's'} set
         {' · '}
         {version.bitsOptionCount ?? 0} Bits option{version.bitsOptionCount === 1 ? '' : 's'}
-        {version.withdrawnAt && ` · withdrawn ${formatDate(version.withdrawnAt)}`}
+        {version.withdrawnAt && ` · withdrawn ${formatDateTime(version.withdrawnAt)}`}
       </p>
 
       {notice && (
@@ -579,7 +577,7 @@ function LifecycleActions({
         onConfirm={runWithdraw}
       >
         <p>
-          {version.name} was due to take effect {formatDate(version.effectiveFrom)}. Withdrawing it
+          {version.name} was due to take effect {formatDateTime(version.effectiveFrom)}. Withdrawing it
           is final: it will never take effect, and the version in effect now is untouched. It has
           priced no orders, so nothing is lost.
         </p>

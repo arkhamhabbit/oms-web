@@ -1,4 +1,4 @@
-import type { FulfilAction, OrderStatus } from '@/api/orders'
+import type { FulfilAction, OrderPayment, OrderStatus } from '@/api/orders'
 
 export const ORDER_STATUSES: OrderStatus[] = [
   'PENDING_PAYMENT',
@@ -12,19 +12,6 @@ export const ORDER_STATUSES: OrderStatus[] = [
   'CANCELLED',
   'REFUNDED',
 ]
-
-export const ORDER_STATUS_LABEL: Record<OrderStatus, string> = {
-  PENDING_PAYMENT: 'Awaiting payment',
-  CONFIRMED: 'Confirmed',
-  PACKED: 'Packed',
-  SHIPPED: 'Shipped',
-  OUT_FOR_DELIVERY: 'Out for delivery',
-  DELIVERED: 'Delivered',
-  PAYMENT_FAILED: 'Payment failed',
-  EXPIRED: 'Expired',
-  CANCELLED: 'Cancelled',
-  REFUNDED: 'Refunded',
-}
 
 /** Which permission each action needs — `orders.fulfil` for the steps, `write` to cancel, `refund` to refund. */
 export const ACTION_PERMISSION: Record<FulfilAction, string> = {
@@ -81,10 +68,14 @@ export function istDayStart(date: string, addDays = 0): string | undefined {
   return start.toISOString()
 }
 
-export function formatDateTime(value: string | undefined): string {
-  return value ? new Date(value).toLocaleString() : ''
-}
-
 export function isUuid(value: string): boolean {
   return /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(value.trim())
+}
+
+/** The permission both refund settlement actions (retry, mark as refunded) need. */
+export const REFUND_SETTLEMENT_PERMISSION = 'orders.refund'
+
+/** D9.6 — a refund the gateway has not completed: the only state the two settlement actions apply to. */
+export function isRefundPending(payment: OrderPayment | undefined): boolean {
+  return payment?.status === 'REFUND_PENDING'
 }

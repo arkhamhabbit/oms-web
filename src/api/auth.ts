@@ -2,6 +2,7 @@ import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 
 import { api, unwrap } from '@/api/client'
 import type { components } from '@/api/schema.gen'
+import { clearExpiredNotice, markSignedIn, markSignedOut } from '@/auth/session-hint'
 
 type LoginRequest = components['schemas']['LoginRequest']
 type LoginResponse = components['schemas']['LoginResponse']
@@ -22,7 +23,11 @@ export const profileQueryKey = ['profile'] as const
 export function useProfileQuery(options?: { enabled?: boolean }) {
   return useQuery({
     queryKey: profileQueryKey,
-    queryFn: () => unwrap(api.GET('/api/admin/profile')),
+    queryFn: async () => {
+      const profile = await unwrap(api.GET('/api/admin/profile'))
+      markSignedIn()
+      return profile
+    },
     retry: false,
     enabled: options?.enabled,
   })
@@ -32,6 +37,10 @@ export function useLoginMutation() {
   return useMutation({
     mutationFn: (body: LoginRequest) =>
       unwrap<LoginResponse>(api.POST('/api/admin/auth/login', { body })),
+    onSuccess: () => {
+      markSignedIn()
+      clearExpiredNotice()
+    },
   })
 }
 
@@ -40,7 +49,10 @@ export function useLogoutMutation() {
   const queryClient = useQueryClient()
   return useMutation({
     mutationFn: () => unwrap(api.POST('/api/admin/auth/logout')),
-    onSettled: () => queryClient.clear(),
+    onSettled: () => {
+      markSignedOut()
+      queryClient.clear()
+    },
   })
 }
 

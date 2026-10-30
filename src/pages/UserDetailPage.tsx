@@ -22,10 +22,8 @@ import {
   type RoleGrant,
   type User,
 } from '@/api/users'
+import { formatDateTime } from '@/lib/dates'
 
-function formatDate(value: string | undefined) {
-  return value ? new Date(value).toLocaleString() : ''
-}
 
 function BackLink() {
   return (
@@ -104,8 +102,16 @@ function UserDetailPage() {
         </Explainer>
       )}
 
-      {/* key on version: a reload or a successful save hands the form fresh values */}
-      <ProfileCard key={`profile-${user.version}`} user={user} canWrite={canWrite} onError={fail} />
+      {/* Keyed on the saved profile values, not on `version`: another card's save (Partner, suspend)
+          bumps the version too, and re-keying on it threw away profile edits not yet saved. A save
+          of the profile itself, or a reload showing different values, still hands the form fresh
+          ones; the form sends the current `version` from props either way. */}
+      <ProfileCard
+        key={`profile-${user.id}-${user.name ?? ''}-${user.email ?? ''}`}
+        user={user}
+        canWrite={canWrite}
+        onError={fail}
+      />
       {has('identity.user.read') && <UserAddressesCard userId={user.id!} />}
       {has('identity.user.read') && <UserProfileChangesCard userId={user.id!} />}
       <RolesCard user={user} canWrite={canWrite} onError={fail} />
@@ -196,11 +202,11 @@ function ProfileCard({ user, canWrite, onError }: CardProps & { canWrite: boolea
             <dt>Claimed</dt>
             <dd>
               {user.activatedAt
-                ? formatDate(user.activatedAt)
+                ? formatDateTime(user.activatedAt)
                 : 'Not yet — the person has not claimed this account'}
             </dd>
             <dt>Created</dt>
-            <dd>{formatDate(user.createdAt)}</dd>
+            <dd>{formatDateTime(user.createdAt)}</dd>
           </dl>
           <div>
             <Button type="submit" disabled={!canWrite || update.isPending || name.trim() === ''}>
@@ -223,9 +229,9 @@ function GrantHistory({ history }: { history: RoleGrant[] }) {
       {partner.map((grant, index) => (
         <li key={`${grant.grantedAt}-${index}`} className="flex flex-wrap gap-x-2">
           <span className="font-medium">Partner</span>
-          <span className="text-muted-foreground">granted {formatDate(grant.grantedAt)}</span>
+          <span className="text-muted-foreground">granted {formatDateTime(grant.grantedAt)}</span>
           {grant.revokedAt ? (
-            <span className="text-destructive">· revoked {formatDate(grant.revokedAt)}</span>
+            <span className="text-destructive">· revoked {formatDateTime(grant.revokedAt)}</span>
           ) : (
             <span className="text-muted-foreground">· current</span>
           )}

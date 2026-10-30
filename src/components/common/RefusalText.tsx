@@ -1,3 +1,4 @@
+import type { FieldLabels } from '@/lib/field-labels'
 import { generalMessage, unplacedFieldMessages, type Refusal } from '@/lib/refusal'
 
 /**
@@ -9,14 +10,16 @@ import { generalMessage, unplacedFieldMessages, type Refusal } from '@/lib/refus
 function RefusalText({
   refusal,
   knownFields = [],
+  labels,
   id,
 }: {
   refusal: Refusal | undefined
   knownFields?: string[]
+  labels?: FieldLabels
   id?: string
 }) {
   const general = generalMessage(refusal)
-  const unplaced = unplacedFieldMessages(refusal, knownFields)
+  const unplaced = unplacedFieldMessages(refusal, knownFields, labels)
   if (!general && unplaced.length === 0) {
     return null
   }

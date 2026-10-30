@@ -28,16 +28,11 @@ import {
   type ProductListingVisibility,
   type ProductLockedDisplay,
 } from '@/api/products'
+import { PRODUCT_AUDIENCE_LABEL } from '@/lib/labels'
 
 export interface ProductVisibilityTabProps {
   product: Product
   canWrite: boolean
-}
-
-const AUDIENCE_LABEL: Record<ProductAudience, string> = {
-  PUBLIC: 'Public',
-  TIER_RESTRICTED: 'Tier restricted',
-  CUSTOMER_RESTRICTED: 'Customer restricted',
 }
 
 const AUDIENCE_COPY: Record<ProductAudience, string> = {
@@ -156,7 +151,7 @@ function ProductVisibilityTab({ product, canWrite }: ProductVisibilityTabProps) 
               <SelectContent>
                 {PRODUCT_AUDIENCES.map((a) => (
                   <SelectItem key={a} value={a}>
-                    {AUDIENCE_LABEL[a]}
+                    {PRODUCT_AUDIENCE_LABEL[a]}
                   </SelectItem>
                 ))}
               </SelectContent>

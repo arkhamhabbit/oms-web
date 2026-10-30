@@ -20,9 +20,10 @@ import {
   type PurchaseOrder,
   type PurchaseOrderStatus,
 } from '@/api/procurement'
-import { formatDate } from '@/lib/inventory'
+import { formatDate } from '@/lib/dates'
 import { minorToMajorString } from '@/lib/money'
-import { PO_STATUS_LABEL, PO_STATUSES } from '@/lib/procurement'
+import { PO_STATUSES } from '@/lib/procurement'
+import { ANY_STATUS, PO_STATUS_LABEL } from '@/lib/labels'
 
 const PAGE_SIZE = 20
 
@@ -160,7 +161,7 @@ function PurchaseOrdersPage() {
               value={status}
               onChange={filter(setStatus)}
               ariaLabel="Status filter"
-              allLabel="All statuses"
+              allLabel={ANY_STATUS}
               options={PO_STATUSES.map((s) => ({ value: s, label: PO_STATUS_LABEL[s] }))}
             />
           </>

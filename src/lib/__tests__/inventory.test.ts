@@ -2,7 +2,6 @@ import { describe, expect, it } from 'vitest'
 
 import {
   batchLabel,
-  formatDate,
   formatSigned,
   optionalText,
   positiveInt,
@@ -11,6 +10,7 @@ import {
   summariseAvailability,
   todayIst,
 } from '@/lib/inventory'
+import { formatDate } from '@/lib/dates'
 
 describe('signedQuantity', () => {
   it('makes the type fix the sign for receipts, returns, damage and write-offs', () => {

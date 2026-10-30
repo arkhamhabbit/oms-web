@@ -2,7 +2,13 @@ import { FilmIcon, ImageOffIcon } from 'lucide-react'
 
 import { MediaThumb } from '@/components/media/MediaThumb'
 import type { ContentBlock } from '@/api/content'
-import { FORMAT_LABELS, slidesFor, wallBlocks } from '@/lib/content-rules'
+import {
+  FORMAT_LABELS,
+  highlightBlocks,
+  publishedBlocks,
+  slidesFor,
+  wallBlocks,
+} from '@/lib/content-rules'
 
 export interface WallPreviewProps {
   blocks: ContentBlock[]
@@ -12,12 +18,14 @@ export interface WallPreviewProps {
 
 /**
  * Read-only: what the app will show (D4.20). The highlight circles in order, then the wall as a
- * three-column grid of the in-wall blocks, each tile drawn from its first slide. A block with no
- * slide is not published, so it is drawn as an empty tile to make that visible.
+ * three-column grid of the in-wall blocks, each tile drawn from its first slide. Only blocks with
+ * at least one product slide are shown, because only those are published; the ones left out are
+ * counted below so their absence is explained.
  */
 function WallPreview({ blocks, variantId }: WallPreviewProps) {
-  const circles = blocks.filter((b) => b.iconMediaId || b.icon)
+  const circles = highlightBlocks(blocks)
   const wall = wallBlocks(blocks)
+  const unpublished = blocks.length - publishedBlocks(blocks).length
 
   return (
     <div className="flex flex-col gap-4" data-testid="wall-preview">
@@ -75,6 +83,13 @@ function WallPreview({ blocks, variantId }: WallPreviewProps) {
           </ul>
         )}
       </div>
+      {unpublished > 0 && (
+        <p className="text-xs text-muted-foreground">
+          {unpublished === 1 ? '1 block has' : `${unpublished} blocks have`} no slides and{' '}
+          {unpublished === 1 ? 'is' : 'are'} not published, so {unpublished === 1 ? 'it is' : 'they are'}{' '}
+          left out here.
+        </p>
+      )}
     </div>
   )
 }

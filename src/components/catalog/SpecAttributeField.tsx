@@ -1,3 +1,5 @@
+import * as React from 'react'
+
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { Switch } from '@/components/ui/switch'
@@ -14,6 +16,7 @@ import { useKeyedState } from '@/lib/use-keyed-state'
 import { useAttributeValuesQuery } from '@/api/attributes'
 import type { Attribute } from '@/api/attributes'
 import type { SpecValue } from '@/api/products'
+import { markInactive } from '@/lib/active-only'
 
 export interface SpecMutations {
   set: (body: { attributeId: string; attributeValueId?: string; valueText?: string; valueNumber?: number; valueBoolean?: boolean }) => Promise<unknown>
@@ -24,6 +27,8 @@ export interface SpecAttributeFieldProps {
   attribute: Attribute
   values: SpecValue[]
   mutations: SpecMutations
+  /** The attribute has been deactivated but this record still carries a value for it. */
+  inactive?: boolean
 }
 
 /**
@@ -32,7 +37,9 @@ export interface SpecAttributeFieldProps {
  * against anything beyond the input's own type (a number field can't type letters into it, but
  * whatever it holds is submitted as-is).
  */
-function SpecAttributeField({ attribute, values, mutations }: SpecAttributeFieldProps) {
+function SpecAttributeField({ attribute, values, mutations, inactive }: SpecAttributeFieldProps) {
+  const name = markInactive(attribute.name, !inactive)
+  const inputId = React.useId()
   const current = values.find((v) => v.attributeId === attribute.id)
   const dataType = attribute.dataType
 
@@ -52,8 +59,9 @@ function SpecAttributeField({ attribute, values, mutations }: SpecAttributeField
   if (dataType === 'TEXT') {
     return (
       <div className="flex flex-col gap-1.5">
-        <Label>{attribute.name}</Label>
+        <Label htmlFor={inputId}>{name}</Label>
         <Input
+          id={inputId}
           value={text}
           onChange={(e) => setText(e.target.value)}
           onBlur={() => {
@@ -73,11 +81,12 @@ function SpecAttributeField({ attribute, values, mutations }: SpecAttributeField
   if (dataType === 'NUMBER') {
     return (
       <div className="flex flex-col gap-1.5">
-        <Label>
-          {attribute.name}
+        <Label htmlFor={inputId}>
+          {name}
           {attribute.unit ? ` (${attribute.unit})` : ''}
         </Label>
         <Input
+          id={inputId}
           inputMode="decimal"
           value={number}
           onChange={(e) => setNumber(e.target.value)}
@@ -100,6 +109,7 @@ function SpecAttributeField({ attribute, values, mutations }: SpecAttributeField
     return (
       <div className="flex items-center gap-2">
         <Switch
+          id={inputId}
           checked={!!current?.valueBoolean}
           onCheckedChange={(checked) =>
             mutations
@@ -107,7 +117,7 @@ function SpecAttributeField({ attribute, values, mutations }: SpecAttributeField
               .catch((error) => toastApiError(error))
           }
         />
-        <Label>{attribute.name}</Label>
+        <Label htmlFor={inputId}>{name}</Label>
       </div>
     )
   }
@@ -115,7 +125,7 @@ function SpecAttributeField({ attribute, values, mutations }: SpecAttributeField
   if (dataType === 'SINGLE_SELECT') {
     return (
       <div className="flex flex-col gap-1.5">
-        <Label>{attribute.name}</Label>
+        <Label htmlFor={inputId}>{name}</Label>
         <Select
           value={current?.attributeValueId ?? ''}
           onValueChange={(value) =>
@@ -124,7 +134,7 @@ function SpecAttributeField({ attribute, values, mutations }: SpecAttributeField
               .catch((error) => toastApiError(error))
           }
         >
-          <SelectTrigger>
+          <SelectTrigger id={inputId}>
             <SelectValue placeholder="Choose a value" />
           </SelectTrigger>
           <SelectContent>
@@ -147,8 +157,9 @@ function SpecAttributeField({ attribute, values, mutations }: SpecAttributeField
   const currentValueIds = values.filter((v) => v.attributeId === attribute.id).map((v) => v.attributeValueId!)
   return (
     <div className="flex flex-col gap-1.5">
-      <Label>{attribute.name}</Label>
+      <Label htmlFor={inputId}>{name}</Label>
       <MultiSelect
+        id={inputId}
         options={options}
         value={currentValueIds}
         onValueChange={async (nextIds) => {

@@ -20,6 +20,8 @@ import {
   type ProductOption,
   type Variant,
 } from '@/api/products'
+import { Label } from '@/components/ui/label'
+import { isActiveFlag } from '@/lib/active-only'
 
 export interface ProductOptionsTabProps {
   productId: string
@@ -52,7 +54,7 @@ function ProductOptionsTab({
   const attributesById = new Map((attributesQuery.data?.content ?? []).map((a) => [a.id, a]))
   const usedAttributeIds = new Set(options.map((o) => o.attributeId))
   const availableAttributes = (attributesQuery.data?.content ?? []).filter(
-    (a) => !usedAttributeIds.has(a.id)
+    (a) => !usedAttributeIds.has(a.id) && isActiveFlag(a)
   )
 
   const [pickedAttributeId, setPickedAttributeId] = React.useState<string>('')
@@ -170,7 +172,7 @@ function ProductOptionsTab({
             )}
             <div className="flex flex-wrap items-end gap-3">
               <div className="flex flex-col gap-1.5">
-                <span className="text-sm font-medium">Attribute</span>
+                <Label htmlFor="option-attribute">Attribute</Label>
                 <Select
                   value={pickedAttributeId}
                   onValueChange={(value) => {
@@ -178,7 +180,7 @@ function ProductOptionsTab({
                     setPickedValueId('')
                   }}
                 >
-                  <SelectTrigger className="w-56">
+                  <SelectTrigger id="option-attribute" className="w-56">
                     <SelectValue placeholder="Choose an attribute" />
                   </SelectTrigger>
                   <SelectContent>
@@ -191,19 +193,19 @@ function ProductOptionsTab({
                 </Select>
               </div>
               <div className="flex flex-col gap-1.5">
-                <span className="text-sm font-medium">
+                <Label htmlFor="option-value">
                   Value for the existing {isFirstAxis ? 'item' : 'variant'}
-                </span>
+                </Label>
                 <Select
                   value={pickedValueId}
                   onValueChange={setPickedValueId}
                   disabled={!pickedAttributeId}
                 >
-                  <SelectTrigger className="w-56">
+                  <SelectTrigger id="option-value" className="w-56">
                     <SelectValue placeholder="Choose a value" />
                   </SelectTrigger>
                   <SelectContent>
-                    {(valuesQuery.data ?? []).map((value) => (
+                    {(valuesQuery.data ?? []).filter(isActiveFlag).map((value) => (
                       <SelectItem key={value.id} value={value.id!}>
                         {value.label}
                       </SelectItem>

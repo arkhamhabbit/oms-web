@@ -10,7 +10,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { usePermissions } from '@/auth/usePermissions'
 import { useBreadcrumb } from '@/layouts/breadcrumb-context'
 import { useSupplierActiveMutation, useSupplierQuery } from '@/api/procurement'
-import { formatDateTime } from '@/lib/orders'
+import { formatDateTime } from '@/lib/dates'
 
 function SupplierDetailPage() {
   const { id = '' } = useParams()
