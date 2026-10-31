@@ -171,6 +171,20 @@ export const useUnpublishProductMutation = (id: string) =>
   useProductTransitionMutation(id, 'unpublish')
 export const useArchiveProductMutation = (id: string) => useProductTransitionMutation(id, 'archive')
 
+export function useRestoreProductMutation(id: string) {
+  const invalidate = useInvalidateProducts()
+  return useMutation({
+    mutationFn: (version: number) =>
+      unwrap<Product>(
+        api.POST('/api/admin/products/{id}/restore', {
+          params: { path: { id } },
+          body: { version },
+        })
+      ),
+    onSuccess: invalidate,
+  })
+}
+
 // ---- Options ------------------------------------------------------------------------------
 
 export function useProductOptionsQuery(productId: string | undefined) {

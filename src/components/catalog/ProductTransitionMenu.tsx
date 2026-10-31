@@ -141,8 +141,8 @@ function ProductTransitionMenu({
       onConfirm={() => void run('archive')}
     >
       <p>
-        {product.name}: archiving cannot be undone. An archived product comes off sale and cannot
-        be brought back.
+        {product.name}: an archived product comes off sale and cannot be edited. It can be restored
+        later, as Active and off sale.
       </p>
     </ConfirmDialog>
     </>

@@ -7,18 +7,20 @@ import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
 import { CatalogStatusBadges } from '@/components/catalog/CatalogStatusBadges'
+import { RestoreButton } from '@/components/catalog/RestoreButton'
 import { TransitionMenu } from '@/components/catalog/TransitionMenu'
 import { BrandFormDialog } from '@/components/catalog/BrandFormDialog'
 import { useBreadcrumb } from '@/layouts/breadcrumb-context'
 import { usePermissions } from '@/auth/usePermissions'
 import { toastApiError } from '@/lib/api-error'
-import type { CatalogStatus } from '@/lib/catalog-transitions'
+import { ARCHIVED_NOTICE, type CatalogStatus } from '@/lib/catalog-transitions'
 import {
   useActivateBrandMutation,
   useArchiveBrandMutation,
   useBrandsQuery,
   usePublishBrandMutation,
   useReorderBrandsMutation,
+  useRestoreBrandMutation,
   useUnpublishBrandMutation,
   type Brand,
   type BrandStatus,
@@ -54,6 +56,7 @@ function BrandsPage() {
   const unpublish = useUnpublishBrandMutation()
   const archive = useArchiveBrandMutation()
   const reorder = useReorderBrandsMutation()
+  const restore = useRestoreBrandMutation()
 
   const [formOpen, setFormOpen] = React.useState(false)
   const [editingBrand, setEditingBrand] = React.useState<Brand | undefined>(undefined)
@@ -129,19 +132,29 @@ function BrandsPage() {
             <Button
               variant="ghost"
               size="icon"
-              disabled={!canWrite}
-              title="Edit"
+              disabled={!canWrite || row.original.status === 'ARCHIVED'}
+              title={row.original.status === 'ARCHIVED' ? ARCHIVED_NOTICE : 'Edit'}
               onClick={() => openEdit(row.original)}
             >
               <PencilIcon />
             </Button>
+            <RestoreButton
+              className="flex flex-col items-end gap-1"
+              status={row.original.status}
+              canPublish={canPublish}
+              noun="brand"
+              name={row.original.name ?? 'This brand'}
+              onRestore={() =>
+                restore.mutateAsync({ id: row.original.id!, version: row.original.version! })
+              }
+            />
             <TransitionMenu
               status={row.original.status as CatalogStatus}
               live={!!row.original.live}
               canPublish={canPublish}
               noun="brand"
               name={row.original.name ?? 'This brand'}
-              archiveConsequence="archiving cannot be undone. An archived brand leaves the pickers and cannot be brought back. A brand that is live may be refused."
+              archiveConsequence="an archived brand comes off sale, leaves the pickers and cannot be edited. It can be restored later, as Active and off sale. A brand that is live may be refused."
               onTransition={(action) => runTransition(row.original, action)}
             />
           </div>

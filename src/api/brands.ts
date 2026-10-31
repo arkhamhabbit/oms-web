@@ -8,6 +8,7 @@ export type BrandStatus = NonNullable<Brand['status']>
 type CreateBrandRequest = components['schemas']['CreateBrandRequest']
 type UpdateBrandRequest = components['schemas']['UpdateBrandRequest']
 type ReorderRequest = components['schemas']['ReorderRequest']
+type RestoreRequest = components['schemas']['RestoreRequest']
 
 export interface BrandListParams {
   page: number
@@ -91,6 +92,19 @@ export function useArchiveBrandMutation() {
   return useMutation({
     mutationFn: (id: string) =>
       unwrap<Brand>(api.POST('/api/admin/brands/{id}/archive', { params: { path: { id } } })),
+    onSuccess: invalidate,
+  })
+}
+export function useRestoreBrandMutation() {
+  const invalidate = useInvalidateBrands()
+  return useMutation({
+    mutationFn: ({ id, version }: { id: string } & RestoreRequest) =>
+      unwrap<Brand>(
+        api.POST('/api/admin/brands/{id}/restore', {
+          params: { path: { id } },
+          body: { version },
+        })
+      ),
     onSuccess: invalidate,
   })
 }

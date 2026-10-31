@@ -135,4 +135,3 @@ export function summariseAvailability(result: AvailabilityReconcileResult): Avai
     inSync: Math.max(0, (result.variantsChecked ?? 0) - changed.length),
   }
 }
-

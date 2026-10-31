@@ -213,9 +213,7 @@ function ReconcileTab({ canAdjust }: { canAdjust: boolean }) {
                         <TableCell className="font-mono text-xs" title={r.variantId}>
                           {r.variantId?.slice(0, 8)}…
                         </TableCell>
-                        <TableCell>
-                          {labelOf(AVAILABILITY_ACTION_LABEL, r.action)}
-                        </TableCell>
+                        <TableCell>{labelOf(AVAILABILITY_ACTION_LABEL, r.action)}</TableCell>
                         <TableCell className="text-right">{r.counterBefore}</TableCell>
                         <TableCell className="text-right">{r.expected}</TableCell>
                         <TableCell className="text-right">{r.counterAfter}</TableCell>
