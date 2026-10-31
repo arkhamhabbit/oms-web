@@ -12,11 +12,12 @@ import { ProductImagesTab } from '@/components/catalog/ProductImagesTab'
 import { ProductContentTab } from '@/components/content/ProductContentTab'
 import { ProductMerchandisingTab } from '@/components/catalog/ProductMerchandisingTab'
 import { ProductVisibilityTab } from '@/components/catalog/ProductVisibilityTab'
+import { ArchivedNotice, RestoreButton } from '@/components/catalog/RestoreButton'
 import { ProductTransitionMenu } from '@/components/catalog/ProductTransitionMenu'
 import { useBreadcrumb } from '@/layouts/breadcrumb-context'
 import { usePermissions } from '@/auth/usePermissions'
 import type { CatalogStatus } from '@/lib/catalog-transitions'
-import { useProductQuery } from '@/api/products'
+import { useProductQuery, useRestoreProductMutation } from '@/api/products'
 
 type Tab =
   | 'details'
@@ -31,11 +32,12 @@ type Tab =
 function ProductDetailPage() {
   const { id } = useParams<{ id: string }>()
   const { has } = usePermissions()
-  const canWrite = has('catalog.product.write')
+  const hasWrite = has('catalog.product.write')
   const canApprove = has('catalog.product.approve')
   const canPublish = has('catalog.product.publish')
 
   const productQuery = useProductQuery(id)
+  const restore = useRestoreProductMutation(id ?? '')
   const detail = productQuery.data
   const product = detail?.product
 
@@ -50,6 +52,9 @@ function ProductDetailPage() {
     return <p className="text-sm text-muted-foreground">Product not found.</p>
   }
 
+  // An archived product is read-only (D4.23): every edit control below is disabled until it is restored.
+  const archived = product.status === 'ARCHIVED'
+  const canWrite = hasWrite && !archived
   const options = detail.options ?? []
   const variants = detail.variants ?? []
   const categories = detail.categories ?? []
@@ -77,13 +82,24 @@ function ProductDetailPage() {
           <h1 className="text-xl font-semibold">{product.name}</h1>
           <CatalogStatusBadges status={product.status as CatalogStatus} live={!!product.live} />
         </div>
-        <ProductTransitionMenu
-          product={product}
-          canWrite={canWrite}
-          canApprove={canApprove}
-          canPublish={canPublish}
-        />
+        <div className="flex items-start gap-2">
+          <ProductTransitionMenu
+            product={product}
+            canWrite={canWrite}
+            canApprove={canApprove}
+            canPublish={canPublish}
+          />
+          <RestoreButton
+            className="flex flex-col items-end gap-1"
+            status={product.status}
+            canPublish={canPublish}
+            noun="product"
+            name={product.name ?? 'This product'}
+            onRestore={() => restore.mutateAsync(product.version!)}
+          />
+        </div>
       </div>
+      {archived && <ArchivedNotice />}
 
       <div className="flex gap-2 border-b pb-2">
         {tabs.map((t) => (

@@ -50,3 +50,20 @@ export function availableCatalogTransitions(
 
   return actions.map((action) => ({ action, label: ALL_TRANSITIONS[action] }))
 }
+
+/**
+ * D4.23: restore is the fifth transition, and a deliberate one. It is not in the Actions menu —
+ * it is the one action an archived item has, shown only when the item is ARCHIVED and the account
+ * holds the entity's publish key (the key that archives it). Convenience only (D2.17).
+ */
+export function canRestore(status: string | undefined, canPublish: boolean): boolean {
+  return status === 'ARCHIVED' && canPublish
+}
+
+/** What the confirm says: it comes back Active, and stays off sale until published. */
+export function restorePrompt(name: string): string {
+  return `Restore ${name}? It comes back as Active and stays off sale until you publish it.`
+}
+
+/** Shown on an archived item's page, where its edit controls stay disabled. */
+export const ARCHIVED_NOTICE = 'Archived — restore to edit'

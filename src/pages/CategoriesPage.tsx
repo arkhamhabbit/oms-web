@@ -10,6 +10,7 @@ import { Input } from '@/components/ui/input'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
 import { CatalogStatusBadges } from '@/components/catalog/CatalogStatusBadges'
+import { ArchivedNotice, RestoreButton } from '@/components/catalog/RestoreButton'
 import { TransitionMenu } from '@/components/catalog/TransitionMenu'
 import { CategoryFormDialog } from '@/components/catalog/CategoryFormDialog'
 import type { CategoryNode } from '@/fixtures/categories'
@@ -17,6 +18,7 @@ import { useBreadcrumb } from '@/layouts/breadcrumb-context'
 import { usePermissions } from '@/auth/usePermissions'
 import { toastApiError } from '@/lib/api-error'
 import type { CatalogStatus } from '@/lib/catalog-transitions'
+import { ARCHIVED_NOTICE } from '@/lib/catalog-transitions'
 import { indexCategoryTree, toCategoryNodes } from '@/lib/category-tree-adapter'
 import {
   useActivateCategoryMutation,
@@ -25,6 +27,7 @@ import {
   useCategoryQuery,
   useCategoryTreeQuery,
   useMoveCategoryMutation,
+  useRestoreCategoryMutation,
   usePublishCategoryMutation,
   useUnpublishCategoryMutation,
   type Category,
@@ -35,7 +38,7 @@ import { ANY_STATUS, ANY_VISIBILITY, CATALOG_STATUS_LABEL } from '@/lib/labels'
 
 const PAGE_SIZE = 20
 const CATEGORY_ARCHIVE_CONSEQUENCE =
-  'archiving cannot be undone. An archived category leaves the pickers, takes no new subcategories and cannot be brought back. A live parent may be refused.'
+  'an archived category leaves the pickers, takes no new subcategories and cannot be edited. It can be restored later, as Active and off sale; its subcategories stay archived until restored on their own. A live parent may be refused.'
 const STATUS_OPTIONS: CategoryStatus[] = ['DRAFT', 'IN_REVIEW', 'ACTIVE', 'ARCHIVED']
 
 function CategoryDetailPanel({
@@ -55,6 +58,8 @@ function CategoryDetailPanel({
   const publish = usePublishCategoryMutation()
   const unpublish = useUnpublishCategoryMutation()
   const archive = useArchiveCategoryMutation()
+  const restore = useRestoreCategoryMutation()
+  const archived = node.status === 'ARCHIVED'
 
   function runTransition(action: 'activate' | 'publish' | 'unpublish' | 'archive') {
     const mutation = { activate, publish, unpublish, archive }[action]
@@ -74,11 +79,12 @@ function CategoryDetailPanel({
           <dt className="text-muted-foreground">Display order</dt>
           <dd>{node.displayOrder}</dd>
         </dl>
-        <div className="flex flex-wrap gap-2">
-          <Button variant="outline" size="sm" disabled={!canWrite} onClick={onEdit}>
+        {archived && <ArchivedNotice />}
+        <div className="flex flex-wrap items-start gap-2">
+          <Button variant="outline" size="sm" disabled={!canWrite || archived} onClick={onEdit}>
             <PencilIcon /> Edit
           </Button>
-          {/* An archived category takes no new children, and there is no way back from archived. */}
+          {/* An archived category takes no new children; restoring it is the way back (D4.23). */}
           {node.status !== 'ARCHIVED' && (
             <Button variant="outline" size="sm" disabled={!canWrite} onClick={onAddChild}>
               <PlusIcon /> Add subcategory
@@ -92,6 +98,14 @@ function CategoryDetailPanel({
             name={node.name ?? 'This category'}
             archiveConsequence={CATEGORY_ARCHIVE_CONSEQUENCE}
             onTransition={runTransition}
+          />
+          <RestoreButton
+            className="flex flex-col gap-1"
+            status={node.status}
+            canPublish={canPublish}
+            noun="category"
+            name={node.name ?? 'This category'}
+            onRestore={() => restore.mutateAsync({ id: node.id!, version: node.version! })}
           />
         </div>
       </CardContent>
@@ -232,6 +246,7 @@ function SearchView() {
   const publish = usePublishCategoryMutation()
   const unpublish = useUnpublishCategoryMutation()
   const archive = useArchiveCategoryMutation()
+  const restore = useRestoreCategoryMutation()
 
   const [formOpen, setFormOpen] = React.useState(false)
   const [editingCategory, setEditingCategory] = React.useState<Category | undefined>(undefined)
@@ -267,12 +282,22 @@ function SearchView() {
           <Button
             variant="ghost"
             size="icon"
-            disabled={!canWrite}
-            title="Edit"
+            disabled={!canWrite || row.original.status === 'ARCHIVED'}
+            title={row.original.status === 'ARCHIVED' ? ARCHIVED_NOTICE : 'Edit'}
             onClick={() => openEdit(row.original)}
           >
             <PencilIcon />
           </Button>
+          <RestoreButton
+            className="flex flex-col items-end gap-1"
+            status={row.original.status}
+            canPublish={canPublish}
+            noun="category"
+            name={row.original.name ?? 'This category'}
+            onRestore={() =>
+              restore.mutateAsync({ id: row.original.id!, version: row.original.version! })
+            }
+          />
           <TransitionMenu
             status={row.original.status as CatalogStatus}
             live={!!row.original.live}

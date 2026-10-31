@@ -133,6 +133,19 @@ export function useArchiveCategoryMutation() {
     onSuccess: invalidate,
   })
 }
+export function useRestoreCategoryMutation() {
+  const invalidate = useInvalidateCategories()
+  return useMutation({
+    mutationFn: ({ id, version }: { id: string; version: number }) =>
+      unwrap<Category>(
+        api.POST('/api/admin/categories/{id}/restore', {
+          params: { path: { id } },
+          body: { version },
+        })
+      ),
+    onSuccess: invalidate,
+  })
+}
 
 export function useReorderCategoriesMutation() {
   const invalidate = useInvalidateCategories()
