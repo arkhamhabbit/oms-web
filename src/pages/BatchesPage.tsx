@@ -46,15 +46,11 @@ function BatchesPage() {
       cell: ({ row }) => <span className="font-mono">{row.original.batchNumber}</span>,
     },
     {
-      // The batch response carries only the variant id, not its SKU (recorded as a contract gap).
-      id: 'variant',
-      header: 'Variant',
-      cell: ({ row }) => (
-        <span className="font-mono text-xs" title={row.original.variantId}>
-          {row.original.variantId?.slice(0, 8)}…
-        </span>
-      ),
+      id: 'sku',
+      header: 'SKU',
+      cell: ({ row }) => <span className="font-mono">{row.original.sku}</span>,
     },
+    { id: 'product', header: 'Product', cell: ({ row }) => row.original.productName },
     {
       id: 'mfd',
       header: 'Manufactured',

@@ -37,7 +37,7 @@ beforeEach(() => {
       })
     }
     return refusal(400, 'VALIDATION_FAILED', 'Some fields are not valid. Correct them and retry.', [
-      { field: 'password', message: 'Must be at least 12 characters.' },
+      { field: 'newPassword', message: 'Must be at least 12 characters.' },
     ] as never)
   })
 })

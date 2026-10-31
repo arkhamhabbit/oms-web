@@ -18,7 +18,6 @@ import { MEDIA_STATUS_LABEL, labelOf } from '@/lib/labels'
 
 const PAGE_SIZE = 24
 /** Searching by filename filters what is loaded, so it loads a wide page rather than a narrow one. */
-const SEARCH_SIZE = 200
 
 export interface MediaLibraryGridProps {
   /** Kinds the caller can use; the filter offers only these. */
@@ -53,16 +52,14 @@ function MediaLibraryGrid({
 
   const effectiveStatus = status ?? (statusFilter === ALL ? undefined : statusFilter)
   const query = useMediaQuery({
-    page: searching ? 0 : pageIndex,
-    size: searching ? SEARCH_SIZE : PAGE_SIZE,
+    page: pageIndex,
+    size: PAGE_SIZE,
     kind: kind === ALL ? undefined : kind,
     status: effectiveStatus,
+    q: search.trim(),
   })
 
-  const all = query.data?.content ?? []
-  const items = searching
-    ? all.filter((m) => (m.filename ?? '').toLowerCase().includes(search.trim().toLowerCase()))
-    : all
+  const items = query.data?.content ?? []
   const totalPages = query.data?.totalPages ?? 1
 
   return (
@@ -118,7 +115,7 @@ function MediaLibraryGrid({
         <p className="text-sm text-muted-foreground">Loading…</p>
       ) : items.length === 0 ? (
         <p className="text-sm text-muted-foreground">
-          {searching ? 'No file name matches.' : 'Nothing in the library yet.'}
+          {searching ? 'No file matches that search.' : 'Nothing in the library yet.'}
         </p>
       ) : (
         <ul className="grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-4">
@@ -170,7 +167,7 @@ function MediaLibraryGrid({
         </ul>
       )}
 
-      {!searching && totalPages > 1 && (
+      {totalPages > 1 && (
         <div className="flex items-center justify-end gap-2">
           <span className="text-xs text-muted-foreground">
             Page {pageIndex + 1} of {totalPages}

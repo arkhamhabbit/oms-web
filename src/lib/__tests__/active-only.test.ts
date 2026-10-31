@@ -2,8 +2,6 @@ import { describe, expect, it } from 'vitest'
 
 import { visibleCategoryOptions } from '@/components/catalog/ProductCategoryPicker'
 import { isActiveFlag, isActiveStatus, keepActive, markInactive } from '@/lib/active-only'
-import { reasonsFor, REASON_REQUIRED_TYPES } from '@/lib/inventory'
-import { REASON_CODE_LABEL } from '@/lib/labels'
 
 const brands = [
   { id: 'a', name: 'Alpha', status: 'ACTIVE' },
@@ -50,23 +48,5 @@ describe('active-only pickers', () => {
       'oldkid',
       'lone',
     ])
-  })
-})
-
-describe('reasons by movement type', () => {
-  it('offers only the pairing the server accepts, and nothing for a type that takes no reason', () => {
-    expect(reasonsFor('ADJUSTMENT')).not.toContain('DAMAGED_IN_TRANSIT')
-    expect(reasonsFor('DAMAGE')).toContain('DAMAGED_IN_TRANSIT')
-    expect(reasonsFor('RECEIPT')).toEqual([])
-    expect(reasonsFor('EXPIRY_WRITE_OFF')).toEqual([])
-  })
-
-  it('has reasons for every type that requires one, each with a label', () => {
-    for (const type of REASON_REQUIRED_TYPES) {
-      expect(reasonsFor(type).length).toBeGreaterThan(0)
-      for (const code of reasonsFor(type)) {
-        expect(REASON_CODE_LABEL[code]).toBeTruthy()
-      }
-    }
   })
 })

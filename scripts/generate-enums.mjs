@@ -28,6 +28,20 @@ function schemaEnum(schema, property) {
   return values
 }
 
+function queryDefault(path, name) {
+  const value = spec.paths[path].get.parameters.find((p) => p.name === name)?.schema?.default
+  if (value === undefined) {
+    throw new Error(`${path} ?${name} no longer publishes a default in the contract`)
+  }
+  return value
+}
+
+// Parameter defaults the contract publishes (0.11): an input shows these instead of a local copy.
+const defaults = [
+  ['LOW_STOCK_THRESHOLD_DEFAULT', queryDefault('/api/admin/stock/low-stock', 'threshold')],
+  ['EXPIRING_SOON_DAYS_DEFAULT', queryDefault('/api/admin/stock/expiring-soon', 'withinDays')],
+]
+
 const entries = [
   ['ATTRIBUTE_UNITS', schemaEnum('AttributeResponse', 'unit')],
   ['AUDIT_ENTITY_TYPES', queryEnum('/api/admin/audit-entries', 'entityType')],
@@ -45,7 +59,9 @@ const body =
       ([name, values]) =>
         `export const ${name} = [\n${values.map((v) => `  ${JSON.stringify(v)},`).join('\n')}\n] as const\n`
     )
-    .join('\n')
+    .join('\n') +
+  '\n' +
+  defaults.map(([name, value]) => `export const ${name} = ${JSON.stringify(value)}\n`).join('\n')
 
 if (check) {
   let current = ''

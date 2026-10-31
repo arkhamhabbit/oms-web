@@ -16,6 +16,8 @@ export interface MediaListParams {
   size: number
   kind?: MediaKind
   status?: MediaStatus
+  /** Part of the filename, or of the alt text on an image that uses the item. */
+  q?: string
 }
 
 const MEDIA_KEY = 'media'
@@ -33,6 +35,7 @@ export function useMediaQuery(params: MediaListParams) {
               pageable: { page: params.page, size: params.size },
               kind: params.kind,
               status: params.status,
+              q: params.q || undefined,
             },
           },
         })

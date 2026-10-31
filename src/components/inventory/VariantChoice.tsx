@@ -6,7 +6,7 @@ export interface ChosenVariant {
   id: string
   skuCode: string
   name: string
-  /** Known when picked through the catalog search; absent when a stock row opened the form. */
+  /** From the catalog search or the stock row that opened the form; absent means not tracked. */
   batchTracked?: boolean
 }
 

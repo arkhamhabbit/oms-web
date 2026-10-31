@@ -610,10 +610,10 @@ export interface paths {
             cookie?: never;
         };
         /**
-         * Lists batches, newest first
-         * @description Lists batches, newest first. Every filter is optional.
+         * Lists batches, soonest expiry first and batches with no expiry last
+         * @description Lists batches, soonest expiry first and batches with no expiry last. Every filter is optional.
          *
-         *      <p><code>expiresBefore</code> is the one to reach for when chasing expiry; <code>GET
+         *      <p><code>expiringWithinDays</code> is the one to reach for when chasing expiry; <code>GET
          *      /api/admin/stock/expiring-soon</code> answers the same question against quantities actually on hand,
          *      which is usually what an operator means.
          *
@@ -1567,9 +1567,9 @@ export interface paths {
             cookie?: never;
         };
         /**
-         * The library, newest first, optionally narrowed by kind and status.
-         * @description The library, newest first, optionally narrowed by kind and status. Deleted items are not
-         *      listed.
+         * The library, newest first, optionally narrowed by kind, status and a search.
+         * @description The library, newest first, optionally narrowed by kind, status and a search. Deleted items are
+         *      not listed.
          *
          *     **Requires permission:** `catalog.media.read`.
          */
@@ -4649,6 +4649,33 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/admin/stock/reason-codes": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Which reason codes each movement type accepts on <code>POST /api/admin/stock/adjust</code>, one row
+         *      per type
+         * @description Which reason codes each movement type accepts on <code>POST /api/admin/stock/adjust</code>, one row
+         *      per type.
+         *
+         *      <p>The same list the adjust endpoint validates against. A type with an empty <code>reasons</code>
+         *      takes no reason; for every other type a reason is required and must be one of those listed.
+         *
+         *     **Requires permission:** `inventory.read`.
+         */
+        get: operations["stockReasonCodes"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/admin/stock/rebuild": {
         parameters: {
             query?: never;
@@ -5908,6 +5935,10 @@ export interface components {
             id?: string;
             /** Format: date */
             manufacturedOn?: string;
+            /** @description the name of the variant's product */
+            productName?: string;
+            /** @description the variant's SKU code */
+            sku?: string;
             /** Format: uuid */
             variantId?: string;
         };
@@ -6493,8 +6524,10 @@ export interface components {
             ledger?: number;
             /** Format: int64 */
             projected?: number;
+            skuCode?: string;
             /** Format: uuid */
             variantId?: string;
+            warehouseCode?: string;
             /** Format: uuid */
             warehouseId?: string;
         };
@@ -6639,6 +6672,7 @@ export interface components {
              */
             unitCost?: components["schemas"]["MoneyPayload"];
         };
+        /** @description One line of a goods receipt. */
         GoodsReceiptLineResponse: {
             /** Format: date-time */
             batchExpiresAt?: string;
@@ -6648,6 +6682,23 @@ export interface components {
             /** Format: uuid */
             id?: string;
             lineCost?: components["schemas"]["MoneyPayload"];
+            /**
+             * Format: uuid
+             * @description the purchase order, which every receipt against it shares. Null when
+             *          nothing was accepted
+             */
+            movementReferenceId?: string | null;
+            /**
+             * @description the <code>referenceType</code> that finds this line's stock movement
+             *          with <code>movementReferenceId</code> on <code>GET /api/admin/stock/movements</code>. Null when
+             *          nothing was accepted, since no movement was written
+             */
+            movementReferenceType?: string | null;
+            /**
+             * Format: int32
+             * @description what the purchase order line asked for
+             */
+            orderedQuantity?: number;
             /** Format: uuid */
             purchaseOrderLineId?: string;
             /** Format: int32 */
@@ -7040,6 +7091,16 @@ export interface components {
              * @description null makes the category a root
              */
             newParentId?: string;
+        };
+        /** @description The reasons one movement type accepts. */
+        MovementTypeReasons: {
+            /** @enum {string} */
+            movementType?: "RECEIPT" | "ADJUSTMENT" | "TRANSFER_OUT" | "TRANSFER_IN" | "DAMAGE" | "EXPIRY_WRITE_OFF" | "RETURN" | "SALE";
+            /**
+             * @description what <code>reasonCode</code> may be on this type. Empty means the type takes no
+             *          reason, and sending one is refused
+             */
+            reasons?: ("CYCLE_COUNT" | "DATA_CORRECTION" | "FOUND_STOCK" | "LOST_STOCK" | "THEFT" | "CONSUMED_INTERNALLY" | "DAMAGED_IN_TRANSIT" | "DAMAGED_IN_WAREHOUSE" | "DAMAGED_ON_RETURN" | "CUSTOMER_RETURN" | "COURIER_RTO" | "CANCELLED_ORDER")[];
         };
         /** @description One value on one axis. */
         OptionValuePayload: {
@@ -9202,12 +9263,15 @@ export interface components {
             valueNumber?: number;
             valueText?: string;
         };
+        /** @description One location's stock. */
         StockLevelResponse: {
             /** Format: date-time */
             batchExpiresAt?: string;
             /** Format: uuid */
             batchId?: string;
             batchNumber?: string;
+            /** @description whether a movement of this variant must name a batch */
+            batchTracked?: boolean;
             /** Format: int32 */
             quantityOnHand?: number;
             skuCode?: string;
@@ -9266,6 +9330,8 @@ export interface components {
              *          under a hold
              */
             available?: number;
+            /** @description whether a movement of this variant must name a batch */
+            batchTracked?: boolean;
             /**
              * Format: int64
              * @description everything on hand, anywhere
@@ -12502,9 +12568,12 @@ export interface operations {
     batchList: {
         parameters: {
             query: {
+                /** @description only batches that stop being good within this many business days */
                 expiringWithinDays?: number;
                 pageable: components["schemas"]["Pageable"];
+                /** @description part of a batch number, in any case */
                 search?: string;
+                /** @description only this variant's batches */
                 variantId?: string;
             };
             header?: never;
@@ -15782,6 +15851,11 @@ export interface operations {
                 /** @description only images, or only videos */
                 kind?: "IMAGE" | "VIDEO";
                 pageable: components["schemas"]["Pageable"];
+                /**
+                 * @description part of the original filename, or of the alt text on any product or variant image that
+                 *          uses the item, in any case
+                 */
+                q?: string;
                 /** @description only items in this state — <code>PENDING</code> uploads never confirmed, say */
                 status?: "PENDING" | "READY" | "FAILED";
             };
@@ -26359,7 +26433,9 @@ export interface operations {
         parameters: {
             query: {
                 pageable: components["schemas"]["Pageable"];
+                /** @description only this warehouse */
                 warehouseId?: string;
+                /** @description how many business days ahead counts as soon */
                 withinDays?: number;
             };
             header?: never;
@@ -26481,7 +26557,9 @@ export interface operations {
         parameters: {
             query: {
                 pageable: components["schemas"]["Pageable"];
+                /** @description the highest quantity that counts as low */
                 threshold?: number;
+                /** @description only this warehouse */
                 warehouseId?: string;
             };
             header?: never;
@@ -26544,6 +26622,18 @@ export interface operations {
                 from?: string;
                 movementType?: "RECEIPT" | "ADJUSTMENT" | "TRANSFER_OUT" | "TRANSFER_IN" | "DAMAGE" | "EXPIRY_WRITE_OFF" | "RETURN" | "SALE";
                 pageable: components["schemas"]["Pageable"];
+                /** @description only movements with this <code>reasonCode</code> */
+                reason?: "CYCLE_COUNT" | "DATA_CORRECTION" | "FOUND_STOCK" | "LOST_STOCK" | "THEFT" | "CONSUMED_INTERNALLY" | "DAMAGED_IN_TRANSIT" | "DAMAGED_IN_WAREHOUSE" | "DAMAGED_ON_RETURN" | "CUSTOMER_RETURN" | "COURIER_RTO" | "CANCELLED_ORDER";
+                /**
+                 * @description only movements of this transfer, purchase order or reservation. Works alone
+                 *          or with <code>referenceType</code>
+                 */
+                referenceId?: string;
+                /**
+                 * @description only movements with this reference type: <code>TRANSFER</code>, <code>
+                 *          PURCHASE_ORDER</code> or <code>RESERVATION</code>. Works alone or with <code>referenceId</code>
+                 */
+                referenceType?: string;
                 to?: string;
                 variantId?: string;
                 warehouseId?: string;
@@ -26561,6 +26651,62 @@ export interface operations {
                 };
                 content: {
                     "*/*": components["schemas"]["PageResponseStockMovementResponse"];
+                };
+            };
+            /** @description `VALIDATION_FAILED` — The request body could not be read, a field failed validation, a required header was absent, or a domain validation rule rejected an input the caller can correct. */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description `AUTHENTICATION_FAILED` — No valid credential. Either none was presented, or the session behind it is expired, revoked, or belongs to a member who can no longer sign in. This status means the session is dead and nothing else does — a wrong *current* password on change-password is a 400 with a `currentPassword` field error, not this. */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description `ACCESS_DENIED` — Authenticated, but lacking the permission the endpoint declares. The session is valid; do not sign the operator out. */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description `INTERNAL_ERROR` — An unhandled failure. The message is deliberately generic; `traceId` identifies the server log line that explains it. */
+            500: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+        };
+    };
+    stockReasonCodes: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "*/*": components["schemas"]["MovementTypeReasons"][];
                 };
             };
             /** @description `VALIDATION_FAILED` — The request body could not be read, a field failed validation, a required header was absent, or a domain validation rule rejected an input the caller can correct. */
@@ -26735,6 +26881,9 @@ export interface operations {
         parameters: {
             query: {
                 pageable: components["schemas"]["Pageable"];
+                /** @description part of a SKU code or product name, in any case */
+                q?: string;
+                /** @description only this variant */
                 variantId?: string;
             };
             header?: never;
