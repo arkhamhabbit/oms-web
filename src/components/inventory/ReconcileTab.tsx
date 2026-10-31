@@ -31,7 +31,7 @@ function DriftTable({ rows }: { rows: DriftRow[] }) {
     <Table>
       <TableHeader>
         <TableRow>
-          <TableHead>Variant</TableHead>
+          <TableHead>SKU</TableHead>
           <TableHead>Warehouse</TableHead>
           <TableHead>Batch</TableHead>
           <TableHead className="text-right">Ledger</TableHead>
@@ -42,12 +42,8 @@ function DriftTable({ rows }: { rows: DriftRow[] }) {
       <TableBody>
         {rows.map((r, i) => (
           <TableRow key={`${r.variantId}-${r.warehouseId}-${r.batchId ?? ''}-${i}`}>
-            <TableCell className="font-mono text-xs" title={r.variantId}>
-              {r.variantId?.slice(0, 8)}…
-            </TableCell>
-            <TableCell className="font-mono text-xs" title={r.warehouseId}>
-              {r.warehouseId?.slice(0, 8)}…
-            </TableCell>
+            <TableCell className="font-mono">{r.skuCode}</TableCell>
+            <TableCell className="font-mono">{r.warehouseCode}</TableCell>
             <TableCell className="font-mono text-xs">{r.batchId?.slice(0, 8) ?? ''}</TableCell>
             <TableCell className="text-right">{r.ledger}</TableCell>
             <TableCell className="text-right">{r.projected}</TableCell>

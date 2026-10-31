@@ -78,20 +78,6 @@ export function networkError(cause: unknown): ApiClientError {
 }
 
 /**
- * The same error with some field names renamed, for a server that names a field differently from
- * the request property the form holds (change-password answers `password` for `newPassword`).
- */
-export function remapFieldErrors(error: ApiError, aliases: Record<string, string>): ApiError {
-  return {
-    code: error.code,
-    message: error.message,
-    traceId: error.traceId,
-    existingId: error.existingId,
-    fieldErrors: error.fieldErrors.map((f) => ({ ...f, field: aliases[f.field] ?? f.field })),
-  }
-}
-
-/**
  * Applies an ApiError's fieldErrors to the matching react-hook-form fields. Any field error
  * that doesn't match a known field, plus the top-level message, surfaces as a toast — always
  * carrying the traceId, since that's what turns a support report into something actionable.

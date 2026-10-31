@@ -12,10 +12,12 @@ import { WarehouseSelect } from '@/components/inventory/WarehouseSelect'
 import { FilterSelect } from '@/components/common/FilterSelect'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
+import { EXPIRING_SOON_DAYS_DEFAULT, LOW_STOCK_THRESHOLD_DEFAULT } from '@/api/enums.gen'
 import {
   useBatchesQuery,
   useExpiringSoonQuery,
   useLowStockQuery,
+  useReasonCodesQuery,
   useStockLevelsQuery,
   useStockMovementsQuery,
   useStockTotalsQuery,
@@ -24,15 +26,20 @@ import {
   type StockLevel,
   type StockTotal,
 } from '@/api/inventory'
-import { MOVEMENT_TYPES, REASON_CODES } from '@/lib/inventory'
+import { MOVEMENT_TYPES } from '@/lib/inventory'
 import { istDayStart } from '@/lib/orders'
 import type { ReasonCode } from '@/api/inventory'
 import { formatDateTime } from '@/lib/dates'
 import { MOVEMENT_TYPE_LABEL, REASON_CODE_LABEL } from '@/lib/labels'
 
 const PAGE_SIZE = 20
-/** SKU search has no server filter (contract gap): it reads this many rows and matches here. */
-const SEARCH_WINDOW = 200
+/** The reference types the contract names for the movements filter; the id is a UUID. */
+const REFERENCE_TYPES = [
+  { value: 'TRANSFER', label: 'Transfer' },
+  { value: 'PURCHASE_ORDER', label: 'Purchase order' },
+  { value: 'RESERVATION', label: 'Reservation' },
+]
+const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i
 
 export interface StockTabActions {
   canAdjust: boolean
@@ -47,6 +54,8 @@ export interface StockTabSeed {
   sku?: string
   warehouseId?: string
   batchId?: string
+  referenceType?: string
+  referenceId?: string
 }
 
 function seedVariant(seed: StockTabSeed): ChosenVariant | null {
@@ -85,14 +94,7 @@ function TotalsTab({ actions }: { actions: StockTabActions }) {
   const [pageIndex, setPageIndex] = React.useState(0)
   const [search, setSearch] = React.useState('')
   const searching = search.trim() !== ''
-  const totals = useStockTotalsQuery({
-    page: searching ? 0 : pageIndex,
-    size: searching ? SEARCH_WINDOW : PAGE_SIZE,
-  })
-  const needle = search.trim().toLowerCase()
-  const rows = (totals.data?.content ?? []).filter(
-    (t) => !needle || (t.skuCode ?? '').toLowerCase().includes(needle)
-  )
+  const totals = useStockTotalsQuery({ page: pageIndex, size: PAGE_SIZE, q: search.trim() })
 
   const columns: ColumnDef<StockTotal, unknown>[] = [
     {
@@ -120,6 +122,7 @@ function TotalsTab({ actions }: { actions: StockTabActions }) {
               id: row.original.variantId!,
               skuCode: row.original.skuCode ?? '',
               name: row.original.variantName ?? '',
+              batchTracked: row.original.batchTracked,
             },
           }}
         />
@@ -131,8 +134,8 @@ function TotalsTab({ actions }: { actions: StockTabActions }) {
     <div className="flex flex-col gap-3">
       <div className="flex flex-wrap items-end gap-2">
         <Input
-          placeholder="Search by SKU"
-          aria-label="Search by SKU"
+          placeholder="Search by SKU or product"
+          aria-label="Search by SKU or product"
           value={search}
           onChange={(e) => {
             setSearch(e.target.value)
@@ -148,25 +151,23 @@ function TotalsTab({ actions }: { actions: StockTabActions }) {
       {totals.isError && <ListError error={totals.error} what="Stock totals" />}
       <DataTable
         columns={columns}
-        data={rows}
+        data={totals.data?.content ?? []}
         isLoading={totals.isLoading}
-        emptyMessage={searching ? 'No SKU matches that search.' : 'No stock has been recorded yet.'}
+        emptyMessage={
+          searching ? 'No SKU or product matches that search.' : 'No stock has been recorded yet.'
+        }
         onRowClick={(t) =>
           navigate(
             `/inventory/stock?tab=levels&variant=${t.variantId}&sku=${encodeURIComponent(t.skuCode ?? '')}`
           )
         }
-        serverPagination={
-          searching
-            ? undefined
-            : {
-                pageIndex,
-                pageSize: PAGE_SIZE,
-                pageCount: totals.data?.totalPages ?? 0,
-                totalElements: totals.data?.totalElements ?? 0,
-                onPageIndexChange: setPageIndex,
-              }
-        }
+        serverPagination={{
+          pageIndex,
+          pageSize: PAGE_SIZE,
+          pageCount: totals.data?.totalPages ?? 0,
+          totalElements: totals.data?.totalElements ?? 0,
+          onPageIndexChange: setPageIndex,
+        }}
       />
     </div>
   )
@@ -226,6 +227,7 @@ function LevelsTab({ actions, seed }: { actions: StockTabActions; seed: StockTab
               id: row.original.variantId!,
               skuCode: row.original.skuCode ?? '',
               name: row.original.variantName ?? '',
+              batchTracked: row.original.batchTracked,
             },
             warehouseId: row.original.warehouseId,
             batchId: row.original.batchId,
@@ -315,7 +317,7 @@ function wholeOrUndefined(typed: string): number | undefined {
 
 function LowStockTab() {
   const [pageIndex, setPageIndex] = React.useState(0)
-  const [threshold, setThreshold] = React.useState('')
+  const [threshold, setThreshold] = React.useState(String(LOW_STOCK_THRESHOLD_DEFAULT))
   const [warehouseId, setWarehouseId] = React.useState('')
   const low = useLowStockQuery({
     page: pageIndex,
@@ -352,7 +354,7 @@ function LowStockTab() {
           <Input
             inputMode="numeric"
             aria-label="Low stock threshold"
-            placeholder="Server default"
+            placeholder={String(LOW_STOCK_THRESHOLD_DEFAULT)}
             value={threshold}
             onChange={(e) => {
               setThreshold(e.target.value)
@@ -397,7 +399,7 @@ function LowStockTab() {
 
 function ExpiringTab() {
   const [pageIndex, setPageIndex] = React.useState(0)
-  const [days, setDays] = React.useState('')
+  const [days, setDays] = React.useState(String(EXPIRING_SOON_DAYS_DEFAULT))
   const [warehouseId, setWarehouseId] = React.useState('')
   const expiring = useExpiringSoonQuery({
     page: pageIndex,
@@ -435,7 +437,7 @@ function ExpiringTab() {
           <Input
             inputMode="numeric"
             aria-label="Expiring within days"
-            placeholder="Server default"
+            placeholder={String(EXPIRING_SOON_DAYS_DEFAULT)}
             value={days}
             onChange={(e) => {
               setDays(e.target.value)
@@ -486,9 +488,15 @@ function MovementsTab({
   const [warehouseId, setWarehouseId] = React.useState(seed.warehouseId ?? '')
   const [type, setType] = React.useState<MovementType | ''>('')
   const [reason, setReason] = React.useState<ReasonCode | ''>('')
-  const [reference, setReference] = React.useState('')
+  const [referenceType, setReferenceType] = React.useState(seed.referenceType ?? '')
+  const [referenceId, setReferenceId] = React.useState(seed.referenceId ?? '')
   const [fromDate, setFromDate] = React.useState('')
   const [toDate, setToDate] = React.useState('')
+
+  const reasonCodes = useReasonCodesQuery()
+  // The server takes a reference id only as a full id; anything else is held back, not sent.
+  const idTyped = referenceId.trim()
+  const idIsValid = UUID.test(idTyped)
 
   const movements = useStockMovementsQuery({
     page: pageIndex,
@@ -500,16 +508,12 @@ function MovementsTab({
     from: istDayStart(fromDate),
     // The date box names the last day wanted; the server's `to` is exclusive.
     to: istDayStart(toDate, 1),
+    reason: reason === '' ? undefined : reason,
+    referenceType: referenceType || undefined,
+    referenceId: idIsValid ? idTyped : undefined,
   })
-
-  // The movements endpoint has no reason or reference filter (contract gap): these two narrow the
-  // page that was fetched, and are labelled that way.
-  const needle = reference.trim().toLowerCase()
-  const rows = (movements.data?.content ?? []).filter(
-    (m) =>
-      (reason === '' || m.reasonCode === reason) &&
-      (needle === '' || (m.referenceId ?? '').toLowerCase().includes(needle))
-  )
+  // Every reason the server pairs with some movement type.
+  const reasonOptions = [...new Set((reasonCodes.data ?? []).flatMap((p) => p.reasons ?? []))]
 
   function filter<T>(set: (value: T) => void) {
     return (value: T) => {
@@ -549,24 +553,39 @@ function MovementsTab({
           />
         </div>
         <div className="grid gap-1">
-          <span className="text-xs text-muted-foreground">Reason (this page)</span>
+          <span className="text-xs text-muted-foreground">Reason</span>
           <FilterSelect
             value={reason}
             onChange={filter(setReason)}
             ariaLabel="Reason filter"
             allLabel="All reasons"
-            options={REASON_CODES.map((c) => ({ value: c, label: REASON_CODE_LABEL[c] }))}
+            options={reasonOptions.map((c) => ({ value: c, label: REASON_CODE_LABEL[c] }))}
+          />
+        </div>
+        <div className="grid gap-1">
+          <span className="text-xs text-muted-foreground">Reference type</span>
+          <FilterSelect
+            value={referenceType}
+            onChange={filter(setReferenceType)}
+            ariaLabel="Reference type filter"
+            allLabel="Any reference"
+            options={REFERENCE_TYPES}
           />
         </div>
         <label className="grid gap-1 text-xs text-muted-foreground">
-          Reference (this page)
+          Reference id
           <Input
-            aria-label="Reference filter"
-            placeholder="Reference id"
-            value={reference}
-            onChange={(e) => setReference(e.target.value)}
-            className="w-56 font-mono text-xs"
+            aria-label="Reference id filter"
+            placeholder="Full reference id"
+            value={referenceId}
+            onChange={(e) => filter(setReferenceId)(e.target.value)}
+            className="w-80 font-mono text-xs"
           />
+          {idTyped !== '' && !idIsValid && (
+            <span role="status" className="text-destructive">
+              Not applied: enter the full id (36 characters).
+            </span>
+          )}
         </label>
         <label className="grid gap-1 text-xs text-muted-foreground">
           From
@@ -596,7 +615,7 @@ function MovementsTab({
       )}
       {movements.isError && <ListError error={movements.error} what="Movements" />}
       <MovementsTable
-        rows={rows}
+        rows={movements.data?.content ?? []}
         isLoading={movements.isLoading}
         onOpenTransfer={onOpenTransfer}
         serverPagination={{

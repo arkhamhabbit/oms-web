@@ -58,7 +58,8 @@ function BatchDetailPage() {
           <Facts
             rows={[
               ['Batch number', <span className="font-mono">{batch.batchNumber}</span>],
-              ['Variant', <span className="font-mono text-xs">{batch.variantId}</span>],
+              ['SKU', <span className="font-mono">{batch.sku}</span>],
+              ['Product', batch.productName],
               ['Manufactured', formatDate(batch.manufacturedOn)],
               [
                 'Expires',

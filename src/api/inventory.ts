@@ -20,6 +20,7 @@ export type ReasonCode = NonNullable<StockMovement['reasonCode']>
 export type AdjustStockRequest = Schemas['AdjustStockRequest']
 export type TransferStockRequest = Schemas['TransferStockRequest']
 export type Transfer = Schemas['TransferResponse']
+export type ReasonPairing = Schemas['MovementTypeReasons']
 export type DriftRow = Schemas['DriftRow']
 export type ReconcileResult = Schemas['ReconcileResponse']
 export type RebuildResult = Schemas['RebuildResponse']
@@ -146,7 +147,7 @@ export function useCreateBatchMutation() {
 
 // ---- Stock ----------------------------------------------------------------------------
 
-export function useStockTotalsQuery(params: PageParams & { variantId?: string }) {
+export function useStockTotalsQuery(params: PageParams & { variantId?: string; q?: string }) {
   return useQuery({
     queryKey: [INVENTORY_KEY, 'totals', params],
     queryFn: () =>
@@ -156,6 +157,7 @@ export function useStockTotalsQuery(params: PageParams & { variantId?: string })
             query: {
               pageable: { page: params.page, size: params.size },
               variantId: params.variantId,
+              q: params.q || undefined,
             },
           },
         })
@@ -243,6 +245,10 @@ export interface MovementParams extends PageParams {
   from?: string
   /** ISO instant, exclusive. */
   to?: string
+  reason?: ReasonCode
+  /** The contract names TRANSFER, PURCHASE_ORDER and RESERVATION; works alone or with the id. */
+  referenceType?: string
+  referenceId?: string
 }
 
 export function useStockMovementsQuery(params: MovementParams) {
@@ -260,12 +266,34 @@ export function useStockMovementsQuery(params: MovementParams) {
               movementType: params.movementType,
               from: params.from,
               to: params.to,
+              reason: params.reason,
+              referenceType: params.referenceType || undefined,
+              referenceId: params.referenceId || undefined,
             },
           },
         })
       ),
     placeholderData: (previous) => previous,
   })
+}
+
+/**
+ * Which reasons each movement type takes, as the server publishes it. It changes only with a
+ * release, so one read serves the whole session; an empty list means the type takes no reason.
+ */
+export function useReasonCodesQuery() {
+  return useQuery({
+    queryKey: [INVENTORY_KEY, 'reason-codes'],
+    queryFn: () => unwrap<ReasonPairing[]>(api.GET('/api/admin/stock/reason-codes')),
+    staleTime: Infinity,
+  })
+}
+
+export function reasonsForType(
+  pairings: ReasonPairing[] | undefined,
+  type: MovementType
+): ReasonCode[] {
+  return pairings?.find((p) => p.movementType === type)?.reasons ?? []
 }
 
 export function useTransferQuery(referenceId: string | undefined) {

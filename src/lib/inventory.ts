@@ -2,7 +2,6 @@ import type {
   AvailabilityReconcileResult,
   Batch,
   MovementType,
-  ReasonCode,
   StockMovement,
   WarehouseType,
 } from '@/api/inventory'
@@ -29,48 +28,6 @@ export const ADJUSTABLE_TYPES: MovementType[] = [
   'EXPIRY_WRITE_OFF',
   'RETURN',
 ]
-
-export const REASON_CODES: ReasonCode[] = [
-  'CYCLE_COUNT',
-  'DATA_CORRECTION',
-  'FOUND_STOCK',
-  'LOST_STOCK',
-  'THEFT',
-  'CONSUMED_INTERNALLY',
-  'DAMAGED_IN_TRANSIT',
-  'DAMAGED_IN_WAREHOUSE',
-  'DAMAGED_ON_RETURN',
-  'CUSTOMER_RETURN',
-  'COURIER_RTO',
-  'CANCELLED_ORDER',
-]
-
-/**
- * The contract says a reason is required for these types and rejected on the rest, but it does not
- * publish which code belongs to which type (the server refuses a mismatch with its own sentence:
- * W3.1 found Adjustment with a damage reason refused, type Damage accepted). This is the pairing the
- * adjust dialog offers, kept in one local map until OMS publishes it (recorded for OMS 0.11); the
- * server stays authoritative.
- */
-export const REASONS_BY_TYPE: Partial<Record<MovementType, ReasonCode[]>> = {
-  ADJUSTMENT: [
-    'CYCLE_COUNT',
-    'DATA_CORRECTION',
-    'FOUND_STOCK',
-    'LOST_STOCK',
-    'THEFT',
-    'CONSUMED_INTERNALLY',
-  ],
-  DAMAGE: ['DAMAGED_IN_TRANSIT', 'DAMAGED_IN_WAREHOUSE', 'DAMAGED_ON_RETURN'],
-  RETURN: ['CUSTOMER_RETURN', 'COURIER_RTO', 'CANCELLED_ORDER'],
-}
-
-/** The reason codes to offer for a movement type: none for a type that takes no reason. */
-export function reasonsFor(type: MovementType): ReasonCode[] {
-  return REASONS_BY_TYPE[type] ?? []
-}
-
-export const REASON_REQUIRED_TYPES: MovementType[] = ['ADJUSTMENT', 'DAMAGE', 'RETURN']
 
 /** How the sign of the typed quantity is fixed by the movement type. `either` is an adjustment. */
 export type QuantitySign = 'positive' | 'negative' | 'either'

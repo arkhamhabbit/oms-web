@@ -46,8 +46,16 @@ function StockPage() {
     sku: params.get('sku') ?? undefined,
     warehouseId: params.get('warehouse') ?? undefined,
     batchId: params.get('batch') ?? undefined,
+    referenceType: params.get('refType') ?? undefined,
+    referenceId: params.get('ref') ?? undefined,
   }
-  const seedKey = [seed.variantId, seed.warehouseId, seed.batchId].join('|')
+  const seedKey = [
+    seed.variantId,
+    seed.warehouseId,
+    seed.batchId,
+    seed.referenceType,
+    seed.referenceId,
+  ].join('|')
 
   const [adjust, setAdjust] = React.useState<{ seed?: StockFormSeed } | undefined>()
   const [transfer, setTransfer] = React.useState<{ seed?: StockFormSeed } | undefined>()

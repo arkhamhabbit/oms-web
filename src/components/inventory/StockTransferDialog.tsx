@@ -62,7 +62,7 @@ function TransferBody({
 
   const batches = useBatchesQuery({ page: 0, size: 100, variantId: variant?.id }, !!variant)
   const batchList = batches.data?.content ?? []
-  const batchTracked = variant?.batchTracked ?? batchList.length > 0
+  const batchTracked = !!variant?.batchTracked
 
   const amount = positiveInt(quantity)
   const ready = !!variant && !!fromId && !!toId && fromId !== toId && amount !== null

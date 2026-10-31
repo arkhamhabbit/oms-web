@@ -109,10 +109,12 @@ function GoodsReceiptDetailPage() {
                 <TableHead>SKU</TableHead>
                 <TableHead>Item</TableHead>
                 <TableHead>Batch</TableHead>
+                <TableHead className="text-right">Ordered</TableHead>
                 <TableHead className="text-right">Accepted</TableHead>
                 <TableHead className="text-right">Rejected</TableHead>
                 <TableHead className="text-right">Unit cost</TableHead>
                 <TableHead className="text-right">Line cost</TableHead>
+                <TableHead>Movement</TableHead>
               </TableRow>
             </TableHeader>
             <TableBody>
@@ -121,10 +123,23 @@ function GoodsReceiptDetailPage() {
                   <TableCell className="font-mono">{line.skuCode}</TableCell>
                   <TableCell>{line.variantName}</TableCell>
                   <TableCell className="font-mono">{line.batchNumber ?? ''}</TableCell>
+                  <TableCell className="text-right">{line.orderedQuantity}</TableCell>
                   <TableCell className="text-right">{line.quantityReceived}</TableCell>
                   <TableCell className="text-right">{line.quantityRejected}</TableCell>
                   <TableCell className="text-right">{rupees(line.unitCost)}</TableCell>
                   <TableCell className="text-right">{rupees(line.lineCost)}</TableCell>
+                  <TableCell>
+                    {line.movementReferenceId &&
+                    line.movementReferenceType &&
+                    has('inventory.read') ? (
+                      <Link
+                        className="underline"
+                        to={`/inventory/stock?tab=movements&variant=${line.variantId}&sku=${encodeURIComponent(line.skuCode ?? '')}&refType=${line.movementReferenceType}&ref=${line.movementReferenceId}`}
+                      >
+                        Movement
+                      </Link>
+                    ) : null}
+                  </TableCell>
                 </TableRow>
               ))}
             </TableBody>

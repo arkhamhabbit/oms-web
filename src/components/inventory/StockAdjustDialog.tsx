@@ -25,19 +25,14 @@ import {
 } from '@/components/ui/select'
 import {
   useAdjustStockMutation,
+  reasonsForType,
   useBatchesQuery,
+  useReasonCodesQuery,
   type MovementType,
   type ReasonCode,
 } from '@/api/inventory'
 import { isApiError } from '@/lib/api-error'
-import {
-  ADJUSTABLE_TYPES,
-  optionalText,
-  quantitySignFor,
-  reasonsFor,
-  REASON_REQUIRED_TYPES,
-  signedQuantity,
-} from '@/lib/inventory'
+import { ADJUSTABLE_TYPES, optionalText, quantitySignFor, signedQuantity } from '@/lib/inventory'
 import { fieldMessage, toRefusal, type Refusal } from '@/lib/refusal'
 import { MOVEMENT_TYPE_LABEL, REASON_CODE_LABEL } from '@/lib/labels'
 
@@ -93,10 +88,12 @@ function AdjustBody({ seed, onClose }: { seed?: StockFormSeed; onClose: () => vo
 
   const batches = useBatchesQuery({ page: 0, size: 100, variantId: variant?.id }, !!variant)
   const batchList = batches.data?.content ?? []
-  // A stock row does not say whether its variant tracks batches; batches exist only for tracked ones.
-  const batchTracked = variant?.batchTracked ?? batchList.length > 0
+  const batchTracked = !!variant?.batchTracked
 
-  const needsReason = REASON_REQUIRED_TYPES.includes(type)
+  // The server publishes which reasons a type takes; a type with none takes no reason.
+  const reasonCodes = useReasonCodesQuery()
+  const typeReasons = reasonsForType(reasonCodes.data, type)
+  const needsReason = typeReasons.length > 0
   const signed = signedQuantity(type, quantity)
   const ready = !!variant && !!warehouseId && signed !== null && (!needsReason || reason !== '')
 
@@ -231,7 +228,7 @@ function AdjustBody({ seed, onClose }: { seed?: StockFormSeed; onClose: () => vo
                 <SelectValue placeholder={needsReason ? 'Choose a reason' : '—'} />
               </SelectTrigger>
               <SelectContent>
-                {reasonsFor(type).map((code) => (
+                {typeReasons.map((code) => (
                   <SelectItem key={code} value={code}>
                     {REASON_CODE_LABEL[code]}
                   </SelectItem>

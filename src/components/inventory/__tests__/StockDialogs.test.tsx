@@ -20,6 +20,22 @@ const seed = {
   warehouseId: 'w-31',
 }
 
+/** What GET /api/admin/stock/reason-codes answers (OMS 0.11): one entry per movement type. */
+const PAIRINGS = [
+  { movementType: 'RECEIPT', reasons: [] },
+  { movementType: 'ADJUSTMENT', reasons: ['CYCLE_COUNT', 'LOST_STOCK'] },
+  { movementType: 'DAMAGE', reasons: ['DAMAGED_IN_TRANSIT', 'DAMAGED_IN_WAREHOUSE'] },
+  { movementType: 'EXPIRY_WRITE_OFF', reasons: [] },
+  { movementType: 'RETURN', reasons: ['CUSTOMER_RETURN', 'COURIER_RTO', 'CANCELLED_ORDER'] },
+]
+
+/** Every handler here also answers the reason pairing, which the Adjust dialog reads on open. */
+function respond(handler: Parameters<typeof respondWith>[0]) {
+  respondWith((call) =>
+    call.url.pathname === '/api/admin/stock/reason-codes' ? json(200, PAIRINGS) : handler(call)
+  )
+}
+
 function page(content: unknown[]) {
   return json(200, { content, page: 0, size: 100, totalElements: content.length, totalPages: 1 })
 }
@@ -49,7 +65,7 @@ async function chooseOption(
 
 beforeEach(() => {
   resetFetch()
-  respondWith((call) => {
+  respond((call) => {
     if (call.url.pathname === '/api/admin/warehouses') {
       return page([W31, VERIFY])
     }
@@ -79,8 +95,44 @@ describe('StockAdjustDialog', () => {
     expect(post).toBeEnabled()
   })
 
+  it("offers the server's reasons for the chosen type, and none for a type without any", async () => {
+    const user = userEvent.setup()
+    render(<StockAdjustDialog open onOpenChange={() => {}} seed={seed} />)
+    await user.click(await screen.findByRole('combobox', { name: 'Reason code' }))
+    expect((await screen.findAllByRole('option')).map((o) => o.textContent)).toEqual([
+      'Cycle count',
+      'Lost stock',
+    ])
+    await user.keyboard('{Escape}')
+
+    await chooseOption(user, 'Movement type', 'Return')
+    await user.click(screen.getByRole('combobox', { name: 'Reason code' }))
+    expect((await screen.findAllByRole('option')).map((o) => o.textContent)).toEqual([
+      'Customer return',
+      'Courier RTO',
+      'Cancelled order',
+    ])
+    await user.keyboard('{Escape}')
+
+    await chooseOption(user, 'Movement type', 'Receipt')
+    expect(screen.getByRole('combobox', { name: 'Reason code' })).toBeDisabled()
+  })
+
+  it('does not ask for a batch when the row says the variant is not batch-tracked', async () => {
+    respond((call) =>
+      call.url.pathname === '/api/admin/batches'
+        ? page([{ id: 'b-1', batchNumber: 'W31-B1', variantId: 'v-1', expired: false }])
+        : call.url.pathname === '/api/admin/warehouses'
+          ? page([W31])
+          : json(200, {})
+    )
+    render(<StockAdjustDialog open onOpenChange={() => {}} seed={seed} />)
+    await screen.findByRole('combobox', { name: 'Warehouse' })
+    expect(screen.queryByRole('combobox', { name: 'Batch' })).not.toBeInTheDocument()
+  })
+
   it('makes the type fix the sign: a plain 1 on Damage is sent as -1', async () => {
-    respondWith(() => json(200, { id: 'm1' }))
+    respond(() => json(200, { id: 'm1' }))
     const user = userEvent.setup()
     render(<StockAdjustDialog open onOpenChange={() => {}} seed={seed} />)
     await chooseOption(user, 'Movement type', 'Damage')
@@ -101,7 +153,7 @@ describe('StockAdjustDialog', () => {
 
   it("shows the server's insufficient-stock sentence right under the quantity, and mints a fresh key for the next attempt", async () => {
     const sentence = 'Cannot remove 10 from W31: only 3 on hand.'
-    respondWith((call) =>
+    respond((call) =>
       call.method === 'POST'
         ? refusal(422, 'BUSINESS_RULE_VIOLATION', sentence)
         : call.url.pathname === '/api/admin/warehouses'
@@ -128,7 +180,7 @@ describe('StockAdjustDialog', () => {
   })
 
   it('keeps the same key when the request never reached the server', async () => {
-    respondWith((call) => {
+    respond((call) => {
       if (call.method === 'POST') {
         throw new TypeError('Failed to fetch')
       }
@@ -147,7 +199,7 @@ describe('StockAdjustDialog', () => {
   })
 
   it('asks for a batch when the variant is batch-tracked and sends the one chosen', async () => {
-    respondWith((call) => {
+    respond((call) => {
       if (call.url.pathname === '/api/admin/batches') {
         return page([{ id: 'b-1', batchNumber: 'W31-B1', variantId: 'v-1', expired: false }])
       }
@@ -157,7 +209,13 @@ describe('StockAdjustDialog', () => {
       return json(200, { id: 'm1' })
     })
     const user = userEvent.setup()
-    render(<StockAdjustDialog open onOpenChange={() => {}} seed={seed} />)
+    render(
+      <StockAdjustDialog
+        open
+        onOpenChange={() => {}}
+        seed={{ ...seed, variant: { ...seed.variant, batchTracked: true } }}
+      />
+    )
     await chooseOption(user, 'Batch', 'W31-B1')
     await fill(user, '-1')
     await user.click(screen.getByRole('button', { name: 'Post movement' }))
@@ -169,7 +227,7 @@ describe('StockAdjustDialog', () => {
 describe('StockTransferDialog', () => {
   it('sends a positive quantity between two different warehouses and reports the reference', async () => {
     let referenceId: string | undefined
-    respondWith((call) =>
+    respond((call) =>
       call.method === 'POST'
         ? json(200, { referenceId: 'ref-1' })
         : call.url.pathname === '/api/admin/warehouses'
@@ -213,7 +271,7 @@ describe('StockTransferDialog', () => {
 
   it("shows the server's sentence under the quantity when the source is short", async () => {
     const sentence = 'Cannot transfer 5 from W31: only 1 on hand.'
-    respondWith((call) =>
+    respond((call) =>
       call.method === 'POST'
         ? refusal(422, 'BUSINESS_RULE_VIOLATION', sentence)
         : call.url.pathname === '/api/admin/warehouses'
@@ -232,7 +290,7 @@ describe('StockTransferDialog', () => {
 
 describe('TransferDrawer', () => {
   it('opens both halves from a reference id', async () => {
-    respondWith(() =>
+    respond(() =>
       json(200, {
         referenceId: 'ref-1',
         out: {
@@ -260,7 +318,7 @@ describe('TransferDrawer', () => {
   })
 
   it('says so inside the drawer when the transfer was not found', async () => {
-    respondWith(() => refusal(404, 'NOT_FOUND', 'Transfer ref-9 was not found.'))
+    respond(() => refusal(404, 'NOT_FOUND', 'Transfer ref-9 was not found.'))
     render(<TransferDrawer referenceId="ref-9" onClose={() => {}} />)
     expect(await screen.findByText('Transfer ref-9 was not found.')).toBeInTheDocument()
   })
@@ -284,7 +342,7 @@ describe('StockAdjustDialog refusals and reasons (W3.2)', () => {
 
   it('drops the refusal sentence as soon as the admin changes the type, the reason or a figure', async () => {
     const sentence = 'Cannot remove 10 from W31: only 3 on hand.'
-    respondWith((call) =>
+    respond((call) =>
       call.method === 'POST'
         ? refusal(422, 'BUSINESS_RULE_VIOLATION', sentence)
         : call.url.pathname === '/api/admin/warehouses'
