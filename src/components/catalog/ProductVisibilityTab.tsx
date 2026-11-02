@@ -1,3 +1,4 @@
+import { TierBadge } from '@/components/membership/TierBadge'
 import * as React from 'react'
 import { useQueryClient } from '@tanstack/react-query'
 import { toast } from 'sonner'
@@ -180,7 +181,8 @@ function ProductVisibilityTab({ product, canWrite }: ProductVisibilityTabProps) 
                   <SelectContent>
                     {tiers.map((t) => (
                       <SelectItem key={t.code} value={t.code!}>
-                        {t.name} ({t.code})
+                        <TierBadge code={t.code} />
+                        <span className="font-mono text-xs text-muted-foreground">{t.code}</span>
                       </SelectItem>
                     ))}
                     {storedTierMissing && (

@@ -34,6 +34,8 @@ export const MEMBERSHIP_VERSION_LABELS: FieldLabels = {
   'tiers[].threshold': 'Qualifying threshold',
   'tiers[].qualifyingPoints': 'Qualifying points',
   'tiers[].freeShipping': 'Free shipping',
+  'tiers[].colourHex': 'Tier colour',
+  'tiers[].badgeMediaId': 'Tier badge',
 }
 
 export const PRICING_VERSION_LABELS: FieldLabels = {

@@ -68,6 +68,9 @@ describe('membership helpers', () => {
         pricingLevel: 'MEMBER',
         freeShipping: false,
         activeInviteLimit: 3,
+        colourHex: '#00BACC',
+        badgeMediaId: 'media-1',
+        badge: { mediaId: 'media-1', kind: 'IMAGE', thumbUrl: 'https://cdn/x.png' },
       }),
       ...over,
     })
@@ -83,8 +86,32 @@ describe('membership helpers', () => {
           pricingLevel: 'MEMBER',
           freeShipping: false,
           activeInviteLimit: 3,
+          colourHex: '#00BACC',
+          badgeMediaId: 'media-1',
         },
       ])
+    })
+
+    it('carries colour and badge from a read version into a new draft (copy-forward)', () => {
+      const draft = tierToDraft({ code: 'APEX', colourHex: '#8E88BF', badgeMediaId: 'media-9' })
+      expect(draft.colourHex).toBe('#8E88BF')
+      expect(draft.badge?.id).toBe('media-9') // the id goes back even without a picture
+      const withRef = tierToDraft({
+        code: 'APEX',
+        colourHex: '#8E88BF',
+        badgeMediaId: 'media-9',
+        badge: { mediaId: 'media-9', kind: 'IMAGE' },
+      })
+      expect(withRef.badge?.id).toBe('media-9')
+    })
+
+    it('sends no badge when there is none, and is null while the colour is empty', () => {
+      expect(draftsToRequest([tier({ badge: null })])?.[0].badgeMediaId).toBeUndefined()
+      expect(draftsToRequest([tier({ colourHex: '  ' })])).toBeNull()
+    })
+
+    it('sends a malformed colour so the server can answer with its sentence', () => {
+      expect(draftsToRequest([tier({ colourHex: 'teal' })])?.[0].colourHex).toBe('teal')
     })
 
     it('is null while any numeric field is empty', () => {

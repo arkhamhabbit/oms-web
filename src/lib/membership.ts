@@ -1,4 +1,5 @@
 import type { MembershipVersionState, Tier, TierInput, TierPricingLevel } from '@/api/membership'
+import { pickedFromRef, type PickedMedia } from '@/components/media/MediaPicker'
 
 /** What each lifecycle action is allowed on — D7.11; the server refuses the rest (422). */
 export function membershipActions(state: MembershipVersionState | undefined) {
@@ -25,6 +26,10 @@ export interface TierDraft {
   pricingLevel: TierPricingLevel
   freeShipping: boolean
   activeInviteLimit: number | null
+  /** `#RRGGBB`; empty until chosen. The server judges the shape (D7.18). */
+  colourHex: string
+  /** The badge image from the media library; `null` for none. */
+  badge: PickedMedia | null
 }
 
 let keyCounter = 0
@@ -44,6 +49,12 @@ export function tierToDraft(tier: Tier): TierDraft {
     pricingLevel: tier.pricingLevel ?? 'MEMBER',
     freeShipping: tier.freeShipping ?? false,
     activeInviteLimit: tier.activeInviteLimit ?? 0,
+    // Copy-forward is the console's job: a version is read and posted back, so the look goes with it.
+    colourHex: tier.colourHex ?? '',
+    // The id is what is posted back, so it survives even when no picture came with it.
+    badge:
+      pickedFromRef(tier.badge, tier.badgeMediaId) ??
+      (tier.badgeMediaId ? { id: tier.badgeMediaId, preview: {} } : null),
   }
 }
 
@@ -59,10 +70,15 @@ export function blankTierDraft(): TierDraft {
     pricingLevel: 'MEMBER',
     freeShipping: false,
     activeInviteLimit: 0,
+    colourHex: '',
+    badge: null,
   }
 }
 
-/** The request body for a complete ladder, or `null` while any numeric field is still empty. */
+/**
+ * The request body for a complete ladder, or `null` while any numeric field or colour is still
+ * empty. A colour that is typed but malformed is sent: the server's sentence is shown beside it.
+ */
 export function draftsToRequest(drafts: TierDraft[]): TierInput[] | null {
   const tiers: TierInput[] = []
   for (const d of drafts) {
@@ -70,7 +86,8 @@ export function draftsToRequest(drafts: TierDraft[]): TierInput[] | null {
       d.thresholdPoints12mo === null ||
       d.maintainThresholdPoints === null ||
       d.carrotsPerFriendOrderMinor === null ||
-      d.activeInviteLimit === null
+      d.activeInviteLimit === null ||
+      d.colourHex.trim() === ''
     ) {
       return null
     }
@@ -83,6 +100,8 @@ export function draftsToRequest(drafts: TierDraft[]): TierInput[] | null {
       pricingLevel: d.pricingLevel,
       freeShipping: d.freeShipping,
       activeInviteLimit: d.activeInviteLimit,
+      colourHex: d.colourHex.trim(),
+      badgeMediaId: d.badge?.id,
     })
   }
   return tiers

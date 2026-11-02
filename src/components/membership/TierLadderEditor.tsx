@@ -12,8 +12,10 @@ import {
 } from '@/components/ui/select'
 import { Switch } from '@/components/ui/switch'
 import { MoneyInput } from '@/components/form/MoneyInput'
+import { MediaPicker } from '@/components/media/MediaPicker'
 import type { ApiFieldError } from '@/lib/api-error'
 import { blankTierDraft, maintainHint, parseWholeNumber, type TierDraft } from '@/lib/membership'
+import { swatchValue } from '@/lib/tier-colour'
 
 /** A whole-number text input that reports `null` while empty or not a plain non-negative integer. */
 function NumberField({
@@ -48,7 +50,7 @@ function FieldMessage({ text }: { text: string | undefined }) {
 /**
  * The ladder as a stack of tier cards, lowest first. Each tier carries a **reach** threshold, a
  * **maintain** threshold (D7.15) and the benefit parameters, Carrots per friend order among them
- * (D7.16). The hints under a field mirror the server's rules; the server's own sentences, keyed
+ * (D7.16), and its **colour** and optional **badge** image (D7.18). The hints under a field mirror the server's rules; the server's own sentences, keyed
  * `tiers[i].field`, are shown beside them once it has refused a save.
  */
 function TierLadderEditor({
@@ -130,6 +132,57 @@ function TierLadderEditor({
                   <SelectItem value="LOWEST">Lowest</SelectItem>
                 </SelectContent>
               </Select>
+            </div>
+
+            <div className="grid gap-1.5">
+              <Label htmlFor={id('colour')}>Colour</Label>
+              <div className="flex items-center gap-2">
+                <input
+                  type="color"
+                  aria-label={`Pick the colour of tier ${index + 1}`}
+                  className="h-9 w-10 shrink-0 cursor-pointer rounded-md border bg-transparent p-0.5 disabled:cursor-not-allowed disabled:opacity-50"
+                  value={swatchValue(tier.colourHex)}
+                  disabled={readOnly}
+                  onChange={(e) => patch(index, { colourHex: e.target.value.toUpperCase() })}
+                />
+                <Input
+                  id={id('colour')}
+                  className="font-mono"
+                  placeholder="#RRGGBB"
+                  maxLength={7}
+                  value={tier.colourHex}
+                  disabled={readOnly}
+                  aria-invalid={!!serverError(index, 'colourHex') || undefined}
+                  onChange={(e) => patch(index, { colourHex: e.target.value.trim() })}
+                />
+                <span
+                  data-slot="tier-swatch"
+                  aria-hidden="true"
+                  className="size-6 shrink-0 rounded-full border"
+                  style={{
+                    backgroundColor: tier.colourHex ? swatchValue(tier.colourHex) : undefined,
+                  }}
+                />
+              </div>
+              <p className="text-xs text-muted-foreground">
+                Required. The app and this console colour the tier&apos;s badge with it.
+              </p>
+              <FieldMessage text={serverError(index, 'colourHex')} />
+            </div>
+            <div className="grid gap-1.5 sm:col-span-2">
+              <Label>Badge image</Label>
+              <MediaPicker
+                label="badge"
+                kinds={['IMAGE']}
+                value={tier.badge}
+                disabled={readOnly}
+                onChange={(badge) => patch(index, { badge })}
+              />
+              <p className="text-xs text-muted-foreground">
+                Optional. An image from the media library; without one the badge is the colour and
+                the name.
+              </p>
+              <FieldMessage text={serverError(index, 'badgeMediaId')} />
             </div>
 
             <div className="grid gap-1.5">

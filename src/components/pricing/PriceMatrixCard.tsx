@@ -1,3 +1,4 @@
+import { TierBadge } from '@/components/membership/TierBadge'
 import type { ColumnDef } from '@tanstack/react-table'
 
 import { Badge } from '@/components/ui/badge'
@@ -35,7 +36,7 @@ function PriceMatrixCard({
     {
       id: 'tier',
       header: 'Tier',
-      cell: ({ row }) => `${row.original.tierName} (${row.original.tierCode})`,
+      cell: ({ row }) => <TierBadge code={row.original.tierCode} name={row.original.tierName} />,
     },
     { id: 'level', header: 'Level', cell: ({ row }) => row.original.pricingLevel },
     { id: 'price', header: 'Pays', cell: ({ row }) => formatMoney(row.original.price) },

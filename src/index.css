@@ -119,16 +119,6 @@
   --brand-teal-tint: #ddf8f8;
   --brand-mauve: #714956;
   --brand-mauve-tint: #efeaeb;
-  --tier-sprout: #00a17c;
-  --tier-sprout-tint: #e2fbf2;
-  --tier-active: #00bacc;
-  --tier-active-tint: #d9f9fb;
-  --tier-apex: #8e88bf;
-  --tier-apex-tint: #eeedf6;
-  --tier-legend: #a88f96;
-  --tier-legend-tint: #f4eff0;
-  --tier-locked: #747f8a;
-  --tier-locked-tint: #f2f5f6;
 }
 
 @theme inline {
@@ -158,16 +148,6 @@
   --color-brand-teal-tint: var(--brand-teal-tint);
   --color-brand-mauve: var(--brand-mauve);
   --color-brand-mauve-tint: var(--brand-mauve-tint);
-  --color-tier-sprout: var(--tier-sprout);
-  --color-tier-sprout-tint: var(--tier-sprout-tint);
-  --color-tier-active: var(--tier-active);
-  --color-tier-active-tint: var(--tier-active-tint);
-  --color-tier-apex: var(--tier-apex);
-  --color-tier-apex-tint: var(--tier-apex-tint);
-  --color-tier-legend: var(--tier-legend);
-  --color-tier-legend-tint: var(--tier-legend-tint);
-  --color-tier-locked: var(--tier-locked);
-  --color-tier-locked-tint: var(--tier-locked-tint);
 
   --font-sans:
     'Libre Franklin', ui-sans-serif, system-ui, -apple-system, 'Segoe UI', Roboto, 'Helvetica Neue',
