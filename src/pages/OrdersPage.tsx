@@ -27,6 +27,7 @@ import {
 } from '@/api/orders'
 import { formatDateTime } from '@/lib/dates'
 import { ANY_STATUS, ORDER_STATUS_LABEL } from '@/lib/labels'
+import { TierBadge } from '@/components/membership/TierBadge'
 import { ConsumerLink } from '@/components/orders/ConsumerLink'
 
 const PAGE_SIZE = 20
@@ -93,7 +94,7 @@ function OrdersPage() {
       header: 'Payable',
       cell: ({ row }) => rupees(row.original.payableMinor),
     },
-    { id: 'tier', header: 'Tier', cell: ({ row }) => row.original.tierCode ?? '' },
+    { id: 'tier', header: 'Tier', cell: ({ row }) => <TierBadge code={row.original.tierCode} /> },
     {
       id: 'placedAt',
       header: 'Placed',

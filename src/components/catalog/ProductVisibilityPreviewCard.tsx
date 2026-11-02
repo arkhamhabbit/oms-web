@@ -1,3 +1,4 @@
+import { TierBadge } from '@/components/membership/TierBadge'
 import * as React from 'react'
 import { LockIcon } from 'lucide-react'
 
@@ -50,7 +51,9 @@ function VerdictBadge({ verdict }: { verdict: Verdict | undefined }) {
     return null
   }
   return (
-    <Badge variant={verdict === 'VISIBLE' ? 'default' : verdict === 'LOCKED' ? 'secondary' : 'outline'}>
+    <Badge
+      variant={verdict === 'VISIBLE' ? 'default' : verdict === 'LOCKED' ? 'secondary' : 'outline'}
+    >
       {verdict === 'LOCKED' && <LockIcon className="mr-1 size-3" />}
       {VERDICT_LABEL[verdict]}
     </Badge>
@@ -73,11 +76,9 @@ function VariantRow({ variant }: { variant: VariantVisibility }) {
       <td className="py-2 pr-3">
         <VerdictBadge verdict={variant.visibility} />
       </td>
-      <td className="py-2 pr-3 text-sm">
-        {variant.reason ? REASON_LABEL[variant.reason] : '—'}
-      </td>
+      <td className="py-2 pr-3 text-sm">{variant.reason ? REASON_LABEL[variant.reason] : '—'}</td>
       <td className="py-2 text-sm">
-        {variant.requiredTierCode ?? '—'}
+        {variant.requiredTierCode ? <TierBadge code={variant.requiredTierCode} /> : '—'}
         {variant.ownRequiredTierCode && (
           <span className="ml-1 text-xs text-muted-foreground">(its own)</span>
         )}
@@ -95,8 +96,12 @@ function PreviewResult({ preview }: { preview: VisibilityPreview }) {
         <VerdictBadge verdict={preview.visibility} />
         <span className="text-muted-foreground">
           {preview.reason ? REASON_LABEL[preview.reason] : ''}
-          {preview.requiredTierCode ? ` Requires ${preview.requiredTierCode}.` : ''}
         </span>
+        {preview.requiredTierCode && (
+          <span className="inline-flex items-center gap-1.5 text-muted-foreground">
+            Requires <TierBadge code={preview.requiredTierCode} />
+          </span>
+        )}
       </div>
       {variants.length > 0 && (
         <table className="w-full text-left text-sm">
@@ -136,7 +141,8 @@ function TierPreview({ productId, enabledLadder }: { productId: string; enabledL
             <SelectItem value={NO_TIER}>No tier</SelectItem>
             {(ladder.data ?? []).map((t) => (
               <SelectItem key={t.code} value={t.code!}>
-                {t.name} ({t.code})
+                <TierBadge code={t.code} />
+                <span className="font-mono text-xs text-muted-foreground">{t.code}</span>
               </SelectItem>
             ))}
           </SelectContent>
@@ -238,8 +244,8 @@ function ProductVisibilityPreviewCard({ productId }: { productId: string }) {
         <CardTitle>Preview</CardTitle>
         <CardDescription>
           What a viewer sees for this product and each of its variants. A variant can be locked
-          while the product is visible; it is shown locked only when the product’s locked display
-          is “Show, locked”.
+          while the product is visible; it is shown locked only when the product’s locked display is
+          “Show, locked”.
         </CardDescription>
       </CardHeader>
       <CardContent className="flex flex-col gap-4">

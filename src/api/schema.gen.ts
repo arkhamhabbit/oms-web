@@ -1905,7 +1905,8 @@ export interface paths {
          *      first tier's reach threshold is 0 and no other's is; reach thresholds strictly increase down
          *      the list; the first tier's <code>maintainThresholdPoints</code> is 0 and every other's is greater
          *      than 0 and less than its reach threshold; <code>carrotsPerFriendOrderMinor</code> is 0 or more;
-         *      codes and names are unique. A tier's rank is its position in the list.
+         *      codes and names are unique; <code>colourHex</code> is <code>#RRGGBB</code>; <code>badgeMediaId</code>, when
+         *      sent, is a confirmed image in the media library. A tier's rank is its position in the list.
          *
          *      <p>The benefit flags are stored, not applied: pricing reads <code>pricingLevel</code>, orders read
          *      <code>freeShipping</code>, invites read <code>activeInviteLimit</code>, the referral earn reads <code>
@@ -7099,12 +7100,15 @@ export interface components {
         };
         /** @description Somewhere an item is used — what a delete is refused over. */
         MediaReferenceResponse: {
-            /** @description whose — the product, variant, brand, category or block */
+            /**
+             * @description whose — the product, variant, brand, category, block, or the tier and its ladder
+             *          version
+             */
             owner?: string;
             /**
              * @description <code>product image</code>, <code>variant image</code>, <code>brand logo</code>, <code>brand
-             *          banner</code>, <code>category image</code>, <code>category banner</code>, <code>content block icon</code> or
-             *          <code>content slide</code>
+             *          banner</code>, <code>category image</code>, <code>category banner</code>, <code>content block icon</code>,
+             *          <code>content slide</code> or <code>tier badge</code>
              */
             place?: string;
         };
@@ -9125,12 +9129,16 @@ export interface components {
         ResolvedTierResponse: {
             /** Format: int32 */
             activeInviteLimit?: number;
+            /** @description the tier's badge; null when it has none */
+            badge?: components["schemas"]["MediaRefResponse"];
             /**
              * Format: int64
              * @description referral Carrots per friend order, in minor units of <code>
              *          currency</code>
              */
             carrotsPerFriendOrderMinor?: number;
+            /** @description the tier's colour, <code>#RRGGBB</code> */
+            colourHex?: string;
             /** @description the currency of <code>carrotsPerFriendOrderMinor</code>; <code>INR</code> */
             currency?: string;
             freeShipping?: boolean;
@@ -9572,6 +9580,12 @@ export interface components {
              */
             activeInviteLimit: number;
             /**
+             * Format: uuid
+             * @description the tier's badge: a confirmed image in the media library, or null for none.
+             *          A video is refused
+             */
+            badgeMediaId?: string;
+            /**
              * Format: int64
              * @description referral Carrots (paise) per order placed by a friend the
              *          member invited — declared for the referral earn to apply, not applied by membership; 0 or
@@ -9584,6 +9598,11 @@ export interface components {
              *          where the display name is free to change
              */
             code: string;
+            /**
+             * @description the tier's colour, <code>#RRGGBB</code>, which clients render it in. Tiers may
+             *          share one
+             */
+            colourHex: string;
             /** @description declared for orders to apply — not applied by membership */
             freeShipping: boolean;
             /**
@@ -9612,6 +9631,14 @@ export interface components {
         TierResponse: {
             /** Format: int32 */
             activeInviteLimit?: number;
+            /** @description the badge's URLs; null when it has none */
+            badge?: components["schemas"]["MediaRefResponse"];
+            /**
+             * Format: uuid
+             * @description the tier's badge in the media library; null when it has none. Send it back
+             *          to keep the badge, as a new draft copied from this version does
+             */
+            badgeMediaId?: string;
             /**
              * Format: int64
              * @description referral Carrots per friend order, in minor units of <code>
@@ -9619,6 +9646,8 @@ export interface components {
              */
             carrotsPerFriendOrderMinor?: number;
             code?: string;
+            /** @description the tier's colour, <code>#RRGGBB</code> */
+            colourHex?: string;
             /**
              * @description the currency of <code>carrotsPerFriendOrderMinor</code> — the consumer-cash account
              *          Carrots are earned into; <code>INR</code>
@@ -10679,7 +10708,7 @@ export interface operations {
                     "*/*": components["schemas"]["AttributeGroupResponse"][];
                 };
             };
-            /** @description `VALIDATION_FAILED` — The request body could not be read, a field failed validation, a required header was absent, or a domain validation rule rejected an input the caller can correct. */
+            /** @description `VALIDATION_FAILED` — The request body could not be read, a field failed validation, a required header was absent, or a domain validation rule rejected an input the caller can correct, such as a tier colour ("Must be a colour written as #RRGGBB.") or a tier badge that does not exist or is a video ("Media <id> is a video; this takes an image."). */
             400: {
                 headers: {
                     [name: string]: unknown;
@@ -10739,7 +10768,7 @@ export interface operations {
                     "*/*": components["schemas"]["AttributeGroupResponse"];
                 };
             };
-            /** @description `VALIDATION_FAILED` — The request body could not be read, a field failed validation, a required header was absent, or a domain validation rule rejected an input the caller can correct. */
+            /** @description `VALIDATION_FAILED` — The request body could not be read, a field failed validation, a required header was absent, or a domain validation rule rejected an input the caller can correct, such as a tier colour ("Must be a colour written as #RRGGBB.") or a tier badge that does not exist or is a video ("Media <id> is a video; this takes an image."). */
             400: {
                 headers: {
                     [name: string]: unknown;
@@ -10784,7 +10813,7 @@ export interface operations {
                     "application/json": components["schemas"]["ErrorResponse"];
                 };
             };
-            /** @description `BUSINESS_RULE_VIOLATION` — The request was well-formed and the entities exist, but a domain rule forbids it — publishing a product with no price, archiving a brand products still reference, issuing more stock than a location holds, restoring a category under an archived parent ("Restore the parent category first.") or a product under an archived brand ("Restore the brand first."). Distinct from 400: nothing about the request is malformed. */
+            /** @description `BUSINESS_RULE_VIOLATION` — The request was well-formed and the entities exist, but a domain rule forbids it — publishing a product with no price, archiving a brand products still reference, deleting media a tier badge uses ("This media is still used — tier badge on Sprout of ladder version Launch. Replace or remove it first."), issuing more stock than a location holds, restoring a category under an archived parent ("Restore the parent category first.") or a product under an archived brand ("Restore the brand first."). Distinct from 400: nothing about the request is malformed. */
             422: {
                 headers: {
                     [name: string]: unknown;
@@ -10828,7 +10857,7 @@ export interface operations {
                     "*/*": components["schemas"]["AttributeGroupResponse"];
                 };
             };
-            /** @description `VALIDATION_FAILED` — The request body could not be read, a field failed validation, a required header was absent, or a domain validation rule rejected an input the caller can correct. */
+            /** @description `VALIDATION_FAILED` — The request body could not be read, a field failed validation, a required header was absent, or a domain validation rule rejected an input the caller can correct, such as a tier colour ("Must be a colour written as #RRGGBB.") or a tier badge that does not exist or is a video ("Media <id> is a video; this takes an image."). */
             400: {
                 headers: {
                     [name: string]: unknown;
@@ -10882,7 +10911,7 @@ export interface operations {
                     "application/json": components["schemas"]["ErrorResponse"];
                 };
             };
-            /** @description `BUSINESS_RULE_VIOLATION` — The request was well-formed and the entities exist, but a domain rule forbids it — publishing a product with no price, archiving a brand products still reference, issuing more stock than a location holds, restoring a category under an archived parent ("Restore the parent category first.") or a product under an archived brand ("Restore the brand first."). Distinct from 400: nothing about the request is malformed. */
+            /** @description `BUSINESS_RULE_VIOLATION` — The request was well-formed and the entities exist, but a domain rule forbids it — publishing a product with no price, archiving a brand products still reference, deleting media a tier badge uses ("This media is still used — tier badge on Sprout of ladder version Launch. Replace or remove it first."), issuing more stock than a location holds, restoring a category under an archived parent ("Restore the parent category first.") or a product under an archived brand ("Restore the brand first."). Distinct from 400: nothing about the request is malformed. */
             422: {
                 headers: {
                     [name: string]: unknown;
@@ -10922,7 +10951,7 @@ export interface operations {
                     "*/*": components["schemas"]["AttributeGroupResponse"];
                 };
             };
-            /** @description `VALIDATION_FAILED` — The request body could not be read, a field failed validation, a required header was absent, or a domain validation rule rejected an input the caller can correct. */
+            /** @description `VALIDATION_FAILED` — The request body could not be read, a field failed validation, a required header was absent, or a domain validation rule rejected an input the caller can correct, such as a tier colour ("Must be a colour written as #RRGGBB.") or a tier badge that does not exist or is a video ("Media <id> is a video; this takes an image."). */
             400: {
                 headers: {
                     [name: string]: unknown;
@@ -10967,7 +10996,7 @@ export interface operations {
                     "application/json": components["schemas"]["ErrorResponse"];
                 };
             };
-            /** @description `BUSINESS_RULE_VIOLATION` — The request was well-formed and the entities exist, but a domain rule forbids it — publishing a product with no price, archiving a brand products still reference, issuing more stock than a location holds, restoring a category under an archived parent ("Restore the parent category first.") or a product under an archived brand ("Restore the brand first."). Distinct from 400: nothing about the request is malformed. */
+            /** @description `BUSINESS_RULE_VIOLATION` — The request was well-formed and the entities exist, but a domain rule forbids it — publishing a product with no price, archiving a brand products still reference, deleting media a tier badge uses ("This media is still used — tier badge on Sprout of ladder version Launch. Replace or remove it first."), issuing more stock than a location holds, restoring a category under an archived parent ("Restore the parent category first.") or a product under an archived brand ("Restore the brand first."). Distinct from 400: nothing about the request is malformed. */
             422: {
                 headers: {
                     [name: string]: unknown;
@@ -11007,7 +11036,7 @@ export interface operations {
                     "*/*": components["schemas"]["AttributeGroupResponse"];
                 };
             };
-            /** @description `VALIDATION_FAILED` — The request body could not be read, a field failed validation, a required header was absent, or a domain validation rule rejected an input the caller can correct. */
+            /** @description `VALIDATION_FAILED` — The request body could not be read, a field failed validation, a required header was absent, or a domain validation rule rejected an input the caller can correct, such as a tier colour ("Must be a colour written as #RRGGBB.") or a tier badge that does not exist or is a video ("Media <id> is a video; this takes an image."). */
             400: {
                 headers: {
                     [name: string]: unknown;
@@ -11052,7 +11081,7 @@ export interface operations {
                     "application/json": components["schemas"]["ErrorResponse"];
                 };
             };
-            /** @description `BUSINESS_RULE_VIOLATION` — The request was well-formed and the entities exist, but a domain rule forbids it — publishing a product with no price, archiving a brand products still reference, issuing more stock than a location holds, restoring a category under an archived parent ("Restore the parent category first.") or a product under an archived brand ("Restore the brand first."). Distinct from 400: nothing about the request is malformed. */
+            /** @description `BUSINESS_RULE_VIOLATION` — The request was well-formed and the entities exist, but a domain rule forbids it — publishing a product with no price, archiving a brand products still reference, deleting media a tier badge uses ("This media is still used — tier badge on Sprout of ladder version Launch. Replace or remove it first."), issuing more stock than a location holds, restoring a category under an archived parent ("Restore the parent category first.") or a product under an archived brand ("Restore the brand first."). Distinct from 400: nothing about the request is malformed. */
             422: {
                 headers: {
                     [name: string]: unknown;
@@ -11094,7 +11123,7 @@ export interface operations {
                     "*/*": components["schemas"]["AttributeGroupResponse"][];
                 };
             };
-            /** @description `VALIDATION_FAILED` — The request body could not be read, a field failed validation, a required header was absent, or a domain validation rule rejected an input the caller can correct. */
+            /** @description `VALIDATION_FAILED` — The request body could not be read, a field failed validation, a required header was absent, or a domain validation rule rejected an input the caller can correct, such as a tier colour ("Must be a colour written as #RRGGBB.") or a tier badge that does not exist or is a video ("Media <id> is a video; this takes an image."). */
             400: {
                 headers: {
                     [name: string]: unknown;
@@ -11139,7 +11168,7 @@ export interface operations {
                     "application/json": components["schemas"]["ErrorResponse"];
                 };
             };
-            /** @description `BUSINESS_RULE_VIOLATION` — The request was well-formed and the entities exist, but a domain rule forbids it — publishing a product with no price, archiving a brand products still reference, issuing more stock than a location holds, restoring a category under an archived parent ("Restore the parent category first.") or a product under an archived brand ("Restore the brand first."). Distinct from 400: nothing about the request is malformed. */
+            /** @description `BUSINESS_RULE_VIOLATION` — The request was well-formed and the entities exist, but a domain rule forbids it — publishing a product with no price, archiving a brand products still reference, deleting media a tier badge uses ("This media is still used — tier badge on Sprout of ladder version Launch. Replace or remove it first."), issuing more stock than a location holds, restoring a category under an archived parent ("Restore the parent category first.") or a product under an archived brand ("Restore the brand first."). Distinct from 400: nothing about the request is malformed. */
             422: {
                 headers: {
                     [name: string]: unknown;
@@ -11183,7 +11212,7 @@ export interface operations {
                     "*/*": components["schemas"]["PageResponseAttributeResponse"];
                 };
             };
-            /** @description `VALIDATION_FAILED` — The request body could not be read, a field failed validation, a required header was absent, or a domain validation rule rejected an input the caller can correct. */
+            /** @description `VALIDATION_FAILED` — The request body could not be read, a field failed validation, a required header was absent, or a domain validation rule rejected an input the caller can correct, such as a tier colour ("Must be a colour written as #RRGGBB.") or a tier badge that does not exist or is a video ("Media <id> is a video; this takes an image."). */
             400: {
                 headers: {
                     [name: string]: unknown;
@@ -11243,7 +11272,7 @@ export interface operations {
                     "*/*": components["schemas"]["AttributeResponse"];
                 };
             };
-            /** @description `VALIDATION_FAILED` — The request body could not be read, a field failed validation, a required header was absent, or a domain validation rule rejected an input the caller can correct. */
+            /** @description `VALIDATION_FAILED` — The request body could not be read, a field failed validation, a required header was absent, or a domain validation rule rejected an input the caller can correct, such as a tier colour ("Must be a colour written as #RRGGBB.") or a tier badge that does not exist or is a video ("Media <id> is a video; this takes an image."). */
             400: {
                 headers: {
                     [name: string]: unknown;
@@ -11288,7 +11317,7 @@ export interface operations {
                     "application/json": components["schemas"]["ErrorResponse"];
                 };
             };
-            /** @description `BUSINESS_RULE_VIOLATION` — The request was well-formed and the entities exist, but a domain rule forbids it — publishing a product with no price, archiving a brand products still reference, issuing more stock than a location holds, restoring a category under an archived parent ("Restore the parent category first.") or a product under an archived brand ("Restore the brand first."). Distinct from 400: nothing about the request is malformed. */
+            /** @description `BUSINESS_RULE_VIOLATION` — The request was well-formed and the entities exist, but a domain rule forbids it — publishing a product with no price, archiving a brand products still reference, deleting media a tier badge uses ("This media is still used — tier badge on Sprout of ladder version Launch. Replace or remove it first."), issuing more stock than a location holds, restoring a category under an archived parent ("Restore the parent category first.") or a product under an archived brand ("Restore the brand first."). Distinct from 400: nothing about the request is malformed. */
             422: {
                 headers: {
                     [name: string]: unknown;
@@ -11328,7 +11357,7 @@ export interface operations {
                     "*/*": components["schemas"]["AttributeValueResponse"][];
                 };
             };
-            /** @description `VALIDATION_FAILED` — The request body could not be read, a field failed validation, a required header was absent, or a domain validation rule rejected an input the caller can correct. */
+            /** @description `VALIDATION_FAILED` — The request body could not be read, a field failed validation, a required header was absent, or a domain validation rule rejected an input the caller can correct, such as a tier colour ("Must be a colour written as #RRGGBB.") or a tier badge that does not exist or is a video ("Media <id> is a video; this takes an image."). */
             400: {
                 headers: {
                     [name: string]: unknown;
@@ -11399,7 +11428,7 @@ export interface operations {
                     "*/*": components["schemas"]["AttributeValueResponse"];
                 };
             };
-            /** @description `VALIDATION_FAILED` — The request body could not be read, a field failed validation, a required header was absent, or a domain validation rule rejected an input the caller can correct. */
+            /** @description `VALIDATION_FAILED` — The request body could not be read, a field failed validation, a required header was absent, or a domain validation rule rejected an input the caller can correct, such as a tier colour ("Must be a colour written as #RRGGBB.") or a tier badge that does not exist or is a video ("Media <id> is a video; this takes an image."). */
             400: {
                 headers: {
                     [name: string]: unknown;
@@ -11453,7 +11482,7 @@ export interface operations {
                     "application/json": components["schemas"]["ErrorResponse"];
                 };
             };
-            /** @description `BUSINESS_RULE_VIOLATION` — The request was well-formed and the entities exist, but a domain rule forbids it — publishing a product with no price, archiving a brand products still reference, issuing more stock than a location holds, restoring a category under an archived parent ("Restore the parent category first.") or a product under an archived brand ("Restore the brand first."). Distinct from 400: nothing about the request is malformed. */
+            /** @description `BUSINESS_RULE_VIOLATION` — The request was well-formed and the entities exist, but a domain rule forbids it — publishing a product with no price, archiving a brand products still reference, deleting media a tier badge uses ("This media is still used — tier badge on Sprout of ladder version Launch. Replace or remove it first."), issuing more stock than a location holds, restoring a category under an archived parent ("Restore the parent category first.") or a product under an archived brand ("Restore the brand first."). Distinct from 400: nothing about the request is malformed. */
             422: {
                 headers: {
                     [name: string]: unknown;
@@ -11498,7 +11527,7 @@ export interface operations {
                     "*/*": components["schemas"]["AttributeValueResponse"];
                 };
             };
-            /** @description `VALIDATION_FAILED` — The request body could not be read, a field failed validation, a required header was absent, or a domain validation rule rejected an input the caller can correct. */
+            /** @description `VALIDATION_FAILED` — The request body could not be read, a field failed validation, a required header was absent, or a domain validation rule rejected an input the caller can correct, such as a tier colour ("Must be a colour written as #RRGGBB.") or a tier badge that does not exist or is a video ("Media <id> is a video; this takes an image."). */
             400: {
                 headers: {
                     [name: string]: unknown;
@@ -11552,7 +11581,7 @@ export interface operations {
                     "application/json": components["schemas"]["ErrorResponse"];
                 };
             };
-            /** @description `BUSINESS_RULE_VIOLATION` — The request was well-formed and the entities exist, but a domain rule forbids it — publishing a product with no price, archiving a brand products still reference, issuing more stock than a location holds, restoring a category under an archived parent ("Restore the parent category first.") or a product under an archived brand ("Restore the brand first."). Distinct from 400: nothing about the request is malformed. */
+            /** @description `BUSINESS_RULE_VIOLATION` — The request was well-formed and the entities exist, but a domain rule forbids it — publishing a product with no price, archiving a brand products still reference, deleting media a tier badge uses ("This media is still used — tier badge on Sprout of ladder version Launch. Replace or remove it first."), issuing more stock than a location holds, restoring a category under an archived parent ("Restore the parent category first.") or a product under an archived brand ("Restore the brand first."). Distinct from 400: nothing about the request is malformed. */
             422: {
                 headers: {
                     [name: string]: unknown;
@@ -11593,7 +11622,7 @@ export interface operations {
                     "*/*": components["schemas"]["AttributeValueResponse"];
                 };
             };
-            /** @description `VALIDATION_FAILED` — The request body could not be read, a field failed validation, a required header was absent, or a domain validation rule rejected an input the caller can correct. */
+            /** @description `VALIDATION_FAILED` — The request body could not be read, a field failed validation, a required header was absent, or a domain validation rule rejected an input the caller can correct, such as a tier colour ("Must be a colour written as #RRGGBB.") or a tier badge that does not exist or is a video ("Media <id> is a video; this takes an image."). */
             400: {
                 headers: {
                     [name: string]: unknown;
@@ -11638,7 +11667,7 @@ export interface operations {
                     "application/json": components["schemas"]["ErrorResponse"];
                 };
             };
-            /** @description `BUSINESS_RULE_VIOLATION` — The request was well-formed and the entities exist, but a domain rule forbids it — publishing a product with no price, archiving a brand products still reference, issuing more stock than a location holds, restoring a category under an archived parent ("Restore the parent category first.") or a product under an archived brand ("Restore the brand first."). Distinct from 400: nothing about the request is malformed. */
+            /** @description `BUSINESS_RULE_VIOLATION` — The request was well-formed and the entities exist, but a domain rule forbids it — publishing a product with no price, archiving a brand products still reference, deleting media a tier badge uses ("This media is still used — tier badge on Sprout of ladder version Launch. Replace or remove it first."), issuing more stock than a location holds, restoring a category under an archived parent ("Restore the parent category first.") or a product under an archived brand ("Restore the brand first."). Distinct from 400: nothing about the request is malformed. */
             422: {
                 headers: {
                     [name: string]: unknown;
@@ -11679,7 +11708,7 @@ export interface operations {
                     "*/*": components["schemas"]["AttributeValueResponse"];
                 };
             };
-            /** @description `VALIDATION_FAILED` — The request body could not be read, a field failed validation, a required header was absent, or a domain validation rule rejected an input the caller can correct. */
+            /** @description `VALIDATION_FAILED` — The request body could not be read, a field failed validation, a required header was absent, or a domain validation rule rejected an input the caller can correct, such as a tier colour ("Must be a colour written as #RRGGBB.") or a tier badge that does not exist or is a video ("Media <id> is a video; this takes an image."). */
             400: {
                 headers: {
                     [name: string]: unknown;
@@ -11724,7 +11753,7 @@ export interface operations {
                     "application/json": components["schemas"]["ErrorResponse"];
                 };
             };
-            /** @description `BUSINESS_RULE_VIOLATION` — The request was well-formed and the entities exist, but a domain rule forbids it — publishing a product with no price, archiving a brand products still reference, issuing more stock than a location holds, restoring a category under an archived parent ("Restore the parent category first.") or a product under an archived brand ("Restore the brand first."). Distinct from 400: nothing about the request is malformed. */
+            /** @description `BUSINESS_RULE_VIOLATION` — The request was well-formed and the entities exist, but a domain rule forbids it — publishing a product with no price, archiving a brand products still reference, deleting media a tier badge uses ("This media is still used — tier badge on Sprout of ladder version Launch. Replace or remove it first."), issuing more stock than a location holds, restoring a category under an archived parent ("Restore the parent category first.") or a product under an archived brand ("Restore the brand first."). Distinct from 400: nothing about the request is malformed. */
             422: {
                 headers: {
                     [name: string]: unknown;
@@ -11768,7 +11797,7 @@ export interface operations {
                     "*/*": components["schemas"]["AttributeValueResponse"][];
                 };
             };
-            /** @description `VALIDATION_FAILED` — The request body could not be read, a field failed validation, a required header was absent, or a domain validation rule rejected an input the caller can correct. */
+            /** @description `VALIDATION_FAILED` — The request body could not be read, a field failed validation, a required header was absent, or a domain validation rule rejected an input the caller can correct, such as a tier colour ("Must be a colour written as #RRGGBB.") or a tier badge that does not exist or is a video ("Media <id> is a video; this takes an image."). */
             400: {
                 headers: {
                     [name: string]: unknown;
@@ -11822,7 +11851,7 @@ export interface operations {
                     "application/json": components["schemas"]["ErrorResponse"];
                 };
             };
-            /** @description `BUSINESS_RULE_VIOLATION` — The request was well-formed and the entities exist, but a domain rule forbids it — publishing a product with no price, archiving a brand products still reference, issuing more stock than a location holds, restoring a category under an archived parent ("Restore the parent category first.") or a product under an archived brand ("Restore the brand first."). Distinct from 400: nothing about the request is malformed. */
+            /** @description `BUSINESS_RULE_VIOLATION` — The request was well-formed and the entities exist, but a domain rule forbids it — publishing a product with no price, archiving a brand products still reference, deleting media a tier badge uses ("This media is still used — tier badge on Sprout of ladder version Launch. Replace or remove it first."), issuing more stock than a location holds, restoring a category under an archived parent ("Restore the parent category first.") or a product under an archived brand ("Restore the brand first."). Distinct from 400: nothing about the request is malformed. */
             422: {
                 headers: {
                     [name: string]: unknown;
@@ -11862,7 +11891,7 @@ export interface operations {
                     "*/*": components["schemas"]["AttributeDetailResponse"];
                 };
             };
-            /** @description `VALIDATION_FAILED` — The request body could not be read, a field failed validation, a required header was absent, or a domain validation rule rejected an input the caller can correct. */
+            /** @description `VALIDATION_FAILED` — The request body could not be read, a field failed validation, a required header was absent, or a domain validation rule rejected an input the caller can correct, such as a tier colour ("Must be a colour written as #RRGGBB.") or a tier badge that does not exist or is a video ("Media <id> is a video; this takes an image."). */
             400: {
                 headers: {
                     [name: string]: unknown;
@@ -11933,7 +11962,7 @@ export interface operations {
                     "*/*": components["schemas"]["AttributeResponse"];
                 };
             };
-            /** @description `VALIDATION_FAILED` — The request body could not be read, a field failed validation, a required header was absent, or a domain validation rule rejected an input the caller can correct. */
+            /** @description `VALIDATION_FAILED` — The request body could not be read, a field failed validation, a required header was absent, or a domain validation rule rejected an input the caller can correct, such as a tier colour ("Must be a colour written as #RRGGBB.") or a tier badge that does not exist or is a video ("Media <id> is a video; this takes an image."). */
             400: {
                 headers: {
                     [name: string]: unknown;
@@ -11987,7 +12016,7 @@ export interface operations {
                     "application/json": components["schemas"]["ErrorResponse"];
                 };
             };
-            /** @description `BUSINESS_RULE_VIOLATION` — The request was well-formed and the entities exist, but a domain rule forbids it — publishing a product with no price, archiving a brand products still reference, issuing more stock than a location holds, restoring a category under an archived parent ("Restore the parent category first.") or a product under an archived brand ("Restore the brand first."). Distinct from 400: nothing about the request is malformed. */
+            /** @description `BUSINESS_RULE_VIOLATION` — The request was well-formed and the entities exist, but a domain rule forbids it — publishing a product with no price, archiving a brand products still reference, deleting media a tier badge uses ("This media is still used — tier badge on Sprout of ladder version Launch. Replace or remove it first."), issuing more stock than a location holds, restoring a category under an archived parent ("Restore the parent category first.") or a product under an archived brand ("Restore the brand first."). Distinct from 400: nothing about the request is malformed. */
             422: {
                 headers: {
                     [name: string]: unknown;
@@ -12027,7 +12056,7 @@ export interface operations {
                     "*/*": components["schemas"]["AttributeResponse"];
                 };
             };
-            /** @description `VALIDATION_FAILED` — The request body could not be read, a field failed validation, a required header was absent, or a domain validation rule rejected an input the caller can correct. */
+            /** @description `VALIDATION_FAILED` — The request body could not be read, a field failed validation, a required header was absent, or a domain validation rule rejected an input the caller can correct, such as a tier colour ("Must be a colour written as #RRGGBB.") or a tier badge that does not exist or is a video ("Media <id> is a video; this takes an image."). */
             400: {
                 headers: {
                     [name: string]: unknown;
@@ -12072,7 +12101,7 @@ export interface operations {
                     "application/json": components["schemas"]["ErrorResponse"];
                 };
             };
-            /** @description `BUSINESS_RULE_VIOLATION` — The request was well-formed and the entities exist, but a domain rule forbids it — publishing a product with no price, archiving a brand products still reference, issuing more stock than a location holds, restoring a category under an archived parent ("Restore the parent category first.") or a product under an archived brand ("Restore the brand first."). Distinct from 400: nothing about the request is malformed. */
+            /** @description `BUSINESS_RULE_VIOLATION` — The request was well-formed and the entities exist, but a domain rule forbids it — publishing a product with no price, archiving a brand products still reference, deleting media a tier badge uses ("This media is still used — tier badge on Sprout of ladder version Launch. Replace or remove it first."), issuing more stock than a location holds, restoring a category under an archived parent ("Restore the parent category first.") or a product under an archived brand ("Restore the brand first."). Distinct from 400: nothing about the request is malformed. */
             422: {
                 headers: {
                     [name: string]: unknown;
@@ -12112,7 +12141,7 @@ export interface operations {
                     "*/*": components["schemas"]["AttributeResponse"];
                 };
             };
-            /** @description `VALIDATION_FAILED` — The request body could not be read, a field failed validation, a required header was absent, or a domain validation rule rejected an input the caller can correct. */
+            /** @description `VALIDATION_FAILED` — The request body could not be read, a field failed validation, a required header was absent, or a domain validation rule rejected an input the caller can correct, such as a tier colour ("Must be a colour written as #RRGGBB.") or a tier badge that does not exist or is a video ("Media <id> is a video; this takes an image."). */
             400: {
                 headers: {
                     [name: string]: unknown;
@@ -12157,7 +12186,7 @@ export interface operations {
                     "application/json": components["schemas"]["ErrorResponse"];
                 };
             };
-            /** @description `BUSINESS_RULE_VIOLATION` — The request was well-formed and the entities exist, but a domain rule forbids it — publishing a product with no price, archiving a brand products still reference, issuing more stock than a location holds, restoring a category under an archived parent ("Restore the parent category first.") or a product under an archived brand ("Restore the brand first."). Distinct from 400: nothing about the request is malformed. */
+            /** @description `BUSINESS_RULE_VIOLATION` — The request was well-formed and the entities exist, but a domain rule forbids it — publishing a product with no price, archiving a brand products still reference, deleting media a tier badge uses ("This media is still used — tier badge on Sprout of ladder version Launch. Replace or remove it first."), issuing more stock than a location holds, restoring a category under an archived parent ("Restore the parent category first.") or a product under an archived brand ("Restore the brand first."). Distinct from 400: nothing about the request is malformed. */
             422: {
                 headers: {
                     [name: string]: unknown;
@@ -12199,7 +12228,7 @@ export interface operations {
                     "*/*": components["schemas"]["AttributeResponse"][];
                 };
             };
-            /** @description `VALIDATION_FAILED` — The request body could not be read, a field failed validation, a required header was absent, or a domain validation rule rejected an input the caller can correct. */
+            /** @description `VALIDATION_FAILED` — The request body could not be read, a field failed validation, a required header was absent, or a domain validation rule rejected an input the caller can correct, such as a tier colour ("Must be a colour written as #RRGGBB.") or a tier badge that does not exist or is a video ("Media <id> is a video; this takes an image."). */
             400: {
                 headers: {
                     [name: string]: unknown;
@@ -12244,7 +12273,7 @@ export interface operations {
                     "application/json": components["schemas"]["ErrorResponse"];
                 };
             };
-            /** @description `BUSINESS_RULE_VIOLATION` — The request was well-formed and the entities exist, but a domain rule forbids it — publishing a product with no price, archiving a brand products still reference, issuing more stock than a location holds, restoring a category under an archived parent ("Restore the parent category first.") or a product under an archived brand ("Restore the brand first."). Distinct from 400: nothing about the request is malformed. */
+            /** @description `BUSINESS_RULE_VIOLATION` — The request was well-formed and the entities exist, but a domain rule forbids it — publishing a product with no price, archiving a brand products still reference, deleting media a tier badge uses ("This media is still used — tier badge on Sprout of ladder version Launch. Replace or remove it first."), issuing more stock than a location holds, restoring a category under an archived parent ("Restore the parent category first.") or a product under an archived brand ("Restore the brand first."). Distinct from 400: nothing about the request is malformed. */
             422: {
                 headers: {
                     [name: string]: unknown;
@@ -12290,7 +12319,7 @@ export interface operations {
                     "*/*": components["schemas"]["PageResponseAuditEntryResponse"];
                 };
             };
-            /** @description `VALIDATION_FAILED` — The request body could not be read, a field failed validation, a required header was absent, or a domain validation rule rejected an input the caller can correct. */
+            /** @description `VALIDATION_FAILED` — The request body could not be read, a field failed validation, a required header was absent, or a domain validation rule rejected an input the caller can correct, such as a tier colour ("Must be a colour written as #RRGGBB.") or a tier badge that does not exist or is a video ("Media <id> is a video; this takes an image."). */
             400: {
                 headers: {
                     [name: string]: unknown;
@@ -12348,7 +12377,7 @@ export interface operations {
                 };
                 content?: never;
             };
-            /** @description `VALIDATION_FAILED` — The request body could not be read, a field failed validation, a required header was absent, or a domain validation rule rejected an input the caller can correct. */
+            /** @description `VALIDATION_FAILED` — The request body could not be read, a field failed validation, a required header was absent, or a domain validation rule rejected an input the caller can correct, such as a tier colour ("Must be a colour written as #RRGGBB.") or a tier badge that does not exist or is a video ("Media <id> is a video; this takes an image."). */
             400: {
                 headers: {
                     [name: string]: unknown;
@@ -12375,7 +12404,7 @@ export interface operations {
                     "application/json": components["schemas"]["ErrorResponse"];
                 };
             };
-            /** @description `BUSINESS_RULE_VIOLATION` — The request was well-formed and the entities exist, but a domain rule forbids it — publishing a product with no price, archiving a brand products still reference, issuing more stock than a location holds, restoring a category under an archived parent ("Restore the parent category first.") or a product under an archived brand ("Restore the brand first."). Distinct from 400: nothing about the request is malformed. */
+            /** @description `BUSINESS_RULE_VIOLATION` — The request was well-formed and the entities exist, but a domain rule forbids it — publishing a product with no price, archiving a brand products still reference, deleting media a tier badge uses ("This media is still used — tier badge on Sprout of ladder version Launch. Replace or remove it first."), issuing more stock than a location holds, restoring a category under an archived parent ("Restore the parent category first.") or a product under an archived brand ("Restore the brand first."). Distinct from 400: nothing about the request is malformed. */
             422: {
                 headers: {
                     [name: string]: unknown;
@@ -12415,7 +12444,7 @@ export interface operations {
                 };
                 content?: never;
             };
-            /** @description `VALIDATION_FAILED` — The request body could not be read, a field failed validation, a required header was absent, or a domain validation rule rejected an input the caller can correct. */
+            /** @description `VALIDATION_FAILED` — The request body could not be read, a field failed validation, a required header was absent, or a domain validation rule rejected an input the caller can correct, such as a tier colour ("Must be a colour written as #RRGGBB.") or a tier badge that does not exist or is a video ("Media <id> is a video; this takes an image."). */
             400: {
                 headers: {
                     [name: string]: unknown;
@@ -12442,7 +12471,7 @@ export interface operations {
                     "application/json": components["schemas"]["ErrorResponse"];
                 };
             };
-            /** @description `BUSINESS_RULE_VIOLATION` — The request was well-formed and the entities exist, but a domain rule forbids it — publishing a product with no price, archiving a brand products still reference, issuing more stock than a location holds, restoring a category under an archived parent ("Restore the parent category first.") or a product under an archived brand ("Restore the brand first."). Distinct from 400: nothing about the request is malformed. */
+            /** @description `BUSINESS_RULE_VIOLATION` — The request was well-formed and the entities exist, but a domain rule forbids it — publishing a product with no price, archiving a brand products still reference, deleting media a tier badge uses ("This media is still used — tier badge on Sprout of ladder version Launch. Replace or remove it first."), issuing more stock than a location holds, restoring a category under an archived parent ("Restore the parent category first.") or a product under an archived brand ("Restore the brand first."). Distinct from 400: nothing about the request is malformed. */
             422: {
                 headers: {
                     [name: string]: unknown;
@@ -12484,7 +12513,7 @@ export interface operations {
                     "*/*": components["schemas"]["LoginResponse"];
                 };
             };
-            /** @description `VALIDATION_FAILED` — The request body could not be read, a field failed validation, a required header was absent, or a domain validation rule rejected an input the caller can correct. */
+            /** @description `VALIDATION_FAILED` — The request body could not be read, a field failed validation, a required header was absent, or a domain validation rule rejected an input the caller can correct, such as a tier colour ("Must be a colour written as #RRGGBB.") or a tier badge that does not exist or is a video ("Media <id> is a video; this takes an image."). */
             400: {
                 headers: {
                     [name: string]: unknown;
@@ -12511,7 +12540,7 @@ export interface operations {
                     "application/json": components["schemas"]["ErrorResponse"];
                 };
             };
-            /** @description `BUSINESS_RULE_VIOLATION` — The request was well-formed and the entities exist, but a domain rule forbids it — publishing a product with no price, archiving a brand products still reference, issuing more stock than a location holds, restoring a category under an archived parent ("Restore the parent category first.") or a product under an archived brand ("Restore the brand first."). Distinct from 400: nothing about the request is malformed. */
+            /** @description `BUSINESS_RULE_VIOLATION` — The request was well-formed and the entities exist, but a domain rule forbids it — publishing a product with no price, archiving a brand products still reference, deleting media a tier badge uses ("This media is still used — tier badge on Sprout of ladder version Launch. Replace or remove it first."), issuing more stock than a location holds, restoring a category under an archived parent ("Restore the parent category first.") or a product under an archived brand ("Restore the brand first."). Distinct from 400: nothing about the request is malformed. */
             422: {
                 headers: {
                     [name: string]: unknown;
@@ -12547,7 +12576,7 @@ export interface operations {
                 };
                 content?: never;
             };
-            /** @description `VALIDATION_FAILED` — The request body could not be read, a field failed validation, a required header was absent, or a domain validation rule rejected an input the caller can correct. */
+            /** @description `VALIDATION_FAILED` — The request body could not be read, a field failed validation, a required header was absent, or a domain validation rule rejected an input the caller can correct, such as a tier colour ("Must be a colour written as #RRGGBB.") or a tier badge that does not exist or is a video ("Media <id> is a video; this takes an image."). */
             400: {
                 headers: {
                     [name: string]: unknown;
@@ -12583,7 +12612,7 @@ export interface operations {
                     "application/json": components["schemas"]["ErrorResponse"];
                 };
             };
-            /** @description `BUSINESS_RULE_VIOLATION` — The request was well-formed and the entities exist, but a domain rule forbids it — publishing a product with no price, archiving a brand products still reference, issuing more stock than a location holds, restoring a category under an archived parent ("Restore the parent category first.") or a product under an archived brand ("Restore the brand first."). Distinct from 400: nothing about the request is malformed. */
+            /** @description `BUSINESS_RULE_VIOLATION` — The request was well-formed and the entities exist, but a domain rule forbids it — publishing a product with no price, archiving a brand products still reference, deleting media a tier badge uses ("This media is still used — tier badge on Sprout of ladder version Launch. Replace or remove it first."), issuing more stock than a location holds, restoring a category under an archived parent ("Restore the parent category first.") or a product under an archived brand ("Restore the brand first."). Distinct from 400: nothing about the request is malformed. */
             422: {
                 headers: {
                     [name: string]: unknown;
@@ -12625,7 +12654,7 @@ export interface operations {
                     "*/*": components["schemas"]["GenericAcknowledgement"];
                 };
             };
-            /** @description `VALIDATION_FAILED` — The request body could not be read, a field failed validation, a required header was absent, or a domain validation rule rejected an input the caller can correct. */
+            /** @description `VALIDATION_FAILED` — The request body could not be read, a field failed validation, a required header was absent, or a domain validation rule rejected an input the caller can correct, such as a tier colour ("Must be a colour written as #RRGGBB.") or a tier badge that does not exist or is a video ("Media <id> is a video; this takes an image."). */
             400: {
                 headers: {
                     [name: string]: unknown;
@@ -12652,7 +12681,7 @@ export interface operations {
                     "application/json": components["schemas"]["ErrorResponse"];
                 };
             };
-            /** @description `BUSINESS_RULE_VIOLATION` — The request was well-formed and the entities exist, but a domain rule forbids it — publishing a product with no price, archiving a brand products still reference, issuing more stock than a location holds, restoring a category under an archived parent ("Restore the parent category first.") or a product under an archived brand ("Restore the brand first."). Distinct from 400: nothing about the request is malformed. */
+            /** @description `BUSINESS_RULE_VIOLATION` — The request was well-formed and the entities exist, but a domain rule forbids it — publishing a product with no price, archiving a brand products still reference, deleting media a tier badge uses ("This media is still used — tier badge on Sprout of ladder version Launch. Replace or remove it first."), issuing more stock than a location holds, restoring a category under an archived parent ("Restore the parent category first.") or a product under an archived brand ("Restore the brand first."). Distinct from 400: nothing about the request is malformed. */
             422: {
                 headers: {
                     [name: string]: unknown;
@@ -12698,7 +12727,7 @@ export interface operations {
                     "*/*": components["schemas"]["PageResponseBatchResponse"];
                 };
             };
-            /** @description `VALIDATION_FAILED` — The request body could not be read, a field failed validation, a required header was absent, or a domain validation rule rejected an input the caller can correct. */
+            /** @description `VALIDATION_FAILED` — The request body could not be read, a field failed validation, a required header was absent, or a domain validation rule rejected an input the caller can correct, such as a tier colour ("Must be a colour written as #RRGGBB.") or a tier badge that does not exist or is a video ("Media <id> is a video; this takes an image."). */
             400: {
                 headers: {
                     [name: string]: unknown;
@@ -12758,7 +12787,7 @@ export interface operations {
                     "*/*": components["schemas"]["BatchResponse"];
                 };
             };
-            /** @description `VALIDATION_FAILED` — The request body could not be read, a field failed validation, a required header was absent, or a domain validation rule rejected an input the caller can correct. */
+            /** @description `VALIDATION_FAILED` — The request body could not be read, a field failed validation, a required header was absent, or a domain validation rule rejected an input the caller can correct, such as a tier colour ("Must be a colour written as #RRGGBB.") or a tier badge that does not exist or is a video ("Media <id> is a video; this takes an image."). */
             400: {
                 headers: {
                     [name: string]: unknown;
@@ -12803,7 +12832,7 @@ export interface operations {
                     "application/json": components["schemas"]["ErrorResponse"];
                 };
             };
-            /** @description `BUSINESS_RULE_VIOLATION` — The request was well-formed and the entities exist, but a domain rule forbids it — publishing a product with no price, archiving a brand products still reference, issuing more stock than a location holds, restoring a category under an archived parent ("Restore the parent category first.") or a product under an archived brand ("Restore the brand first."). Distinct from 400: nothing about the request is malformed. */
+            /** @description `BUSINESS_RULE_VIOLATION` — The request was well-formed and the entities exist, but a domain rule forbids it — publishing a product with no price, archiving a brand products still reference, deleting media a tier badge uses ("This media is still used — tier badge on Sprout of ladder version Launch. Replace or remove it first."), issuing more stock than a location holds, restoring a category under an archived parent ("Restore the parent category first.") or a product under an archived brand ("Restore the brand first."). Distinct from 400: nothing about the request is malformed. */
             422: {
                 headers: {
                     [name: string]: unknown;
@@ -12843,7 +12872,7 @@ export interface operations {
                     "*/*": components["schemas"]["BatchResponse"];
                 };
             };
-            /** @description `VALIDATION_FAILED` — The request body could not be read, a field failed validation, a required header was absent, or a domain validation rule rejected an input the caller can correct. */
+            /** @description `VALIDATION_FAILED` — The request body could not be read, a field failed validation, a required header was absent, or a domain validation rule rejected an input the caller can correct, such as a tier colour ("Must be a colour written as #RRGGBB.") or a tier badge that does not exist or is a video ("Media <id> is a video; this takes an image."). */
             400: {
                 headers: {
                     [name: string]: unknown;
@@ -12919,7 +12948,7 @@ export interface operations {
                     "*/*": components["schemas"]["PageResponseBrandResponse"];
                 };
             };
-            /** @description `VALIDATION_FAILED` — The request body could not be read, a field failed validation, a required header was absent, or a domain validation rule rejected an input the caller can correct. */
+            /** @description `VALIDATION_FAILED` — The request body could not be read, a field failed validation, a required header was absent, or a domain validation rule rejected an input the caller can correct, such as a tier colour ("Must be a colour written as #RRGGBB.") or a tier badge that does not exist or is a video ("Media <id> is a video; this takes an image."). */
             400: {
                 headers: {
                     [name: string]: unknown;
@@ -12979,7 +13008,7 @@ export interface operations {
                     "*/*": components["schemas"]["BrandResponse"];
                 };
             };
-            /** @description `VALIDATION_FAILED` — The request body could not be read, a field failed validation, a required header was absent, or a domain validation rule rejected an input the caller can correct. */
+            /** @description `VALIDATION_FAILED` — The request body could not be read, a field failed validation, a required header was absent, or a domain validation rule rejected an input the caller can correct, such as a tier colour ("Must be a colour written as #RRGGBB.") or a tier badge that does not exist or is a video ("Media <id> is a video; this takes an image."). */
             400: {
                 headers: {
                     [name: string]: unknown;
@@ -13024,7 +13053,7 @@ export interface operations {
                     "application/json": components["schemas"]["ErrorResponse"];
                 };
             };
-            /** @description `BUSINESS_RULE_VIOLATION` — The request was well-formed and the entities exist, but a domain rule forbids it — publishing a product with no price, archiving a brand products still reference, issuing more stock than a location holds, restoring a category under an archived parent ("Restore the parent category first.") or a product under an archived brand ("Restore the brand first."). Distinct from 400: nothing about the request is malformed. */
+            /** @description `BUSINESS_RULE_VIOLATION` — The request was well-formed and the entities exist, but a domain rule forbids it — publishing a product with no price, archiving a brand products still reference, deleting media a tier badge uses ("This media is still used — tier badge on Sprout of ladder version Launch. Replace or remove it first."), issuing more stock than a location holds, restoring a category under an archived parent ("Restore the parent category first.") or a product under an archived brand ("Restore the brand first."). Distinct from 400: nothing about the request is malformed. */
             422: {
                 headers: {
                     [name: string]: unknown;
@@ -13064,7 +13093,7 @@ export interface operations {
                     "*/*": components["schemas"]["BrandResponse"];
                 };
             };
-            /** @description `VALIDATION_FAILED` — The request body could not be read, a field failed validation, a required header was absent, or a domain validation rule rejected an input the caller can correct. */
+            /** @description `VALIDATION_FAILED` — The request body could not be read, a field failed validation, a required header was absent, or a domain validation rule rejected an input the caller can correct, such as a tier colour ("Must be a colour written as #RRGGBB.") or a tier badge that does not exist or is a video ("Media <id> is a video; this takes an image."). */
             400: {
                 headers: {
                     [name: string]: unknown;
@@ -13135,7 +13164,7 @@ export interface operations {
                     "*/*": components["schemas"]["BrandResponse"];
                 };
             };
-            /** @description `VALIDATION_FAILED` — The request body could not be read, a field failed validation, a required header was absent, or a domain validation rule rejected an input the caller can correct. */
+            /** @description `VALIDATION_FAILED` — The request body could not be read, a field failed validation, a required header was absent, or a domain validation rule rejected an input the caller can correct, such as a tier colour ("Must be a colour written as #RRGGBB.") or a tier badge that does not exist or is a video ("Media <id> is a video; this takes an image."). */
             400: {
                 headers: {
                     [name: string]: unknown;
@@ -13189,7 +13218,7 @@ export interface operations {
                     "application/json": components["schemas"]["ErrorResponse"];
                 };
             };
-            /** @description `BUSINESS_RULE_VIOLATION` — The request was well-formed and the entities exist, but a domain rule forbids it — publishing a product with no price, archiving a brand products still reference, issuing more stock than a location holds, restoring a category under an archived parent ("Restore the parent category first.") or a product under an archived brand ("Restore the brand first."). Distinct from 400: nothing about the request is malformed. */
+            /** @description `BUSINESS_RULE_VIOLATION` — The request was well-formed and the entities exist, but a domain rule forbids it — publishing a product with no price, archiving a brand products still reference, deleting media a tier badge uses ("This media is still used — tier badge on Sprout of ladder version Launch. Replace or remove it first."), issuing more stock than a location holds, restoring a category under an archived parent ("Restore the parent category first.") or a product under an archived brand ("Restore the brand first."). Distinct from 400: nothing about the request is malformed. */
             422: {
                 headers: {
                     [name: string]: unknown;
@@ -13229,7 +13258,7 @@ export interface operations {
                     "*/*": components["schemas"]["BrandResponse"];
                 };
             };
-            /** @description `VALIDATION_FAILED` — The request body could not be read, a field failed validation, a required header was absent, or a domain validation rule rejected an input the caller can correct. */
+            /** @description `VALIDATION_FAILED` — The request body could not be read, a field failed validation, a required header was absent, or a domain validation rule rejected an input the caller can correct, such as a tier colour ("Must be a colour written as #RRGGBB.") or a tier badge that does not exist or is a video ("Media <id> is a video; this takes an image."). */
             400: {
                 headers: {
                     [name: string]: unknown;
@@ -13274,7 +13303,7 @@ export interface operations {
                     "application/json": components["schemas"]["ErrorResponse"];
                 };
             };
-            /** @description `BUSINESS_RULE_VIOLATION` — The request was well-formed and the entities exist, but a domain rule forbids it — publishing a product with no price, archiving a brand products still reference, issuing more stock than a location holds, restoring a category under an archived parent ("Restore the parent category first.") or a product under an archived brand ("Restore the brand first."). Distinct from 400: nothing about the request is malformed. */
+            /** @description `BUSINESS_RULE_VIOLATION` — The request was well-formed and the entities exist, but a domain rule forbids it — publishing a product with no price, archiving a brand products still reference, deleting media a tier badge uses ("This media is still used — tier badge on Sprout of ladder version Launch. Replace or remove it first."), issuing more stock than a location holds, restoring a category under an archived parent ("Restore the parent category first.") or a product under an archived brand ("Restore the brand first."). Distinct from 400: nothing about the request is malformed. */
             422: {
                 headers: {
                     [name: string]: unknown;
@@ -13314,7 +13343,7 @@ export interface operations {
                     "*/*": components["schemas"]["BrandResponse"];
                 };
             };
-            /** @description `VALIDATION_FAILED` — The request body could not be read, a field failed validation, a required header was absent, or a domain validation rule rejected an input the caller can correct. */
+            /** @description `VALIDATION_FAILED` — The request body could not be read, a field failed validation, a required header was absent, or a domain validation rule rejected an input the caller can correct, such as a tier colour ("Must be a colour written as #RRGGBB.") or a tier badge that does not exist or is a video ("Media <id> is a video; this takes an image."). */
             400: {
                 headers: {
                     [name: string]: unknown;
@@ -13359,7 +13388,7 @@ export interface operations {
                     "application/json": components["schemas"]["ErrorResponse"];
                 };
             };
-            /** @description `BUSINESS_RULE_VIOLATION` — The request was well-formed and the entities exist, but a domain rule forbids it — publishing a product with no price, archiving a brand products still reference, issuing more stock than a location holds, restoring a category under an archived parent ("Restore the parent category first.") or a product under an archived brand ("Restore the brand first."). Distinct from 400: nothing about the request is malformed. */
+            /** @description `BUSINESS_RULE_VIOLATION` — The request was well-formed and the entities exist, but a domain rule forbids it — publishing a product with no price, archiving a brand products still reference, deleting media a tier badge uses ("This media is still used — tier badge on Sprout of ladder version Launch. Replace or remove it first."), issuing more stock than a location holds, restoring a category under an archived parent ("Restore the parent category first.") or a product under an archived brand ("Restore the brand first."). Distinct from 400: nothing about the request is malformed. */
             422: {
                 headers: {
                     [name: string]: unknown;
@@ -13399,7 +13428,7 @@ export interface operations {
                     "*/*": components["schemas"]["BrandResponse"];
                 };
             };
-            /** @description `VALIDATION_FAILED` — The request body could not be read, a field failed validation, a required header was absent, or a domain validation rule rejected an input the caller can correct. */
+            /** @description `VALIDATION_FAILED` — The request body could not be read, a field failed validation, a required header was absent, or a domain validation rule rejected an input the caller can correct, such as a tier colour ("Must be a colour written as #RRGGBB.") or a tier badge that does not exist or is a video ("Media <id> is a video; this takes an image."). */
             400: {
                 headers: {
                     [name: string]: unknown;
@@ -13444,7 +13473,7 @@ export interface operations {
                     "application/json": components["schemas"]["ErrorResponse"];
                 };
             };
-            /** @description `BUSINESS_RULE_VIOLATION` — The request was well-formed and the entities exist, but a domain rule forbids it — publishing a product with no price, archiving a brand products still reference, issuing more stock than a location holds, restoring a category under an archived parent ("Restore the parent category first.") or a product under an archived brand ("Restore the brand first."). Distinct from 400: nothing about the request is malformed. */
+            /** @description `BUSINESS_RULE_VIOLATION` — The request was well-formed and the entities exist, but a domain rule forbids it — publishing a product with no price, archiving a brand products still reference, deleting media a tier badge uses ("This media is still used — tier badge on Sprout of ladder version Launch. Replace or remove it first."), issuing more stock than a location holds, restoring a category under an archived parent ("Restore the parent category first.") or a product under an archived brand ("Restore the brand first."). Distinct from 400: nothing about the request is malformed. */
             422: {
                 headers: {
                     [name: string]: unknown;
@@ -13488,7 +13517,7 @@ export interface operations {
                     "*/*": components["schemas"]["BrandResponse"];
                 };
             };
-            /** @description `VALIDATION_FAILED` — The request body could not be read, a field failed validation, a required header was absent, or a domain validation rule rejected an input the caller can correct. */
+            /** @description `VALIDATION_FAILED` — The request body could not be read, a field failed validation, a required header was absent, or a domain validation rule rejected an input the caller can correct, such as a tier colour ("Must be a colour written as #RRGGBB.") or a tier badge that does not exist or is a video ("Media <id> is a video; this takes an image."). */
             400: {
                 headers: {
                     [name: string]: unknown;
@@ -13542,7 +13571,7 @@ export interface operations {
                     "application/json": components["schemas"]["ErrorResponse"];
                 };
             };
-            /** @description `BUSINESS_RULE_VIOLATION` — The request was well-formed and the entities exist, but a domain rule forbids it — publishing a product with no price, archiving a brand products still reference, issuing more stock than a location holds, restoring a category under an archived parent ("Restore the parent category first.") or a product under an archived brand ("Restore the brand first."). Distinct from 400: nothing about the request is malformed. */
+            /** @description `BUSINESS_RULE_VIOLATION` — The request was well-formed and the entities exist, but a domain rule forbids it — publishing a product with no price, archiving a brand products still reference, deleting media a tier badge uses ("This media is still used — tier badge on Sprout of ladder version Launch. Replace or remove it first."), issuing more stock than a location holds, restoring a category under an archived parent ("Restore the parent category first.") or a product under an archived brand ("Restore the brand first."). Distinct from 400: nothing about the request is malformed. */
             422: {
                 headers: {
                     [name: string]: unknown;
@@ -13582,7 +13611,7 @@ export interface operations {
                     "*/*": components["schemas"]["BrandResponse"];
                 };
             };
-            /** @description `VALIDATION_FAILED` — The request body could not be read, a field failed validation, a required header was absent, or a domain validation rule rejected an input the caller can correct. */
+            /** @description `VALIDATION_FAILED` — The request body could not be read, a field failed validation, a required header was absent, or a domain validation rule rejected an input the caller can correct, such as a tier colour ("Must be a colour written as #RRGGBB.") or a tier badge that does not exist or is a video ("Media <id> is a video; this takes an image."). */
             400: {
                 headers: {
                     [name: string]: unknown;
@@ -13627,7 +13656,7 @@ export interface operations {
                     "application/json": components["schemas"]["ErrorResponse"];
                 };
             };
-            /** @description `BUSINESS_RULE_VIOLATION` — The request was well-formed and the entities exist, but a domain rule forbids it — publishing a product with no price, archiving a brand products still reference, issuing more stock than a location holds, restoring a category under an archived parent ("Restore the parent category first.") or a product under an archived brand ("Restore the brand first."). Distinct from 400: nothing about the request is malformed. */
+            /** @description `BUSINESS_RULE_VIOLATION` — The request was well-formed and the entities exist, but a domain rule forbids it — publishing a product with no price, archiving a brand products still reference, deleting media a tier badge uses ("This media is still used — tier badge on Sprout of ladder version Launch. Replace or remove it first."), issuing more stock than a location holds, restoring a category under an archived parent ("Restore the parent category first.") or a product under an archived brand ("Restore the brand first."). Distinct from 400: nothing about the request is malformed. */
             422: {
                 headers: {
                     [name: string]: unknown;
@@ -13669,7 +13698,7 @@ export interface operations {
                     "*/*": components["schemas"]["BrandResponse"][];
                 };
             };
-            /** @description `VALIDATION_FAILED` — The request body could not be read, a field failed validation, a required header was absent, or a domain validation rule rejected an input the caller can correct. */
+            /** @description `VALIDATION_FAILED` — The request body could not be read, a field failed validation, a required header was absent, or a domain validation rule rejected an input the caller can correct, such as a tier colour ("Must be a colour written as #RRGGBB.") or a tier badge that does not exist or is a video ("Media <id> is a video; this takes an image."). */
             400: {
                 headers: {
                     [name: string]: unknown;
@@ -13714,7 +13743,7 @@ export interface operations {
                     "application/json": components["schemas"]["ErrorResponse"];
                 };
             };
-            /** @description `BUSINESS_RULE_VIOLATION` — The request was well-formed and the entities exist, but a domain rule forbids it — publishing a product with no price, archiving a brand products still reference, issuing more stock than a location holds, restoring a category under an archived parent ("Restore the parent category first.") or a product under an archived brand ("Restore the brand first."). Distinct from 400: nothing about the request is malformed. */
+            /** @description `BUSINESS_RULE_VIOLATION` — The request was well-formed and the entities exist, but a domain rule forbids it — publishing a product with no price, archiving a brand products still reference, deleting media a tier badge uses ("This media is still used — tier badge on Sprout of ladder version Launch. Replace or remove it first."), issuing more stock than a location holds, restoring a category under an archived parent ("Restore the parent category first.") or a product under an archived brand ("Restore the brand first."). Distinct from 400: nothing about the request is malformed. */
             422: {
                 headers: {
                     [name: string]: unknown;
@@ -13758,7 +13787,7 @@ export interface operations {
                     "*/*": components["schemas"]["PageResponseCategoryResponse"];
                 };
             };
-            /** @description `VALIDATION_FAILED` — The request body could not be read, a field failed validation, a required header was absent, or a domain validation rule rejected an input the caller can correct. */
+            /** @description `VALIDATION_FAILED` — The request body could not be read, a field failed validation, a required header was absent, or a domain validation rule rejected an input the caller can correct, such as a tier colour ("Must be a colour written as #RRGGBB.") or a tier badge that does not exist or is a video ("Media <id> is a video; this takes an image."). */
             400: {
                 headers: {
                     [name: string]: unknown;
@@ -13818,7 +13847,7 @@ export interface operations {
                     "*/*": components["schemas"]["CategoryResponse"];
                 };
             };
-            /** @description `VALIDATION_FAILED` — The request body could not be read, a field failed validation, a required header was absent, or a domain validation rule rejected an input the caller can correct. */
+            /** @description `VALIDATION_FAILED` — The request body could not be read, a field failed validation, a required header was absent, or a domain validation rule rejected an input the caller can correct, such as a tier colour ("Must be a colour written as #RRGGBB.") or a tier badge that does not exist or is a video ("Media <id> is a video; this takes an image."). */
             400: {
                 headers: {
                     [name: string]: unknown;
@@ -13863,7 +13892,7 @@ export interface operations {
                     "application/json": components["schemas"]["ErrorResponse"];
                 };
             };
-            /** @description `BUSINESS_RULE_VIOLATION` — The request was well-formed and the entities exist, but a domain rule forbids it — publishing a product with no price, archiving a brand products still reference, issuing more stock than a location holds, restoring a category under an archived parent ("Restore the parent category first.") or a product under an archived brand ("Restore the brand first."). Distinct from 400: nothing about the request is malformed. */
+            /** @description `BUSINESS_RULE_VIOLATION` — The request was well-formed and the entities exist, but a domain rule forbids it — publishing a product with no price, archiving a brand products still reference, deleting media a tier badge uses ("This media is still used — tier badge on Sprout of ladder version Launch. Replace or remove it first."), issuing more stock than a location holds, restoring a category under an archived parent ("Restore the parent category first.") or a product under an archived brand ("Restore the brand first."). Distinct from 400: nothing about the request is malformed. */
             422: {
                 headers: {
                     [name: string]: unknown;
@@ -13903,7 +13932,7 @@ export interface operations {
                     "*/*": components["schemas"]["CategoryResponse"];
                 };
             };
-            /** @description `VALIDATION_FAILED` — The request body could not be read, a field failed validation, a required header was absent, or a domain validation rule rejected an input the caller can correct. */
+            /** @description `VALIDATION_FAILED` — The request body could not be read, a field failed validation, a required header was absent, or a domain validation rule rejected an input the caller can correct, such as a tier colour ("Must be a colour written as #RRGGBB.") or a tier badge that does not exist or is a video ("Media <id> is a video; this takes an image."). */
             400: {
                 headers: {
                     [name: string]: unknown;
@@ -13974,7 +14003,7 @@ export interface operations {
                     "*/*": components["schemas"]["CategoryResponse"];
                 };
             };
-            /** @description `VALIDATION_FAILED` — The request body could not be read, a field failed validation, a required header was absent, or a domain validation rule rejected an input the caller can correct. */
+            /** @description `VALIDATION_FAILED` — The request body could not be read, a field failed validation, a required header was absent, or a domain validation rule rejected an input the caller can correct, such as a tier colour ("Must be a colour written as #RRGGBB.") or a tier badge that does not exist or is a video ("Media <id> is a video; this takes an image."). */
             400: {
                 headers: {
                     [name: string]: unknown;
@@ -14028,7 +14057,7 @@ export interface operations {
                     "application/json": components["schemas"]["ErrorResponse"];
                 };
             };
-            /** @description `BUSINESS_RULE_VIOLATION` — The request was well-formed and the entities exist, but a domain rule forbids it — publishing a product with no price, archiving a brand products still reference, issuing more stock than a location holds, restoring a category under an archived parent ("Restore the parent category first.") or a product under an archived brand ("Restore the brand first."). Distinct from 400: nothing about the request is malformed. */
+            /** @description `BUSINESS_RULE_VIOLATION` — The request was well-formed and the entities exist, but a domain rule forbids it — publishing a product with no price, archiving a brand products still reference, deleting media a tier badge uses ("This media is still used — tier badge on Sprout of ladder version Launch. Replace or remove it first."), issuing more stock than a location holds, restoring a category under an archived parent ("Restore the parent category first.") or a product under an archived brand ("Restore the brand first."). Distinct from 400: nothing about the request is malformed. */
             422: {
                 headers: {
                     [name: string]: unknown;
@@ -14068,7 +14097,7 @@ export interface operations {
                     "*/*": components["schemas"]["CategoryResponse"];
                 };
             };
-            /** @description `VALIDATION_FAILED` — The request body could not be read, a field failed validation, a required header was absent, or a domain validation rule rejected an input the caller can correct. */
+            /** @description `VALIDATION_FAILED` — The request body could not be read, a field failed validation, a required header was absent, or a domain validation rule rejected an input the caller can correct, such as a tier colour ("Must be a colour written as #RRGGBB.") or a tier badge that does not exist or is a video ("Media <id> is a video; this takes an image."). */
             400: {
                 headers: {
                     [name: string]: unknown;
@@ -14113,7 +14142,7 @@ export interface operations {
                     "application/json": components["schemas"]["ErrorResponse"];
                 };
             };
-            /** @description `BUSINESS_RULE_VIOLATION` — The request was well-formed and the entities exist, but a domain rule forbids it — publishing a product with no price, archiving a brand products still reference, issuing more stock than a location holds, restoring a category under an archived parent ("Restore the parent category first.") or a product under an archived brand ("Restore the brand first."). Distinct from 400: nothing about the request is malformed. */
+            /** @description `BUSINESS_RULE_VIOLATION` — The request was well-formed and the entities exist, but a domain rule forbids it — publishing a product with no price, archiving a brand products still reference, deleting media a tier badge uses ("This media is still used — tier badge on Sprout of ladder version Launch. Replace or remove it first."), issuing more stock than a location holds, restoring a category under an archived parent ("Restore the parent category first.") or a product under an archived brand ("Restore the brand first."). Distinct from 400: nothing about the request is malformed. */
             422: {
                 headers: {
                     [name: string]: unknown;
@@ -14153,7 +14182,7 @@ export interface operations {
                     "*/*": components["schemas"]["CategoryResponse"];
                 };
             };
-            /** @description `VALIDATION_FAILED` — The request body could not be read, a field failed validation, a required header was absent, or a domain validation rule rejected an input the caller can correct. */
+            /** @description `VALIDATION_FAILED` — The request body could not be read, a field failed validation, a required header was absent, or a domain validation rule rejected an input the caller can correct, such as a tier colour ("Must be a colour written as #RRGGBB.") or a tier badge that does not exist or is a video ("Media <id> is a video; this takes an image."). */
             400: {
                 headers: {
                     [name: string]: unknown;
@@ -14198,7 +14227,7 @@ export interface operations {
                     "application/json": components["schemas"]["ErrorResponse"];
                 };
             };
-            /** @description `BUSINESS_RULE_VIOLATION` — The request was well-formed and the entities exist, but a domain rule forbids it — publishing a product with no price, archiving a brand products still reference, issuing more stock than a location holds, restoring a category under an archived parent ("Restore the parent category first.") or a product under an archived brand ("Restore the brand first."). Distinct from 400: nothing about the request is malformed. */
+            /** @description `BUSINESS_RULE_VIOLATION` — The request was well-formed and the entities exist, but a domain rule forbids it — publishing a product with no price, archiving a brand products still reference, deleting media a tier badge uses ("This media is still used — tier badge on Sprout of ladder version Launch. Replace or remove it first."), issuing more stock than a location holds, restoring a category under an archived parent ("Restore the parent category first.") or a product under an archived brand ("Restore the brand first."). Distinct from 400: nothing about the request is malformed. */
             422: {
                 headers: {
                     [name: string]: unknown;
@@ -14242,7 +14271,7 @@ export interface operations {
                     "*/*": components["schemas"]["CategoryResponse"];
                 };
             };
-            /** @description `VALIDATION_FAILED` — The request body could not be read, a field failed validation, a required header was absent, or a domain validation rule rejected an input the caller can correct. */
+            /** @description `VALIDATION_FAILED` — The request body could not be read, a field failed validation, a required header was absent, or a domain validation rule rejected an input the caller can correct, such as a tier colour ("Must be a colour written as #RRGGBB.") or a tier badge that does not exist or is a video ("Media <id> is a video; this takes an image."). */
             400: {
                 headers: {
                     [name: string]: unknown;
@@ -14296,7 +14325,7 @@ export interface operations {
                     "application/json": components["schemas"]["ErrorResponse"];
                 };
             };
-            /** @description `BUSINESS_RULE_VIOLATION` — The request was well-formed and the entities exist, but a domain rule forbids it — publishing a product with no price, archiving a brand products still reference, issuing more stock than a location holds, restoring a category under an archived parent ("Restore the parent category first.") or a product under an archived brand ("Restore the brand first."). Distinct from 400: nothing about the request is malformed. */
+            /** @description `BUSINESS_RULE_VIOLATION` — The request was well-formed and the entities exist, but a domain rule forbids it — publishing a product with no price, archiving a brand products still reference, deleting media a tier badge uses ("This media is still used — tier badge on Sprout of ladder version Launch. Replace or remove it first."), issuing more stock than a location holds, restoring a category under an archived parent ("Restore the parent category first.") or a product under an archived brand ("Restore the brand first."). Distinct from 400: nothing about the request is malformed. */
             422: {
                 headers: {
                     [name: string]: unknown;
@@ -14336,7 +14365,7 @@ export interface operations {
                     "*/*": components["schemas"]["CategoryResponse"];
                 };
             };
-            /** @description `VALIDATION_FAILED` — The request body could not be read, a field failed validation, a required header was absent, or a domain validation rule rejected an input the caller can correct. */
+            /** @description `VALIDATION_FAILED` — The request body could not be read, a field failed validation, a required header was absent, or a domain validation rule rejected an input the caller can correct, such as a tier colour ("Must be a colour written as #RRGGBB.") or a tier badge that does not exist or is a video ("Media <id> is a video; this takes an image."). */
             400: {
                 headers: {
                     [name: string]: unknown;
@@ -14381,7 +14410,7 @@ export interface operations {
                     "application/json": components["schemas"]["ErrorResponse"];
                 };
             };
-            /** @description `BUSINESS_RULE_VIOLATION` — The request was well-formed and the entities exist, but a domain rule forbids it — publishing a product with no price, archiving a brand products still reference, issuing more stock than a location holds, restoring a category under an archived parent ("Restore the parent category first.") or a product under an archived brand ("Restore the brand first."). Distinct from 400: nothing about the request is malformed. */
+            /** @description `BUSINESS_RULE_VIOLATION` — The request was well-formed and the entities exist, but a domain rule forbids it — publishing a product with no price, archiving a brand products still reference, deleting media a tier badge uses ("This media is still used — tier badge on Sprout of ladder version Launch. Replace or remove it first."), issuing more stock than a location holds, restoring a category under an archived parent ("Restore the parent category first.") or a product under an archived brand ("Restore the brand first."). Distinct from 400: nothing about the request is malformed. */
             422: {
                 headers: {
                     [name: string]: unknown;
@@ -14425,7 +14454,7 @@ export interface operations {
                     "*/*": components["schemas"]["CategoryResponse"];
                 };
             };
-            /** @description `VALIDATION_FAILED` — The request body could not be read, a field failed validation, a required header was absent, or a domain validation rule rejected an input the caller can correct. */
+            /** @description `VALIDATION_FAILED` — The request body could not be read, a field failed validation, a required header was absent, or a domain validation rule rejected an input the caller can correct, such as a tier colour ("Must be a colour written as #RRGGBB.") or a tier badge that does not exist or is a video ("Media <id> is a video; this takes an image."). */
             400: {
                 headers: {
                     [name: string]: unknown;
@@ -14479,7 +14508,7 @@ export interface operations {
                     "application/json": components["schemas"]["ErrorResponse"];
                 };
             };
-            /** @description `BUSINESS_RULE_VIOLATION` — The request was well-formed and the entities exist, but a domain rule forbids it — publishing a product with no price, archiving a brand products still reference, issuing more stock than a location holds, restoring a category under an archived parent ("Restore the parent category first.") or a product under an archived brand ("Restore the brand first."). Distinct from 400: nothing about the request is malformed. */
+            /** @description `BUSINESS_RULE_VIOLATION` — The request was well-formed and the entities exist, but a domain rule forbids it — publishing a product with no price, archiving a brand products still reference, deleting media a tier badge uses ("This media is still used — tier badge on Sprout of ladder version Launch. Replace or remove it first."), issuing more stock than a location holds, restoring a category under an archived parent ("Restore the parent category first.") or a product under an archived brand ("Restore the brand first."). Distinct from 400: nothing about the request is malformed. */
             422: {
                 headers: {
                     [name: string]: unknown;
@@ -14519,7 +14548,7 @@ export interface operations {
                     "*/*": components["schemas"]["CategoryResponse"];
                 };
             };
-            /** @description `VALIDATION_FAILED` — The request body could not be read, a field failed validation, a required header was absent, or a domain validation rule rejected an input the caller can correct. */
+            /** @description `VALIDATION_FAILED` — The request body could not be read, a field failed validation, a required header was absent, or a domain validation rule rejected an input the caller can correct, such as a tier colour ("Must be a colour written as #RRGGBB.") or a tier badge that does not exist or is a video ("Media <id> is a video; this takes an image."). */
             400: {
                 headers: {
                     [name: string]: unknown;
@@ -14564,7 +14593,7 @@ export interface operations {
                     "application/json": components["schemas"]["ErrorResponse"];
                 };
             };
-            /** @description `BUSINESS_RULE_VIOLATION` — The request was well-formed and the entities exist, but a domain rule forbids it — publishing a product with no price, archiving a brand products still reference, issuing more stock than a location holds, restoring a category under an archived parent ("Restore the parent category first.") or a product under an archived brand ("Restore the brand first."). Distinct from 400: nothing about the request is malformed. */
+            /** @description `BUSINESS_RULE_VIOLATION` — The request was well-formed and the entities exist, but a domain rule forbids it — publishing a product with no price, archiving a brand products still reference, deleting media a tier badge uses ("This media is still used — tier badge on Sprout of ladder version Launch. Replace or remove it first."), issuing more stock than a location holds, restoring a category under an archived parent ("Restore the parent category first.") or a product under an archived brand ("Restore the brand first."). Distinct from 400: nothing about the request is malformed. */
             422: {
                 headers: {
                     [name: string]: unknown;
@@ -14606,7 +14635,7 @@ export interface operations {
                     "*/*": components["schemas"]["CategoryResponse"][];
                 };
             };
-            /** @description `VALIDATION_FAILED` — The request body could not be read, a field failed validation, a required header was absent, or a domain validation rule rejected an input the caller can correct. */
+            /** @description `VALIDATION_FAILED` — The request body could not be read, a field failed validation, a required header was absent, or a domain validation rule rejected an input the caller can correct, such as a tier colour ("Must be a colour written as #RRGGBB.") or a tier badge that does not exist or is a video ("Media <id> is a video; this takes an image."). */
             400: {
                 headers: {
                     [name: string]: unknown;
@@ -14651,7 +14680,7 @@ export interface operations {
                     "application/json": components["schemas"]["ErrorResponse"];
                 };
             };
-            /** @description `BUSINESS_RULE_VIOLATION` — The request was well-formed and the entities exist, but a domain rule forbids it — publishing a product with no price, archiving a brand products still reference, issuing more stock than a location holds, restoring a category under an archived parent ("Restore the parent category first.") or a product under an archived brand ("Restore the brand first."). Distinct from 400: nothing about the request is malformed. */
+            /** @description `BUSINESS_RULE_VIOLATION` — The request was well-formed and the entities exist, but a domain rule forbids it — publishing a product with no price, archiving a brand products still reference, deleting media a tier badge uses ("This media is still used — tier badge on Sprout of ladder version Launch. Replace or remove it first."), issuing more stock than a location holds, restoring a category under an archived parent ("Restore the parent category first.") or a product under an archived brand ("Restore the brand first."). Distinct from 400: nothing about the request is malformed. */
             422: {
                 headers: {
                     [name: string]: unknown;
@@ -14689,7 +14718,7 @@ export interface operations {
                     "*/*": components["schemas"]["CategoryTreeResponse"][];
                 };
             };
-            /** @description `VALIDATION_FAILED` — The request body could not be read, a field failed validation, a required header was absent, or a domain validation rule rejected an input the caller can correct. */
+            /** @description `VALIDATION_FAILED` — The request body could not be read, a field failed validation, a required header was absent, or a domain validation rule rejected an input the caller can correct, such as a tier colour ("Must be a colour written as #RRGGBB.") or a tier badge that does not exist or is a video ("Media <id> is a video; this takes an image."). */
             400: {
                 headers: {
                     [name: string]: unknown;
@@ -14748,7 +14777,7 @@ export interface operations {
                     "*/*": components["schemas"]["PageResponseEarnRulesResponse"];
                 };
             };
-            /** @description `VALIDATION_FAILED` — The request body could not be read, a field failed validation, a required header was absent, or a domain validation rule rejected an input the caller can correct. */
+            /** @description `VALIDATION_FAILED` — The request body could not be read, a field failed validation, a required header was absent, or a domain validation rule rejected an input the caller can correct, such as a tier colour ("Must be a colour written as #RRGGBB.") or a tier badge that does not exist or is a video ("Media <id> is a video; this takes an image."). */
             400: {
                 headers: {
                     [name: string]: unknown;
@@ -14808,7 +14837,7 @@ export interface operations {
                     "*/*": components["schemas"]["EarnRulesResponse"];
                 };
             };
-            /** @description `VALIDATION_FAILED` — The request body could not be read, a field failed validation, a required header was absent, or a domain validation rule rejected an input the caller can correct. */
+            /** @description `VALIDATION_FAILED` — The request body could not be read, a field failed validation, a required header was absent, or a domain validation rule rejected an input the caller can correct, such as a tier colour ("Must be a colour written as #RRGGBB.") or a tier badge that does not exist or is a video ("Media <id> is a video; this takes an image."). */
             400: {
                 headers: {
                     [name: string]: unknown;
@@ -14853,7 +14882,7 @@ export interface operations {
                     "application/json": components["schemas"]["ErrorResponse"];
                 };
             };
-            /** @description `BUSINESS_RULE_VIOLATION` — The request was well-formed and the entities exist, but a domain rule forbids it — publishing a product with no price, archiving a brand products still reference, issuing more stock than a location holds, restoring a category under an archived parent ("Restore the parent category first.") or a product under an archived brand ("Restore the brand first."). Distinct from 400: nothing about the request is malformed. */
+            /** @description `BUSINESS_RULE_VIOLATION` — The request was well-formed and the entities exist, but a domain rule forbids it — publishing a product with no price, archiving a brand products still reference, deleting media a tier badge uses ("This media is still used — tier badge on Sprout of ladder version Launch. Replace or remove it first."), issuing more stock than a location holds, restoring a category under an archived parent ("Restore the parent category first.") or a product under an archived brand ("Restore the brand first."). Distinct from 400: nothing about the request is malformed. */
             422: {
                 headers: {
                     [name: string]: unknown;
@@ -14893,7 +14922,7 @@ export interface operations {
                     "*/*": components["schemas"]["EarnRulesResponse"];
                 };
             };
-            /** @description `VALIDATION_FAILED` — The request body could not be read, a field failed validation, a required header was absent, or a domain validation rule rejected an input the caller can correct. */
+            /** @description `VALIDATION_FAILED` — The request body could not be read, a field failed validation, a required header was absent, or a domain validation rule rejected an input the caller can correct, such as a tier colour ("Must be a colour written as #RRGGBB.") or a tier badge that does not exist or is a video ("Media <id> is a video; this takes an image."). */
             400: {
                 headers: {
                     [name: string]: unknown;
@@ -14964,7 +14993,7 @@ export interface operations {
                     "*/*": components["schemas"]["EarnRulesResponse"];
                 };
             };
-            /** @description `VALIDATION_FAILED` — The request body could not be read, a field failed validation, a required header was absent, or a domain validation rule rejected an input the caller can correct. */
+            /** @description `VALIDATION_FAILED` — The request body could not be read, a field failed validation, a required header was absent, or a domain validation rule rejected an input the caller can correct, such as a tier colour ("Must be a colour written as #RRGGBB.") or a tier badge that does not exist or is a video ("Media <id> is a video; this takes an image."). */
             400: {
                 headers: {
                     [name: string]: unknown;
@@ -15018,7 +15047,7 @@ export interface operations {
                     "application/json": components["schemas"]["ErrorResponse"];
                 };
             };
-            /** @description `BUSINESS_RULE_VIOLATION` — The request was well-formed and the entities exist, but a domain rule forbids it — publishing a product with no price, archiving a brand products still reference, issuing more stock than a location holds, restoring a category under an archived parent ("Restore the parent category first.") or a product under an archived brand ("Restore the brand first."). Distinct from 400: nothing about the request is malformed. */
+            /** @description `BUSINESS_RULE_VIOLATION` — The request was well-formed and the entities exist, but a domain rule forbids it — publishing a product with no price, archiving a brand products still reference, deleting media a tier badge uses ("This media is still used — tier badge on Sprout of ladder version Launch. Replace or remove it first."), issuing more stock than a location holds, restoring a category under an archived parent ("Restore the parent category first.") or a product under an archived brand ("Restore the brand first."). Distinct from 400: nothing about the request is malformed. */
             422: {
                 headers: {
                     [name: string]: unknown;
@@ -15062,7 +15091,7 @@ export interface operations {
                     "*/*": components["schemas"]["EarnRulesResponse"];
                 };
             };
-            /** @description `VALIDATION_FAILED` — The request body could not be read, a field failed validation, a required header was absent, or a domain validation rule rejected an input the caller can correct. */
+            /** @description `VALIDATION_FAILED` — The request body could not be read, a field failed validation, a required header was absent, or a domain validation rule rejected an input the caller can correct, such as a tier colour ("Must be a colour written as #RRGGBB.") or a tier badge that does not exist or is a video ("Media <id> is a video; this takes an image."). */
             400: {
                 headers: {
                     [name: string]: unknown;
@@ -15116,7 +15145,7 @@ export interface operations {
                     "application/json": components["schemas"]["ErrorResponse"];
                 };
             };
-            /** @description `BUSINESS_RULE_VIOLATION` — The request was well-formed and the entities exist, but a domain rule forbids it — publishing a product with no price, archiving a brand products still reference, issuing more stock than a location holds, restoring a category under an archived parent ("Restore the parent category first.") or a product under an archived brand ("Restore the brand first."). Distinct from 400: nothing about the request is malformed. */
+            /** @description `BUSINESS_RULE_VIOLATION` — The request was well-formed and the entities exist, but a domain rule forbids it — publishing a product with no price, archiving a brand products still reference, deleting media a tier badge uses ("This media is still used — tier badge on Sprout of ladder version Launch. Replace or remove it first."), issuing more stock than a location holds, restoring a category under an archived parent ("Restore the parent category first.") or a product under an archived brand ("Restore the brand first."). Distinct from 400: nothing about the request is malformed. */
             422: {
                 headers: {
                     [name: string]: unknown;
@@ -15160,7 +15189,7 @@ export interface operations {
                     "*/*": components["schemas"]["EarnRulesResponse"];
                 };
             };
-            /** @description `VALIDATION_FAILED` — The request body could not be read, a field failed validation, a required header was absent, or a domain validation rule rejected an input the caller can correct. */
+            /** @description `VALIDATION_FAILED` — The request body could not be read, a field failed validation, a required header was absent, or a domain validation rule rejected an input the caller can correct, such as a tier colour ("Must be a colour written as #RRGGBB.") or a tier badge that does not exist or is a video ("Media <id> is a video; this takes an image."). */
             400: {
                 headers: {
                     [name: string]: unknown;
@@ -15214,7 +15243,7 @@ export interface operations {
                     "application/json": components["schemas"]["ErrorResponse"];
                 };
             };
-            /** @description `BUSINESS_RULE_VIOLATION` — The request was well-formed and the entities exist, but a domain rule forbids it — publishing a product with no price, archiving a brand products still reference, issuing more stock than a location holds, restoring a category under an archived parent ("Restore the parent category first.") or a product under an archived brand ("Restore the brand first."). Distinct from 400: nothing about the request is malformed. */
+            /** @description `BUSINESS_RULE_VIOLATION` — The request was well-formed and the entities exist, but a domain rule forbids it — publishing a product with no price, archiving a brand products still reference, deleting media a tier badge uses ("This media is still used — tier badge on Sprout of ladder version Launch. Replace or remove it first."), issuing more stock than a location holds, restoring a category under an archived parent ("Restore the parent category first.") or a product under an archived brand ("Restore the brand first."). Distinct from 400: nothing about the request is malformed. */
             422: {
                 headers: {
                     [name: string]: unknown;
@@ -15254,7 +15283,7 @@ export interface operations {
                     "*/*": components["schemas"]["EarnRulesResponse"];
                 };
             };
-            /** @description `VALIDATION_FAILED` — The request body could not be read, a field failed validation, a required header was absent, or a domain validation rule rejected an input the caller can correct. */
+            /** @description `VALIDATION_FAILED` — The request body could not be read, a field failed validation, a required header was absent, or a domain validation rule rejected an input the caller can correct, such as a tier colour ("Must be a colour written as #RRGGBB.") or a tier badge that does not exist or is a video ("Media <id> is a video; this takes an image."). */
             400: {
                 headers: {
                     [name: string]: unknown;
@@ -15315,7 +15344,7 @@ export interface operations {
                     "*/*": components["schemas"]["PageResponseGoodsReceiptResponse"];
                 };
             };
-            /** @description `VALIDATION_FAILED` — The request body could not be read, a field failed validation, a required header was absent, or a domain validation rule rejected an input the caller can correct. */
+            /** @description `VALIDATION_FAILED` — The request body could not be read, a field failed validation, a required header was absent, or a domain validation rule rejected an input the caller can correct, such as a tier colour ("Must be a colour written as #RRGGBB.") or a tier badge that does not exist or is a video ("Media <id> is a video; this takes an image."). */
             400: {
                 headers: {
                     [name: string]: unknown;
@@ -15379,7 +15408,7 @@ export interface operations {
                     "*/*": components["schemas"]["GoodsReceiptResponse"];
                 };
             };
-            /** @description `VALIDATION_FAILED` — The request body could not be read, a field failed validation, a required header was absent, or a domain validation rule rejected an input the caller can correct. */
+            /** @description `VALIDATION_FAILED` — The request body could not be read, a field failed validation, a required header was absent, or a domain validation rule rejected an input the caller can correct, such as a tier colour ("Must be a colour written as #RRGGBB.") or a tier badge that does not exist or is a video ("Media <id> is a video; this takes an image."). */
             400: {
                 headers: {
                     [name: string]: unknown;
@@ -15424,7 +15453,7 @@ export interface operations {
                     "application/json": components["schemas"]["ErrorResponse"];
                 };
             };
-            /** @description `BUSINESS_RULE_VIOLATION` — The request was well-formed and the entities exist, but a domain rule forbids it — publishing a product with no price, archiving a brand products still reference, issuing more stock than a location holds, restoring a category under an archived parent ("Restore the parent category first.") or a product under an archived brand ("Restore the brand first."). Distinct from 400: nothing about the request is malformed. */
+            /** @description `BUSINESS_RULE_VIOLATION` — The request was well-formed and the entities exist, but a domain rule forbids it — publishing a product with no price, archiving a brand products still reference, deleting media a tier badge uses ("This media is still used — tier badge on Sprout of ladder version Launch. Replace or remove it first."), issuing more stock than a location holds, restoring a category under an archived parent ("Restore the parent category first.") or a product under an archived brand ("Restore the brand first."). Distinct from 400: nothing about the request is malformed. */
             422: {
                 headers: {
                     [name: string]: unknown;
@@ -15464,7 +15493,7 @@ export interface operations {
                     "*/*": components["schemas"]["GoodsReceiptResponse"];
                 };
             };
-            /** @description `VALIDATION_FAILED` — The request body could not be read, a field failed validation, a required header was absent, or a domain validation rule rejected an input the caller can correct. */
+            /** @description `VALIDATION_FAILED` — The request body could not be read, a field failed validation, a required header was absent, or a domain validation rule rejected an input the caller can correct, such as a tier colour ("Must be a colour written as #RRGGBB.") or a tier badge that does not exist or is a video ("Media <id> is a video; this takes an image."). */
             400: {
                 headers: {
                     [name: string]: unknown;
@@ -15533,7 +15562,7 @@ export interface operations {
                     "*/*": components["schemas"]["PageResponseInviteResponse"];
                 };
             };
-            /** @description `VALIDATION_FAILED` — The request body could not be read, a field failed validation, a required header was absent, or a domain validation rule rejected an input the caller can correct. */
+            /** @description `VALIDATION_FAILED` — The request body could not be read, a field failed validation, a required header was absent, or a domain validation rule rejected an input the caller can correct, such as a tier colour ("Must be a colour written as #RRGGBB.") or a tier badge that does not exist or is a video ("Media <id> is a video; this takes an image."). */
             400: {
                 headers: {
                     [name: string]: unknown;
@@ -15593,7 +15622,7 @@ export interface operations {
                     "*/*": components["schemas"]["InviteResponse"];
                 };
             };
-            /** @description `VALIDATION_FAILED` — The request body could not be read, a field failed validation, a required header was absent, or a domain validation rule rejected an input the caller can correct. */
+            /** @description `VALIDATION_FAILED` — The request body could not be read, a field failed validation, a required header was absent, or a domain validation rule rejected an input the caller can correct, such as a tier colour ("Must be a colour written as #RRGGBB.") or a tier badge that does not exist or is a video ("Media <id> is a video; this takes an image."). */
             400: {
                 headers: {
                     [name: string]: unknown;
@@ -15638,7 +15667,7 @@ export interface operations {
                     "application/json": components["schemas"]["ErrorResponse"];
                 };
             };
-            /** @description `BUSINESS_RULE_VIOLATION` — The request was well-formed and the entities exist, but a domain rule forbids it — publishing a product with no price, archiving a brand products still reference, issuing more stock than a location holds, restoring a category under an archived parent ("Restore the parent category first.") or a product under an archived brand ("Restore the brand first."). Distinct from 400: nothing about the request is malformed. */
+            /** @description `BUSINESS_RULE_VIOLATION` — The request was well-formed and the entities exist, but a domain rule forbids it — publishing a product with no price, archiving a brand products still reference, deleting media a tier badge uses ("This media is still used — tier badge on Sprout of ladder version Launch. Replace or remove it first."), issuing more stock than a location holds, restoring a category under an archived parent ("Restore the parent category first.") or a product under an archived brand ("Restore the brand first."). Distinct from 400: nothing about the request is malformed. */
             422: {
                 headers: {
                     [name: string]: unknown;
@@ -15678,7 +15707,7 @@ export interface operations {
                     "*/*": components["schemas"]["InviteResponse"];
                 };
             };
-            /** @description `VALIDATION_FAILED` — The request body could not be read, a field failed validation, a required header was absent, or a domain validation rule rejected an input the caller can correct. */
+            /** @description `VALIDATION_FAILED` — The request body could not be read, a field failed validation, a required header was absent, or a domain validation rule rejected an input the caller can correct, such as a tier colour ("Must be a colour written as #RRGGBB.") or a tier badge that does not exist or is a video ("Media <id> is a video; this takes an image."). */
             400: {
                 headers: {
                     [name: string]: unknown;
@@ -15749,7 +15778,7 @@ export interface operations {
                     "*/*": components["schemas"]["InviteResponse"];
                 };
             };
-            /** @description `VALIDATION_FAILED` — The request body could not be read, a field failed validation, a required header was absent, or a domain validation rule rejected an input the caller can correct. */
+            /** @description `VALIDATION_FAILED` — The request body could not be read, a field failed validation, a required header was absent, or a domain validation rule rejected an input the caller can correct, such as a tier colour ("Must be a colour written as #RRGGBB.") or a tier badge that does not exist or is a video ("Media <id> is a video; this takes an image."). */
             400: {
                 headers: {
                     [name: string]: unknown;
@@ -15803,7 +15832,7 @@ export interface operations {
                     "application/json": components["schemas"]["ErrorResponse"];
                 };
             };
-            /** @description `BUSINESS_RULE_VIOLATION` — The request was well-formed and the entities exist, but a domain rule forbids it — publishing a product with no price, archiving a brand products still reference, issuing more stock than a location holds, restoring a category under an archived parent ("Restore the parent category first.") or a product under an archived brand ("Restore the brand first."). Distinct from 400: nothing about the request is malformed. */
+            /** @description `BUSINESS_RULE_VIOLATION` — The request was well-formed and the entities exist, but a domain rule forbids it — publishing a product with no price, archiving a brand products still reference, deleting media a tier badge uses ("This media is still used — tier badge on Sprout of ladder version Launch. Replace or remove it first."), issuing more stock than a location holds, restoring a category under an archived parent ("Restore the parent category first.") or a product under an archived brand ("Restore the brand first."). Distinct from 400: nothing about the request is malformed. */
             422: {
                 headers: {
                     [name: string]: unknown;
@@ -15844,7 +15873,7 @@ export interface operations {
                     "*/*": components["schemas"]["PageResponseClaimIntakeResponse"];
                 };
             };
-            /** @description `VALIDATION_FAILED` — The request body could not be read, a field failed validation, a required header was absent, or a domain validation rule rejected an input the caller can correct. */
+            /** @description `VALIDATION_FAILED` — The request body could not be read, a field failed validation, a required header was absent, or a domain validation rule rejected an input the caller can correct, such as a tier colour ("Must be a colour written as #RRGGBB.") or a tier badge that does not exist or is a video ("Media <id> is a video; this takes an image."). */
             400: {
                 headers: {
                     [name: string]: unknown;
@@ -15900,7 +15929,7 @@ export interface operations {
                     "*/*": components["schemas"]["DrainResponse"];
                 };
             };
-            /** @description `VALIDATION_FAILED` — The request body could not be read, a field failed validation, a required header was absent, or a domain validation rule rejected an input the caller can correct. */
+            /** @description `VALIDATION_FAILED` — The request body could not be read, a field failed validation, a required header was absent, or a domain validation rule rejected an input the caller can correct, such as a tier colour ("Must be a colour written as #RRGGBB.") or a tier badge that does not exist or is a video ("Media <id> is a video; this takes an image."). */
             400: {
                 headers: {
                     [name: string]: unknown;
@@ -15936,7 +15965,7 @@ export interface operations {
                     "application/json": components["schemas"]["ErrorResponse"];
                 };
             };
-            /** @description `BUSINESS_RULE_VIOLATION` — The request was well-formed and the entities exist, but a domain rule forbids it — publishing a product with no price, archiving a brand products still reference, issuing more stock than a location holds, restoring a category under an archived parent ("Restore the parent category first.") or a product under an archived brand ("Restore the brand first."). Distinct from 400: nothing about the request is malformed. */
+            /** @description `BUSINESS_RULE_VIOLATION` — The request was well-formed and the entities exist, but a domain rule forbids it — publishing a product with no price, archiving a brand products still reference, deleting media a tier badge uses ("This media is still used — tier badge on Sprout of ladder version Launch. Replace or remove it first."), issuing more stock than a location holds, restoring a category under an archived parent ("Restore the parent category first.") or a product under an archived brand ("Restore the brand first."). Distinct from 400: nothing about the request is malformed. */
             422: {
                 headers: {
                     [name: string]: unknown;
@@ -15977,7 +16006,7 @@ export interface operations {
                     "*/*": components["schemas"]["PageResponseReferralResponse"];
                 };
             };
-            /** @description `VALIDATION_FAILED` — The request body could not be read, a field failed validation, a required header was absent, or a domain validation rule rejected an input the caller can correct. */
+            /** @description `VALIDATION_FAILED` — The request body could not be read, a field failed validation, a required header was absent, or a domain validation rule rejected an input the caller can correct, such as a tier colour ("Must be a colour written as #RRGGBB.") or a tier badge that does not exist or is a video ("Media <id> is a video; this takes an image."). */
             400: {
                 headers: {
                     [name: string]: unknown;
@@ -16036,7 +16065,7 @@ export interface operations {
                     "*/*": components["schemas"]["PageResponseInviteIntakeResponse"];
                 };
             };
-            /** @description `VALIDATION_FAILED` — The request body could not be read, a field failed validation, a required header was absent, or a domain validation rule rejected an input the caller can correct. */
+            /** @description `VALIDATION_FAILED` — The request body could not be read, a field failed validation, a required header was absent, or a domain validation rule rejected an input the caller can correct, such as a tier colour ("Must be a colour written as #RRGGBB.") or a tier badge that does not exist or is a video ("Media <id> is a video; this takes an image."). */
             400: {
                 headers: {
                     [name: string]: unknown;
@@ -16110,7 +16139,7 @@ export interface operations {
                     "*/*": components["schemas"]["PageResponseLoginEventResponse"];
                 };
             };
-            /** @description `VALIDATION_FAILED` — The request body could not be read, a field failed validation, a required header was absent, or a domain validation rule rejected an input the caller can correct. */
+            /** @description `VALIDATION_FAILED` — The request body could not be read, a field failed validation, a required header was absent, or a domain validation rule rejected an input the caller can correct, such as a tier colour ("Must be a colour written as #RRGGBB.") or a tier badge that does not exist or is a video ("Media <id> is a video; this takes an image."). */
             400: {
                 headers: {
                     [name: string]: unknown;
@@ -16177,7 +16206,7 @@ export interface operations {
                     "*/*": components["schemas"]["PageResponseMediaResponse"];
                 };
             };
-            /** @description `VALIDATION_FAILED` — The request body could not be read, a field failed validation, a required header was absent, or a domain validation rule rejected an input the caller can correct. */
+            /** @description `VALIDATION_FAILED` — The request body could not be read, a field failed validation, a required header was absent, or a domain validation rule rejected an input the caller can correct, such as a tier colour ("Must be a colour written as #RRGGBB.") or a tier badge that does not exist or is a video ("Media <id> is a video; this takes an image."). */
             400: {
                 headers: {
                     [name: string]: unknown;
@@ -16235,7 +16264,7 @@ export interface operations {
                     "*/*": components["schemas"]["MediaResponse"];
                 };
             };
-            /** @description `VALIDATION_FAILED` — The request body could not be read, a field failed validation, a required header was absent, or a domain validation rule rejected an input the caller can correct. */
+            /** @description `VALIDATION_FAILED` — The request body could not be read, a field failed validation, a required header was absent, or a domain validation rule rejected an input the caller can correct, such as a tier colour ("Must be a colour written as #RRGGBB.") or a tier badge that does not exist or is a video ("Media <id> is a video; this takes an image."). */
             400: {
                 headers: {
                     [name: string]: unknown;
@@ -16300,7 +16329,7 @@ export interface operations {
                 };
                 content?: never;
             };
-            /** @description `VALIDATION_FAILED` — The request body could not be read, a field failed validation, a required header was absent, or a domain validation rule rejected an input the caller can correct. */
+            /** @description `VALIDATION_FAILED` — The request body could not be read, a field failed validation, a required header was absent, or a domain validation rule rejected an input the caller can correct, such as a tier colour ("Must be a colour written as #RRGGBB.") or a tier badge that does not exist or is a video ("Media <id> is a video; this takes an image."). */
             400: {
                 headers: {
                     [name: string]: unknown;
@@ -16345,7 +16374,7 @@ export interface operations {
                     "application/json": components["schemas"]["ErrorResponse"];
                 };
             };
-            /** @description `BUSINESS_RULE_VIOLATION` — The request was well-formed and the entities exist, but a domain rule forbids it — publishing a product with no price, archiving a brand products still reference, issuing more stock than a location holds, restoring a category under an archived parent ("Restore the parent category first.") or a product under an archived brand ("Restore the brand first."). Distinct from 400: nothing about the request is malformed. */
+            /** @description `BUSINESS_RULE_VIOLATION` — The request was well-formed and the entities exist, but a domain rule forbids it — publishing a product with no price, archiving a brand products still reference, deleting media a tier badge uses ("This media is still used — tier badge on Sprout of ladder version Launch. Replace or remove it first."), issuing more stock than a location holds, restoring a category under an archived parent ("Restore the parent category first.") or a product under an archived brand ("Restore the brand first."). Distinct from 400: nothing about the request is malformed. */
             422: {
                 headers: {
                     [name: string]: unknown;
@@ -16385,7 +16414,7 @@ export interface operations {
                     "*/*": components["schemas"]["MediaResponse"];
                 };
             };
-            /** @description `VALIDATION_FAILED` — The request body could not be read, a field failed validation, a required header was absent, or a domain validation rule rejected an input the caller can correct. */
+            /** @description `VALIDATION_FAILED` — The request body could not be read, a field failed validation, a required header was absent, or a domain validation rule rejected an input the caller can correct, such as a tier colour ("Must be a colour written as #RRGGBB.") or a tier badge that does not exist or is a video ("Media <id> is a video; this takes an image."). */
             400: {
                 headers: {
                     [name: string]: unknown;
@@ -16430,7 +16459,7 @@ export interface operations {
                     "application/json": components["schemas"]["ErrorResponse"];
                 };
             };
-            /** @description `BUSINESS_RULE_VIOLATION` — The request was well-formed and the entities exist, but a domain rule forbids it — publishing a product with no price, archiving a brand products still reference, issuing more stock than a location holds, restoring a category under an archived parent ("Restore the parent category first.") or a product under an archived brand ("Restore the brand first."). Distinct from 400: nothing about the request is malformed. */
+            /** @description `BUSINESS_RULE_VIOLATION` — The request was well-formed and the entities exist, but a domain rule forbids it — publishing a product with no price, archiving a brand products still reference, deleting media a tier badge uses ("This media is still used — tier badge on Sprout of ladder version Launch. Replace or remove it first."), issuing more stock than a location holds, restoring a category under an archived parent ("Restore the parent category first.") or a product under an archived brand ("Restore the brand first."). Distinct from 400: nothing about the request is malformed. */
             422: {
                 headers: {
                     [name: string]: unknown;
@@ -16470,7 +16499,7 @@ export interface operations {
                     "*/*": components["schemas"]["MediaReferenceResponse"][];
                 };
             };
-            /** @description `VALIDATION_FAILED` — The request body could not be read, a field failed validation, a required header was absent, or a domain validation rule rejected an input the caller can correct. */
+            /** @description `VALIDATION_FAILED` — The request body could not be read, a field failed validation, a required header was absent, or a domain validation rule rejected an input the caller can correct, such as a tier colour ("Must be a colour written as #RRGGBB.") or a tier badge that does not exist or is a video ("Media <id> is a video; this takes an image."). */
             400: {
                 headers: {
                     [name: string]: unknown;
@@ -16539,7 +16568,7 @@ export interface operations {
                     "*/*": components["schemas"]["IssuedUploadResponse"];
                 };
             };
-            /** @description `VALIDATION_FAILED` — The request body could not be read, a field failed validation, a required header was absent, or a domain validation rule rejected an input the caller can correct. */
+            /** @description `VALIDATION_FAILED` — The request body could not be read, a field failed validation, a required header was absent, or a domain validation rule rejected an input the caller can correct, such as a tier colour ("Must be a colour written as #RRGGBB.") or a tier badge that does not exist or is a video ("Media <id> is a video; this takes an image."). */
             400: {
                 headers: {
                     [name: string]: unknown;
@@ -16584,7 +16613,7 @@ export interface operations {
                     "application/json": components["schemas"]["ErrorResponse"];
                 };
             };
-            /** @description `BUSINESS_RULE_VIOLATION` — The request was well-formed and the entities exist, but a domain rule forbids it — publishing a product with no price, archiving a brand products still reference, issuing more stock than a location holds, restoring a category under an archived parent ("Restore the parent category first.") or a product under an archived brand ("Restore the brand first."). Distinct from 400: nothing about the request is malformed. */
+            /** @description `BUSINESS_RULE_VIOLATION` — The request was well-formed and the entities exist, but a domain rule forbids it — publishing a product with no price, archiving a brand products still reference, deleting media a tier badge uses ("This media is still used — tier badge on Sprout of ladder version Launch. Replace or remove it first."), issuing more stock than a location holds, restoring a category under an archived parent ("Restore the parent category first.") or a product under an archived brand ("Restore the brand first."). Distinct from 400: nothing about the request is malformed. */
             422: {
                 headers: {
                     [name: string]: unknown;
@@ -16622,7 +16651,7 @@ export interface operations {
                     "*/*": components["schemas"]["CycleRunResponse"];
                 };
             };
-            /** @description `VALIDATION_FAILED` — The request body could not be read, a field failed validation, a required header was absent, or a domain validation rule rejected an input the caller can correct. */
+            /** @description `VALIDATION_FAILED` — The request body could not be read, a field failed validation, a required header was absent, or a domain validation rule rejected an input the caller can correct, such as a tier colour ("Must be a colour written as #RRGGBB.") or a tier badge that does not exist or is a video ("Media <id> is a video; this takes an image."). */
             400: {
                 headers: {
                     [name: string]: unknown;
@@ -16658,7 +16687,7 @@ export interface operations {
                     "application/json": components["schemas"]["ErrorResponse"];
                 };
             };
-            /** @description `BUSINESS_RULE_VIOLATION` — The request was well-formed and the entities exist, but a domain rule forbids it — publishing a product with no price, archiving a brand products still reference, issuing more stock than a location holds, restoring a category under an archived parent ("Restore the parent category first.") or a product under an archived brand ("Restore the brand first."). Distinct from 400: nothing about the request is malformed. */
+            /** @description `BUSINESS_RULE_VIOLATION` — The request was well-formed and the entities exist, but a domain rule forbids it — publishing a product with no price, archiving a brand products still reference, deleting media a tier badge uses ("This media is still used — tier badge on Sprout of ladder version Launch. Replace or remove it first."), issuing more stock than a location holds, restoring a category under an archived parent ("Restore the parent category first.") or a product under an archived brand ("Restore the brand first."). Distinct from 400: nothing about the request is malformed. */
             422: {
                 headers: {
                     [name: string]: unknown;
@@ -16699,7 +16728,7 @@ export interface operations {
                     "*/*": components["schemas"]["ResolvedTierResponse"];
                 };
             };
-            /** @description `VALIDATION_FAILED` — The request body could not be read, a field failed validation, a required header was absent, or a domain validation rule rejected an input the caller can correct. */
+            /** @description `VALIDATION_FAILED` — The request body could not be read, a field failed validation, a required header was absent, or a domain validation rule rejected an input the caller can correct, such as a tier colour ("Must be a colour written as #RRGGBB.") or a tier badge that does not exist or is a video ("Media <id> is a video; this takes an image."). */
             400: {
                 headers: {
                     [name: string]: unknown;
@@ -16757,7 +16786,7 @@ export interface operations {
                     "*/*": components["schemas"]["UserTierResponse"];
                 };
             };
-            /** @description `VALIDATION_FAILED` — The request body could not be read, a field failed validation, a required header was absent, or a domain validation rule rejected an input the caller can correct. */
+            /** @description `VALIDATION_FAILED` — The request body could not be read, a field failed validation, a required header was absent, or a domain validation rule rejected an input the caller can correct, such as a tier colour ("Must be a colour written as #RRGGBB.") or a tier badge that does not exist or is a video ("Media <id> is a video; this takes an image."). */
             400: {
                 headers: {
                     [name: string]: unknown;
@@ -16826,7 +16855,7 @@ export interface operations {
                     "*/*": components["schemas"]["PageResponseTierTransitionResponse"];
                 };
             };
-            /** @description `VALIDATION_FAILED` — The request body could not be read, a field failed validation, a required header was absent, or a domain validation rule rejected an input the caller can correct. */
+            /** @description `VALIDATION_FAILED` — The request body could not be read, a field failed validation, a required header was absent, or a domain validation rule rejected an input the caller can correct, such as a tier colour ("Must be a colour written as #RRGGBB.") or a tier badge that does not exist or is a video ("Media <id> is a video; this takes an image."). */
             400: {
                 headers: {
                     [name: string]: unknown;
@@ -16894,7 +16923,7 @@ export interface operations {
                     "*/*": components["schemas"]["PageResponseVersionResponse"];
                 };
             };
-            /** @description `VALIDATION_FAILED` — The request body could not be read, a field failed validation, a required header was absent, or a domain validation rule rejected an input the caller can correct. */
+            /** @description `VALIDATION_FAILED` — The request body could not be read, a field failed validation, a required header was absent, or a domain validation rule rejected an input the caller can correct, such as a tier colour ("Must be a colour written as #RRGGBB.") or a tier badge that does not exist or is a video ("Media <id> is a video; this takes an image."). */
             400: {
                 headers: {
                     [name: string]: unknown;
@@ -16954,7 +16983,7 @@ export interface operations {
                     "*/*": components["schemas"]["VersionResponse"];
                 };
             };
-            /** @description `VALIDATION_FAILED` — The request body could not be read, a field failed validation, a required header was absent, or a domain validation rule rejected an input the caller can correct. */
+            /** @description `VALIDATION_FAILED` — The request body could not be read, a field failed validation, a required header was absent, or a domain validation rule rejected an input the caller can correct, such as a tier colour ("Must be a colour written as #RRGGBB.") or a tier badge that does not exist or is a video ("Media <id> is a video; this takes an image."). */
             400: {
                 headers: {
                     [name: string]: unknown;
@@ -16999,7 +17028,7 @@ export interface operations {
                     "application/json": components["schemas"]["ErrorResponse"];
                 };
             };
-            /** @description `BUSINESS_RULE_VIOLATION` — The request was well-formed and the entities exist, but a domain rule forbids it — publishing a product with no price, archiving a brand products still reference, issuing more stock than a location holds, restoring a category under an archived parent ("Restore the parent category first.") or a product under an archived brand ("Restore the brand first."). Distinct from 400: nothing about the request is malformed. */
+            /** @description `BUSINESS_RULE_VIOLATION` — The request was well-formed and the entities exist, but a domain rule forbids it — publishing a product with no price, archiving a brand products still reference, deleting media a tier badge uses ("This media is still used — tier badge on Sprout of ladder version Launch. Replace or remove it first."), issuing more stock than a location holds, restoring a category under an archived parent ("Restore the parent category first.") or a product under an archived brand ("Restore the brand first."). Distinct from 400: nothing about the request is malformed. */
             422: {
                 headers: {
                     [name: string]: unknown;
@@ -17039,7 +17068,7 @@ export interface operations {
                     "*/*": components["schemas"]["VersionResponse"];
                 };
             };
-            /** @description `VALIDATION_FAILED` — The request body could not be read, a field failed validation, a required header was absent, or a domain validation rule rejected an input the caller can correct. */
+            /** @description `VALIDATION_FAILED` — The request body could not be read, a field failed validation, a required header was absent, or a domain validation rule rejected an input the caller can correct, such as a tier colour ("Must be a colour written as #RRGGBB.") or a tier badge that does not exist or is a video ("Media <id> is a video; this takes an image."). */
             400: {
                 headers: {
                     [name: string]: unknown;
@@ -17110,7 +17139,7 @@ export interface operations {
                     "*/*": components["schemas"]["VersionResponse"];
                 };
             };
-            /** @description `VALIDATION_FAILED` — The request body could not be read, a field failed validation, a required header was absent, or a domain validation rule rejected an input the caller can correct. */
+            /** @description `VALIDATION_FAILED` — The request body could not be read, a field failed validation, a required header was absent, or a domain validation rule rejected an input the caller can correct, such as a tier colour ("Must be a colour written as #RRGGBB.") or a tier badge that does not exist or is a video ("Media <id> is a video; this takes an image."). */
             400: {
                 headers: {
                     [name: string]: unknown;
@@ -17164,7 +17193,7 @@ export interface operations {
                     "application/json": components["schemas"]["ErrorResponse"];
                 };
             };
-            /** @description `BUSINESS_RULE_VIOLATION` — The request was well-formed and the entities exist, but a domain rule forbids it — publishing a product with no price, archiving a brand products still reference, issuing more stock than a location holds, restoring a category under an archived parent ("Restore the parent category first.") or a product under an archived brand ("Restore the brand first."). Distinct from 400: nothing about the request is malformed. */
+            /** @description `BUSINESS_RULE_VIOLATION` — The request was well-formed and the entities exist, but a domain rule forbids it — publishing a product with no price, archiving a brand products still reference, deleting media a tier badge uses ("This media is still used — tier badge on Sprout of ladder version Launch. Replace or remove it first."), issuing more stock than a location holds, restoring a category under an archived parent ("Restore the parent category first.") or a product under an archived brand ("Restore the brand first."). Distinct from 400: nothing about the request is malformed. */
             422: {
                 headers: {
                     [name: string]: unknown;
@@ -17208,7 +17237,7 @@ export interface operations {
                     "*/*": components["schemas"]["VersionResponse"];
                 };
             };
-            /** @description `VALIDATION_FAILED` — The request body could not be read, a field failed validation, a required header was absent, or a domain validation rule rejected an input the caller can correct. */
+            /** @description `VALIDATION_FAILED` — The request body could not be read, a field failed validation, a required header was absent, or a domain validation rule rejected an input the caller can correct, such as a tier colour ("Must be a colour written as #RRGGBB.") or a tier badge that does not exist or is a video ("Media <id> is a video; this takes an image."). */
             400: {
                 headers: {
                     [name: string]: unknown;
@@ -17262,7 +17291,7 @@ export interface operations {
                     "application/json": components["schemas"]["ErrorResponse"];
                 };
             };
-            /** @description `BUSINESS_RULE_VIOLATION` — The request was well-formed and the entities exist, but a domain rule forbids it — publishing a product with no price, archiving a brand products still reference, issuing more stock than a location holds, restoring a category under an archived parent ("Restore the parent category first.") or a product under an archived brand ("Restore the brand first."). Distinct from 400: nothing about the request is malformed. */
+            /** @description `BUSINESS_RULE_VIOLATION` — The request was well-formed and the entities exist, but a domain rule forbids it — publishing a product with no price, archiving a brand products still reference, deleting media a tier badge uses ("This media is still used — tier badge on Sprout of ladder version Launch. Replace or remove it first."), issuing more stock than a location holds, restoring a category under an archived parent ("Restore the parent category first.") or a product under an archived brand ("Restore the brand first."). Distinct from 400: nothing about the request is malformed. */
             422: {
                 headers: {
                     [name: string]: unknown;
@@ -17306,7 +17335,7 @@ export interface operations {
                     "*/*": components["schemas"]["VersionResponse"];
                 };
             };
-            /** @description `VALIDATION_FAILED` — The request body could not be read, a field failed validation, a required header was absent, or a domain validation rule rejected an input the caller can correct. */
+            /** @description `VALIDATION_FAILED` — The request body could not be read, a field failed validation, a required header was absent, or a domain validation rule rejected an input the caller can correct, such as a tier colour ("Must be a colour written as #RRGGBB.") or a tier badge that does not exist or is a video ("Media <id> is a video; this takes an image."). */
             400: {
                 headers: {
                     [name: string]: unknown;
@@ -17360,7 +17389,7 @@ export interface operations {
                     "application/json": components["schemas"]["ErrorResponse"];
                 };
             };
-            /** @description `BUSINESS_RULE_VIOLATION` — The request was well-formed and the entities exist, but a domain rule forbids it — publishing a product with no price, archiving a brand products still reference, issuing more stock than a location holds, restoring a category under an archived parent ("Restore the parent category first.") or a product under an archived brand ("Restore the brand first."). Distinct from 400: nothing about the request is malformed. */
+            /** @description `BUSINESS_RULE_VIOLATION` — The request was well-formed and the entities exist, but a domain rule forbids it — publishing a product with no price, archiving a brand products still reference, deleting media a tier badge uses ("This media is still used — tier badge on Sprout of ladder version Launch. Replace or remove it first."), issuing more stock than a location holds, restoring a category under an archived parent ("Restore the parent category first.") or a product under an archived brand ("Restore the brand first."). Distinct from 400: nothing about the request is malformed. */
             422: {
                 headers: {
                     [name: string]: unknown;
@@ -17400,7 +17429,7 @@ export interface operations {
                     "*/*": components["schemas"]["VersionResponse"];
                 };
             };
-            /** @description `VALIDATION_FAILED` — The request body could not be read, a field failed validation, a required header was absent, or a domain validation rule rejected an input the caller can correct. */
+            /** @description `VALIDATION_FAILED` — The request body could not be read, a field failed validation, a required header was absent, or a domain validation rule rejected an input the caller can correct, such as a tier colour ("Must be a colour written as #RRGGBB.") or a tier badge that does not exist or is a video ("Media <id> is a video; this takes an image."). */
             400: {
                 headers: {
                     [name: string]: unknown;
@@ -17463,7 +17492,7 @@ export interface operations {
                     "*/*": components["schemas"]["PageResponseOrderSummaryResponse"];
                 };
             };
-            /** @description `VALIDATION_FAILED` — The request body could not be read, a field failed validation, a required header was absent, or a domain validation rule rejected an input the caller can correct. */
+            /** @description `VALIDATION_FAILED` — The request body could not be read, a field failed validation, a required header was absent, or a domain validation rule rejected an input the caller can correct, such as a tier colour ("Must be a colour written as #RRGGBB.") or a tier badge that does not exist or is a video ("Media <id> is a video; this takes an image."). */
             400: {
                 headers: {
                     [name: string]: unknown;
@@ -17521,7 +17550,7 @@ export interface operations {
                     "*/*": components["schemas"]["OrderDetailResponse"];
                 };
             };
-            /** @description `VALIDATION_FAILED` — The request body could not be read, a field failed validation, a required header was absent, or a domain validation rule rejected an input the caller can correct. */
+            /** @description `VALIDATION_FAILED` — The request body could not be read, a field failed validation, a required header was absent, or a domain validation rule rejected an input the caller can correct, such as a tier colour ("Must be a colour written as #RRGGBB.") or a tier badge that does not exist or is a video ("Media <id> is a video; this takes an image."). */
             400: {
                 headers: {
                     [name: string]: unknown;
@@ -17594,7 +17623,7 @@ export interface operations {
                     "*/*": components["schemas"]["OrderDetailResponse"];
                 };
             };
-            /** @description `VALIDATION_FAILED` — The request body could not be read, a field failed validation, a required header was absent, or a domain validation rule rejected an input the caller can correct. */
+            /** @description `VALIDATION_FAILED` — The request body could not be read, a field failed validation, a required header was absent, or a domain validation rule rejected an input the caller can correct, such as a tier colour ("Must be a colour written as #RRGGBB.") or a tier badge that does not exist or is a video ("Media <id> is a video; this takes an image."). */
             400: {
                 headers: {
                     [name: string]: unknown;
@@ -17648,7 +17677,7 @@ export interface operations {
                     "application/json": components["schemas"]["ErrorResponse"];
                 };
             };
-            /** @description `BUSINESS_RULE_VIOLATION` — The request was well-formed and the entities exist, but a domain rule forbids it — publishing a product with no price, archiving a brand products still reference, issuing more stock than a location holds, restoring a category under an archived parent ("Restore the parent category first.") or a product under an archived brand ("Restore the brand first."). Distinct from 400: nothing about the request is malformed. */
+            /** @description `BUSINESS_RULE_VIOLATION` — The request was well-formed and the entities exist, but a domain rule forbids it — publishing a product with no price, archiving a brand products still reference, deleting media a tier badge uses ("This media is still used — tier badge on Sprout of ladder version Launch. Replace or remove it first."), issuing more stock than a location holds, restoring a category under an archived parent ("Restore the parent category first.") or a product under an archived brand ("Restore the brand first."). Distinct from 400: nothing about the request is malformed. */
             422: {
                 headers: {
                     [name: string]: unknown;
@@ -17694,7 +17723,7 @@ export interface operations {
                     "*/*": components["schemas"]["OrderDetailResponse"];
                 };
             };
-            /** @description `VALIDATION_FAILED` — The request body could not be read, a field failed validation, a required header was absent, or a domain validation rule rejected an input the caller can correct. */
+            /** @description `VALIDATION_FAILED` — The request body could not be read, a field failed validation, a required header was absent, or a domain validation rule rejected an input the caller can correct, such as a tier colour ("Must be a colour written as #RRGGBB.") or a tier badge that does not exist or is a video ("Media <id> is a video; this takes an image."). */
             400: {
                 headers: {
                     [name: string]: unknown;
@@ -17748,7 +17777,7 @@ export interface operations {
                     "application/json": components["schemas"]["ErrorResponse"];
                 };
             };
-            /** @description `BUSINESS_RULE_VIOLATION` — The request was well-formed and the entities exist, but a domain rule forbids it — publishing a product with no price, archiving a brand products still reference, issuing more stock than a location holds, restoring a category under an archived parent ("Restore the parent category first.") or a product under an archived brand ("Restore the brand first."). Distinct from 400: nothing about the request is malformed. */
+            /** @description `BUSINESS_RULE_VIOLATION` — The request was well-formed and the entities exist, but a domain rule forbids it — publishing a product with no price, archiving a brand products still reference, deleting media a tier badge uses ("This media is still used — tier badge on Sprout of ladder version Launch. Replace or remove it first."), issuing more stock than a location holds, restoring a category under an archived parent ("Restore the parent category first.") or a product under an archived brand ("Restore the brand first."). Distinct from 400: nothing about the request is malformed. */
             422: {
                 headers: {
                     [name: string]: unknown;
@@ -17788,7 +17817,7 @@ export interface operations {
                     "*/*": components["schemas"]["InvoiceResponse"];
                 };
             };
-            /** @description `VALIDATION_FAILED` — The request body could not be read, a field failed validation, a required header was absent, or a domain validation rule rejected an input the caller can correct. */
+            /** @description `VALIDATION_FAILED` — The request body could not be read, a field failed validation, a required header was absent, or a domain validation rule rejected an input the caller can correct, such as a tier colour ("Must be a colour written as #RRGGBB.") or a tier badge that does not exist or is a video ("Media <id> is a video; this takes an image."). */
             400: {
                 headers: {
                     [name: string]: unknown;
@@ -17861,7 +17890,7 @@ export interface operations {
                     "*/*": components["schemas"]["OrderDetailResponse"];
                 };
             };
-            /** @description `VALIDATION_FAILED` — The request body could not be read, a field failed validation, a required header was absent, or a domain validation rule rejected an input the caller can correct. */
+            /** @description `VALIDATION_FAILED` — The request body could not be read, a field failed validation, a required header was absent, or a domain validation rule rejected an input the caller can correct, such as a tier colour ("Must be a colour written as #RRGGBB.") or a tier badge that does not exist or is a video ("Media <id> is a video; this takes an image."). */
             400: {
                 headers: {
                     [name: string]: unknown;
@@ -17915,7 +17944,7 @@ export interface operations {
                     "application/json": components["schemas"]["ErrorResponse"];
                 };
             };
-            /** @description `BUSINESS_RULE_VIOLATION` — The request was well-formed and the entities exist, but a domain rule forbids it — publishing a product with no price, archiving a brand products still reference, issuing more stock than a location holds, restoring a category under an archived parent ("Restore the parent category first.") or a product under an archived brand ("Restore the brand first."). Distinct from 400: nothing about the request is malformed. */
+            /** @description `BUSINESS_RULE_VIOLATION` — The request was well-formed and the entities exist, but a domain rule forbids it — publishing a product with no price, archiving a brand products still reference, deleting media a tier badge uses ("This media is still used — tier badge on Sprout of ladder version Launch. Replace or remove it first."), issuing more stock than a location holds, restoring a category under an archived parent ("Restore the parent category first.") or a product under an archived brand ("Restore the brand first."). Distinct from 400: nothing about the request is malformed. */
             422: {
                 headers: {
                     [name: string]: unknown;
@@ -17961,7 +17990,7 @@ export interface operations {
                     "*/*": components["schemas"]["OrderDetailResponse"];
                 };
             };
-            /** @description `VALIDATION_FAILED` — The request body could not be read, a field failed validation, a required header was absent, or a domain validation rule rejected an input the caller can correct. */
+            /** @description `VALIDATION_FAILED` — The request body could not be read, a field failed validation, a required header was absent, or a domain validation rule rejected an input the caller can correct, such as a tier colour ("Must be a colour written as #RRGGBB.") or a tier badge that does not exist or is a video ("Media <id> is a video; this takes an image."). */
             400: {
                 headers: {
                     [name: string]: unknown;
@@ -18015,7 +18044,7 @@ export interface operations {
                     "application/json": components["schemas"]["ErrorResponse"];
                 };
             };
-            /** @description `BUSINESS_RULE_VIOLATION` — The request was well-formed and the entities exist, but a domain rule forbids it — publishing a product with no price, archiving a brand products still reference, issuing more stock than a location holds, restoring a category under an archived parent ("Restore the parent category first.") or a product under an archived brand ("Restore the brand first."). Distinct from 400: nothing about the request is malformed. */
+            /** @description `BUSINESS_RULE_VIOLATION` — The request was well-formed and the entities exist, but a domain rule forbids it — publishing a product with no price, archiving a brand products still reference, deleting media a tier badge uses ("This media is still used — tier badge on Sprout of ladder version Launch. Replace or remove it first."), issuing more stock than a location holds, restoring a category under an archived parent ("Restore the parent category first.") or a product under an archived brand ("Restore the brand first."). Distinct from 400: nothing about the request is malformed. */
             422: {
                 headers: {
                     [name: string]: unknown;
@@ -18061,7 +18090,7 @@ export interface operations {
                     "*/*": components["schemas"]["OrderDetailResponse"];
                 };
             };
-            /** @description `VALIDATION_FAILED` — The request body could not be read, a field failed validation, a required header was absent, or a domain validation rule rejected an input the caller can correct. */
+            /** @description `VALIDATION_FAILED` — The request body could not be read, a field failed validation, a required header was absent, or a domain validation rule rejected an input the caller can correct, such as a tier colour ("Must be a colour written as #RRGGBB.") or a tier badge that does not exist or is a video ("Media <id> is a video; this takes an image."). */
             400: {
                 headers: {
                     [name: string]: unknown;
@@ -18115,7 +18144,7 @@ export interface operations {
                     "application/json": components["schemas"]["ErrorResponse"];
                 };
             };
-            /** @description `BUSINESS_RULE_VIOLATION` — The request was well-formed and the entities exist, but a domain rule forbids it — publishing a product with no price, archiving a brand products still reference, issuing more stock than a location holds, restoring a category under an archived parent ("Restore the parent category first.") or a product under an archived brand ("Restore the brand first."). Distinct from 400: nothing about the request is malformed. */
+            /** @description `BUSINESS_RULE_VIOLATION` — The request was well-formed and the entities exist, but a domain rule forbids it — publishing a product with no price, archiving a brand products still reference, deleting media a tier badge uses ("This media is still used — tier badge on Sprout of ladder version Launch. Replace or remove it first."), issuing more stock than a location holds, restoring a category under an archived parent ("Restore the parent category first.") or a product under an archived brand ("Restore the brand first."). Distinct from 400: nothing about the request is malformed. */
             422: {
                 headers: {
                     [name: string]: unknown;
@@ -18161,7 +18190,7 @@ export interface operations {
                     "*/*": components["schemas"]["OrderDetailResponse"];
                 };
             };
-            /** @description `VALIDATION_FAILED` — The request body could not be read, a field failed validation, a required header was absent, or a domain validation rule rejected an input the caller can correct. */
+            /** @description `VALIDATION_FAILED` — The request body could not be read, a field failed validation, a required header was absent, or a domain validation rule rejected an input the caller can correct, such as a tier colour ("Must be a colour written as #RRGGBB.") or a tier badge that does not exist or is a video ("Media <id> is a video; this takes an image."). */
             400: {
                 headers: {
                     [name: string]: unknown;
@@ -18215,7 +18244,7 @@ export interface operations {
                     "application/json": components["schemas"]["ErrorResponse"];
                 };
             };
-            /** @description `BUSINESS_RULE_VIOLATION` — The request was well-formed and the entities exist, but a domain rule forbids it — publishing a product with no price, archiving a brand products still reference, issuing more stock than a location holds, restoring a category under an archived parent ("Restore the parent category first.") or a product under an archived brand ("Restore the brand first."). Distinct from 400: nothing about the request is malformed. */
+            /** @description `BUSINESS_RULE_VIOLATION` — The request was well-formed and the entities exist, but a domain rule forbids it — publishing a product with no price, archiving a brand products still reference, deleting media a tier badge uses ("This media is still used — tier badge on Sprout of ladder version Launch. Replace or remove it first."), issuing more stock than a location holds, restoring a category under an archived parent ("Restore the parent category first.") or a product under an archived brand ("Restore the brand first."). Distinct from 400: nothing about the request is malformed. */
             422: {
                 headers: {
                     [name: string]: unknown;
@@ -18261,7 +18290,7 @@ export interface operations {
                     "*/*": components["schemas"]["OrderDetailResponse"];
                 };
             };
-            /** @description `VALIDATION_FAILED` — The request body could not be read, a field failed validation, a required header was absent, or a domain validation rule rejected an input the caller can correct. */
+            /** @description `VALIDATION_FAILED` — The request body could not be read, a field failed validation, a required header was absent, or a domain validation rule rejected an input the caller can correct, such as a tier colour ("Must be a colour written as #RRGGBB.") or a tier badge that does not exist or is a video ("Media <id> is a video; this takes an image."). */
             400: {
                 headers: {
                     [name: string]: unknown;
@@ -18315,7 +18344,7 @@ export interface operations {
                     "application/json": components["schemas"]["ErrorResponse"];
                 };
             };
-            /** @description `BUSINESS_RULE_VIOLATION` — The request was well-formed and the entities exist, but a domain rule forbids it — publishing a product with no price, archiving a brand products still reference, issuing more stock than a location holds, restoring a category under an archived parent ("Restore the parent category first.") or a product under an archived brand ("Restore the brand first."). Distinct from 400: nothing about the request is malformed. */
+            /** @description `BUSINESS_RULE_VIOLATION` — The request was well-formed and the entities exist, but a domain rule forbids it — publishing a product with no price, archiving a brand products still reference, deleting media a tier badge uses ("This media is still used — tier badge on Sprout of ladder version Launch. Replace or remove it first."), issuing more stock than a location holds, restoring a category under an archived parent ("Restore the parent category first.") or a product under an archived brand ("Restore the brand first."). Distinct from 400: nothing about the request is malformed. */
             422: {
                 headers: {
                     [name: string]: unknown;
@@ -18361,7 +18390,7 @@ export interface operations {
                     "*/*": components["schemas"]["OrderDetailResponse"];
                 };
             };
-            /** @description `VALIDATION_FAILED` — The request body could not be read, a field failed validation, a required header was absent, or a domain validation rule rejected an input the caller can correct. */
+            /** @description `VALIDATION_FAILED` — The request body could not be read, a field failed validation, a required header was absent, or a domain validation rule rejected an input the caller can correct, such as a tier colour ("Must be a colour written as #RRGGBB.") or a tier badge that does not exist or is a video ("Media <id> is a video; this takes an image."). */
             400: {
                 headers: {
                     [name: string]: unknown;
@@ -18415,7 +18444,7 @@ export interface operations {
                     "application/json": components["schemas"]["ErrorResponse"];
                 };
             };
-            /** @description `BUSINESS_RULE_VIOLATION` — The request was well-formed and the entities exist, but a domain rule forbids it — publishing a product with no price, archiving a brand products still reference, issuing more stock than a location holds, restoring a category under an archived parent ("Restore the parent category first.") or a product under an archived brand ("Restore the brand first."). Distinct from 400: nothing about the request is malformed. */
+            /** @description `BUSINESS_RULE_VIOLATION` — The request was well-formed and the entities exist, but a domain rule forbids it — publishing a product with no price, archiving a brand products still reference, deleting media a tier badge uses ("This media is still used — tier badge on Sprout of ladder version Launch. Replace or remove it first."), issuing more stock than a location holds, restoring a category under an archived parent ("Restore the parent category first.") or a product under an archived brand ("Restore the brand first."). Distinct from 400: nothing about the request is malformed. */
             422: {
                 headers: {
                     [name: string]: unknown;
@@ -18453,7 +18482,7 @@ export interface operations {
                     "*/*": components["schemas"]["OrderSettingsResponse"];
                 };
             };
-            /** @description `VALIDATION_FAILED` — The request body could not be read, a field failed validation, a required header was absent, or a domain validation rule rejected an input the caller can correct. */
+            /** @description `VALIDATION_FAILED` — The request body could not be read, a field failed validation, a required header was absent, or a domain validation rule rejected an input the caller can correct, such as a tier colour ("Must be a colour written as #RRGGBB.") or a tier badge that does not exist or is a video ("Media <id> is a video; this takes an image."). */
             400: {
                 headers: {
                     [name: string]: unknown;
@@ -18511,7 +18540,7 @@ export interface operations {
                     "*/*": components["schemas"]["PageResponseOrderSettingsResponse"];
                 };
             };
-            /** @description `VALIDATION_FAILED` — The request body could not be read, a field failed validation, a required header was absent, or a domain validation rule rejected an input the caller can correct. */
+            /** @description `VALIDATION_FAILED` — The request body could not be read, a field failed validation, a required header was absent, or a domain validation rule rejected an input the caller can correct, such as a tier colour ("Must be a colour written as #RRGGBB.") or a tier badge that does not exist or is a video ("Media <id> is a video; this takes an image."). */
             400: {
                 headers: {
                     [name: string]: unknown;
@@ -18571,7 +18600,7 @@ export interface operations {
                     "*/*": components["schemas"]["OrderSettingsResponse"];
                 };
             };
-            /** @description `VALIDATION_FAILED` — The request body could not be read, a field failed validation, a required header was absent, or a domain validation rule rejected an input the caller can correct. */
+            /** @description `VALIDATION_FAILED` — The request body could not be read, a field failed validation, a required header was absent, or a domain validation rule rejected an input the caller can correct, such as a tier colour ("Must be a colour written as #RRGGBB.") or a tier badge that does not exist or is a video ("Media <id> is a video; this takes an image."). */
             400: {
                 headers: {
                     [name: string]: unknown;
@@ -18616,7 +18645,7 @@ export interface operations {
                     "application/json": components["schemas"]["ErrorResponse"];
                 };
             };
-            /** @description `BUSINESS_RULE_VIOLATION` — The request was well-formed and the entities exist, but a domain rule forbids it — publishing a product with no price, archiving a brand products still reference, issuing more stock than a location holds, restoring a category under an archived parent ("Restore the parent category first.") or a product under an archived brand ("Restore the brand first."). Distinct from 400: nothing about the request is malformed. */
+            /** @description `BUSINESS_RULE_VIOLATION` — The request was well-formed and the entities exist, but a domain rule forbids it — publishing a product with no price, archiving a brand products still reference, deleting media a tier badge uses ("This media is still used — tier badge on Sprout of ladder version Launch. Replace or remove it first."), issuing more stock than a location holds, restoring a category under an archived parent ("Restore the parent category first.") or a product under an archived brand ("Restore the brand first."). Distinct from 400: nothing about the request is malformed. */
             422: {
                 headers: {
                     [name: string]: unknown;
@@ -18654,7 +18683,7 @@ export interface operations {
                     "*/*": components["schemas"]["PermissionDomainResponse"][];
                 };
             };
-            /** @description `VALIDATION_FAILED` — The request body could not be read, a field failed validation, a required header was absent, or a domain validation rule rejected an input the caller can correct. */
+            /** @description `VALIDATION_FAILED` — The request body could not be read, a field failed validation, a required header was absent, or a domain validation rule rejected an input the caller can correct, such as a tier colour ("Must be a colour written as #RRGGBB.") or a tier badge that does not exist or is a video ("Media <id> is a video; this takes an image."). */
             400: {
                 headers: {
                     [name: string]: unknown;
@@ -18714,7 +18743,7 @@ export interface operations {
                     "*/*": components["schemas"]["ResolvedPriceResponse"];
                 };
             };
-            /** @description `VALIDATION_FAILED` — The request body could not be read, a field failed validation, a required header was absent, or a domain validation rule rejected an input the caller can correct. */
+            /** @description `VALIDATION_FAILED` — The request body could not be read, a field failed validation, a required header was absent, or a domain validation rule rejected an input the caller can correct, such as a tier colour ("Must be a colour written as #RRGGBB.") or a tier badge that does not exist or is a video ("Media <id> is a video; this takes an image."). */
             400: {
                 headers: {
                     [name: string]: unknown;
@@ -18774,7 +18803,7 @@ export interface operations {
                     "*/*": components["schemas"]["PriceMatrixResponse"];
                 };
             };
-            /** @description `VALIDATION_FAILED` — The request body could not be read, a field failed validation, a required header was absent, or a domain validation rule rejected an input the caller can correct. */
+            /** @description `VALIDATION_FAILED` — The request body could not be read, a field failed validation, a required header was absent, or a domain validation rule rejected an input the caller can correct, such as a tier colour ("Must be a colour written as #RRGGBB.") or a tier badge that does not exist or is a video ("Media <id> is a video; this takes an image."). */
             400: {
                 headers: {
                     [name: string]: unknown;
@@ -18842,7 +18871,7 @@ export interface operations {
                     "*/*": components["schemas"]["PageResponsePricingVersionResponse"];
                 };
             };
-            /** @description `VALIDATION_FAILED` — The request body could not be read, a field failed validation, a required header was absent, or a domain validation rule rejected an input the caller can correct. */
+            /** @description `VALIDATION_FAILED` — The request body could not be read, a field failed validation, a required header was absent, or a domain validation rule rejected an input the caller can correct, such as a tier colour ("Must be a colour written as #RRGGBB.") or a tier badge that does not exist or is a video ("Media <id> is a video; this takes an image."). */
             400: {
                 headers: {
                     [name: string]: unknown;
@@ -18902,7 +18931,7 @@ export interface operations {
                     "*/*": components["schemas"]["PricingVersionResponse"];
                 };
             };
-            /** @description `VALIDATION_FAILED` — The request body could not be read, a field failed validation, a required header was absent, or a domain validation rule rejected an input the caller can correct. */
+            /** @description `VALIDATION_FAILED` — The request body could not be read, a field failed validation, a required header was absent, or a domain validation rule rejected an input the caller can correct, such as a tier colour ("Must be a colour written as #RRGGBB.") or a tier badge that does not exist or is a video ("Media <id> is a video; this takes an image."). */
             400: {
                 headers: {
                     [name: string]: unknown;
@@ -18947,7 +18976,7 @@ export interface operations {
                     "application/json": components["schemas"]["ErrorResponse"];
                 };
             };
-            /** @description `BUSINESS_RULE_VIOLATION` — The request was well-formed and the entities exist, but a domain rule forbids it — publishing a product with no price, archiving a brand products still reference, issuing more stock than a location holds, restoring a category under an archived parent ("Restore the parent category first.") or a product under an archived brand ("Restore the brand first."). Distinct from 400: nothing about the request is malformed. */
+            /** @description `BUSINESS_RULE_VIOLATION` — The request was well-formed and the entities exist, but a domain rule forbids it — publishing a product with no price, archiving a brand products still reference, deleting media a tier badge uses ("This media is still used — tier badge on Sprout of ladder version Launch. Replace or remove it first."), issuing more stock than a location holds, restoring a category under an archived parent ("Restore the parent category first.") or a product under an archived brand ("Restore the brand first."). Distinct from 400: nothing about the request is malformed. */
             422: {
                 headers: {
                     [name: string]: unknown;
@@ -18987,7 +19016,7 @@ export interface operations {
                     "*/*": components["schemas"]["PricingVersionResponse"];
                 };
             };
-            /** @description `VALIDATION_FAILED` — The request body could not be read, a field failed validation, a required header was absent, or a domain validation rule rejected an input the caller can correct. */
+            /** @description `VALIDATION_FAILED` — The request body could not be read, a field failed validation, a required header was absent, or a domain validation rule rejected an input the caller can correct, such as a tier colour ("Must be a colour written as #RRGGBB.") or a tier badge that does not exist or is a video ("Media <id> is a video; this takes an image."). */
             400: {
                 headers: {
                     [name: string]: unknown;
@@ -19058,7 +19087,7 @@ export interface operations {
                     "*/*": components["schemas"]["PricingVersionResponse"];
                 };
             };
-            /** @description `VALIDATION_FAILED` — The request body could not be read, a field failed validation, a required header was absent, or a domain validation rule rejected an input the caller can correct. */
+            /** @description `VALIDATION_FAILED` — The request body could not be read, a field failed validation, a required header was absent, or a domain validation rule rejected an input the caller can correct, such as a tier colour ("Must be a colour written as #RRGGBB.") or a tier badge that does not exist or is a video ("Media <id> is a video; this takes an image."). */
             400: {
                 headers: {
                     [name: string]: unknown;
@@ -19112,7 +19141,7 @@ export interface operations {
                     "application/json": components["schemas"]["ErrorResponse"];
                 };
             };
-            /** @description `BUSINESS_RULE_VIOLATION` — The request was well-formed and the entities exist, but a domain rule forbids it — publishing a product with no price, archiving a brand products still reference, issuing more stock than a location holds, restoring a category under an archived parent ("Restore the parent category first.") or a product under an archived brand ("Restore the brand first."). Distinct from 400: nothing about the request is malformed. */
+            /** @description `BUSINESS_RULE_VIOLATION` — The request was well-formed and the entities exist, but a domain rule forbids it — publishing a product with no price, archiving a brand products still reference, deleting media a tier badge uses ("This media is still used — tier badge on Sprout of ladder version Launch. Replace or remove it first."), issuing more stock than a location holds, restoring a category under an archived parent ("Restore the parent category first.") or a product under an archived brand ("Restore the brand first."). Distinct from 400: nothing about the request is malformed. */
             422: {
                 headers: {
                     [name: string]: unknown;
@@ -19154,7 +19183,7 @@ export interface operations {
                     "*/*": components["schemas"]["PageResponseVersionBitsOptionResponse"];
                 };
             };
-            /** @description `VALIDATION_FAILED` — The request body could not be read, a field failed validation, a required header was absent, or a domain validation rule rejected an input the caller can correct. */
+            /** @description `VALIDATION_FAILED` — The request body could not be read, a field failed validation, a required header was absent, or a domain validation rule rejected an input the caller can correct, such as a tier colour ("Must be a colour written as #RRGGBB.") or a tier badge that does not exist or is a video ("Media <id> is a video; this takes an image."). */
             400: {
                 headers: {
                     [name: string]: unknown;
@@ -19225,7 +19254,7 @@ export interface operations {
                     "*/*": components["schemas"]["PricingVersionResponse"];
                 };
             };
-            /** @description `VALIDATION_FAILED` — The request body could not be read, a field failed validation, a required header was absent, or a domain validation rule rejected an input the caller can correct. */
+            /** @description `VALIDATION_FAILED` — The request body could not be read, a field failed validation, a required header was absent, or a domain validation rule rejected an input the caller can correct, such as a tier colour ("Must be a colour written as #RRGGBB.") or a tier badge that does not exist or is a video ("Media <id> is a video; this takes an image."). */
             400: {
                 headers: {
                     [name: string]: unknown;
@@ -19279,7 +19308,7 @@ export interface operations {
                     "application/json": components["schemas"]["ErrorResponse"];
                 };
             };
-            /** @description `BUSINESS_RULE_VIOLATION` — The request was well-formed and the entities exist, but a domain rule forbids it — publishing a product with no price, archiving a brand products still reference, issuing more stock than a location holds, restoring a category under an archived parent ("Restore the parent category first.") or a product under an archived brand ("Restore the brand first."). Distinct from 400: nothing about the request is malformed. */
+            /** @description `BUSINESS_RULE_VIOLATION` — The request was well-formed and the entities exist, but a domain rule forbids it — publishing a product with no price, archiving a brand products still reference, deleting media a tier badge uses ("This media is still used — tier badge on Sprout of ladder version Launch. Replace or remove it first."), issuing more stock than a location holds, restoring a category under an archived parent ("Restore the parent category first.") or a product under an archived brand ("Restore the brand first."). Distinct from 400: nothing about the request is malformed. */
             422: {
                 headers: {
                     [name: string]: unknown;
@@ -19321,7 +19350,7 @@ export interface operations {
                     "*/*": components["schemas"]["PageResponseLevelPriceResponse"];
                 };
             };
-            /** @description `VALIDATION_FAILED` — The request body could not be read, a field failed validation, a required header was absent, or a domain validation rule rejected an input the caller can correct. */
+            /** @description `VALIDATION_FAILED` — The request body could not be read, a field failed validation, a required header was absent, or a domain validation rule rejected an input the caller can correct, such as a tier colour ("Must be a colour written as #RRGGBB.") or a tier badge that does not exist or is a video ("Media <id> is a video; this takes an image."). */
             400: {
                 headers: {
                     [name: string]: unknown;
@@ -19392,7 +19421,7 @@ export interface operations {
                     "*/*": components["schemas"]["PricingVersionResponse"];
                 };
             };
-            /** @description `VALIDATION_FAILED` — The request body could not be read, a field failed validation, a required header was absent, or a domain validation rule rejected an input the caller can correct. */
+            /** @description `VALIDATION_FAILED` — The request body could not be read, a field failed validation, a required header was absent, or a domain validation rule rejected an input the caller can correct, such as a tier colour ("Must be a colour written as #RRGGBB.") or a tier badge that does not exist or is a video ("Media <id> is a video; this takes an image."). */
             400: {
                 headers: {
                     [name: string]: unknown;
@@ -19446,7 +19475,7 @@ export interface operations {
                     "application/json": components["schemas"]["ErrorResponse"];
                 };
             };
-            /** @description `BUSINESS_RULE_VIOLATION` — The request was well-formed and the entities exist, but a domain rule forbids it — publishing a product with no price, archiving a brand products still reference, issuing more stock than a location holds, restoring a category under an archived parent ("Restore the parent category first.") or a product under an archived brand ("Restore the brand first."). Distinct from 400: nothing about the request is malformed. */
+            /** @description `BUSINESS_RULE_VIOLATION` — The request was well-formed and the entities exist, but a domain rule forbids it — publishing a product with no price, archiving a brand products still reference, deleting media a tier badge uses ("This media is still used — tier badge on Sprout of ladder version Launch. Replace or remove it first."), issuing more stock than a location holds, restoring a category under an archived parent ("Restore the parent category first.") or a product under an archived brand ("Restore the brand first."). Distinct from 400: nothing about the request is malformed. */
             422: {
                 headers: {
                     [name: string]: unknown;
@@ -19491,7 +19520,7 @@ export interface operations {
                     "*/*": components["schemas"]["VariantPricesResponse"];
                 };
             };
-            /** @description `VALIDATION_FAILED` — The request body could not be read, a field failed validation, a required header was absent, or a domain validation rule rejected an input the caller can correct. */
+            /** @description `VALIDATION_FAILED` — The request body could not be read, a field failed validation, a required header was absent, or a domain validation rule rejected an input the caller can correct, such as a tier colour ("Must be a colour written as #RRGGBB.") or a tier badge that does not exist or is a video ("Media <id> is a video; this takes an image."). */
             400: {
                 headers: {
                     [name: string]: unknown;
@@ -19545,7 +19574,7 @@ export interface operations {
                     "application/json": components["schemas"]["ErrorResponse"];
                 };
             };
-            /** @description `BUSINESS_RULE_VIOLATION` — The request was well-formed and the entities exist, but a domain rule forbids it — publishing a product with no price, archiving a brand products still reference, issuing more stock than a location holds, restoring a category under an archived parent ("Restore the parent category first.") or a product under an archived brand ("Restore the brand first."). Distinct from 400: nothing about the request is malformed. */
+            /** @description `BUSINESS_RULE_VIOLATION` — The request was well-formed and the entities exist, but a domain rule forbids it — publishing a product with no price, archiving a brand products still reference, deleting media a tier badge uses ("This media is still used — tier badge on Sprout of ladder version Launch. Replace or remove it first."), issuing more stock than a location holds, restoring a category under an archived parent ("Restore the parent category first.") or a product under an archived brand ("Restore the brand first."). Distinct from 400: nothing about the request is malformed. */
             422: {
                 headers: {
                     [name: string]: unknown;
@@ -19591,7 +19620,7 @@ export interface operations {
                     "*/*": components["schemas"]["VariantPricesResponse"];
                 };
             };
-            /** @description `VALIDATION_FAILED` — The request body could not be read, a field failed validation, a required header was absent, or a domain validation rule rejected an input the caller can correct. */
+            /** @description `VALIDATION_FAILED` — The request body could not be read, a field failed validation, a required header was absent, or a domain validation rule rejected an input the caller can correct, such as a tier colour ("Must be a colour written as #RRGGBB.") or a tier badge that does not exist or is a video ("Media <id> is a video; this takes an image."). */
             400: {
                 headers: {
                     [name: string]: unknown;
@@ -19645,7 +19674,7 @@ export interface operations {
                     "application/json": components["schemas"]["ErrorResponse"];
                 };
             };
-            /** @description `BUSINESS_RULE_VIOLATION` — The request was well-formed and the entities exist, but a domain rule forbids it — publishing a product with no price, archiving a brand products still reference, issuing more stock than a location holds, restoring a category under an archived parent ("Restore the parent category first.") or a product under an archived brand ("Restore the brand first."). Distinct from 400: nothing about the request is malformed. */
+            /** @description `BUSINESS_RULE_VIOLATION` — The request was well-formed and the entities exist, but a domain rule forbids it — publishing a product with no price, archiving a brand products still reference, deleting media a tier badge uses ("This media is still used — tier badge on Sprout of ladder version Launch. Replace or remove it first."), issuing more stock than a location holds, restoring a category under an archived parent ("Restore the parent category first.") or a product under an archived brand ("Restore the brand first."). Distinct from 400: nothing about the request is malformed. */
             422: {
                 headers: {
                     [name: string]: unknown;
@@ -19689,7 +19718,7 @@ export interface operations {
                     "*/*": components["schemas"]["VariantPricesResponse"];
                 };
             };
-            /** @description `VALIDATION_FAILED` — The request body could not be read, a field failed validation, a required header was absent, or a domain validation rule rejected an input the caller can correct. */
+            /** @description `VALIDATION_FAILED` — The request body could not be read, a field failed validation, a required header was absent, or a domain validation rule rejected an input the caller can correct, such as a tier colour ("Must be a colour written as #RRGGBB.") or a tier badge that does not exist or is a video ("Media <id> is a video; this takes an image."). */
             400: {
                 headers: {
                     [name: string]: unknown;
@@ -19734,7 +19763,7 @@ export interface operations {
                     "application/json": components["schemas"]["ErrorResponse"];
                 };
             };
-            /** @description `BUSINESS_RULE_VIOLATION` — The request was well-formed and the entities exist, but a domain rule forbids it — publishing a product with no price, archiving a brand products still reference, issuing more stock than a location holds, restoring a category under an archived parent ("Restore the parent category first.") or a product under an archived brand ("Restore the brand first."). Distinct from 400: nothing about the request is malformed. */
+            /** @description `BUSINESS_RULE_VIOLATION` — The request was well-formed and the entities exist, but a domain rule forbids it — publishing a product with no price, archiving a brand products still reference, deleting media a tier badge uses ("This media is still used — tier badge on Sprout of ladder version Launch. Replace or remove it first."), issuing more stock than a location holds, restoring a category under an archived parent ("Restore the parent category first.") or a product under an archived brand ("Restore the brand first."). Distinct from 400: nothing about the request is malformed. */
             422: {
                 headers: {
                     [name: string]: unknown;
@@ -19775,7 +19804,7 @@ export interface operations {
                     "*/*": components["schemas"]["VariantPricesResponse"];
                 };
             };
-            /** @description `VALIDATION_FAILED` — The request body could not be read, a field failed validation, a required header was absent, or a domain validation rule rejected an input the caller can correct. */
+            /** @description `VALIDATION_FAILED` — The request body could not be read, a field failed validation, a required header was absent, or a domain validation rule rejected an input the caller can correct, such as a tier colour ("Must be a colour written as #RRGGBB.") or a tier badge that does not exist or is a video ("Media <id> is a video; this takes an image."). */
             400: {
                 headers: {
                     [name: string]: unknown;
@@ -19847,7 +19876,7 @@ export interface operations {
                     "*/*": components["schemas"]["VariantPricesResponse"];
                 };
             };
-            /** @description `VALIDATION_FAILED` — The request body could not be read, a field failed validation, a required header was absent, or a domain validation rule rejected an input the caller can correct. */
+            /** @description `VALIDATION_FAILED` — The request body could not be read, a field failed validation, a required header was absent, or a domain validation rule rejected an input the caller can correct, such as a tier colour ("Must be a colour written as #RRGGBB.") or a tier badge that does not exist or is a video ("Media <id> is a video; this takes an image."). */
             400: {
                 headers: {
                     [name: string]: unknown;
@@ -19901,7 +19930,7 @@ export interface operations {
                     "application/json": components["schemas"]["ErrorResponse"];
                 };
             };
-            /** @description `BUSINESS_RULE_VIOLATION` — The request was well-formed and the entities exist, but a domain rule forbids it — publishing a product with no price, archiving a brand products still reference, issuing more stock than a location holds, restoring a category under an archived parent ("Restore the parent category first.") or a product under an archived brand ("Restore the brand first."). Distinct from 400: nothing about the request is malformed. */
+            /** @description `BUSINESS_RULE_VIOLATION` — The request was well-formed and the entities exist, but a domain rule forbids it — publishing a product with no price, archiving a brand products still reference, deleting media a tier badge uses ("This media is still used — tier badge on Sprout of ladder version Launch. Replace or remove it first."), issuing more stock than a location holds, restoring a category under an archived parent ("Restore the parent category first.") or a product under an archived brand ("Restore the brand first."). Distinct from 400: nothing about the request is malformed. */
             422: {
                 headers: {
                     [name: string]: unknown;
@@ -19947,7 +19976,7 @@ export interface operations {
                     "*/*": components["schemas"]["VariantPricesResponse"];
                 };
             };
-            /** @description `VALIDATION_FAILED` — The request body could not be read, a field failed validation, a required header was absent, or a domain validation rule rejected an input the caller can correct. */
+            /** @description `VALIDATION_FAILED` — The request body could not be read, a field failed validation, a required header was absent, or a domain validation rule rejected an input the caller can correct, such as a tier colour ("Must be a colour written as #RRGGBB.") or a tier badge that does not exist or is a video ("Media <id> is a video; this takes an image."). */
             400: {
                 headers: {
                     [name: string]: unknown;
@@ -20001,7 +20030,7 @@ export interface operations {
                     "application/json": components["schemas"]["ErrorResponse"];
                 };
             };
-            /** @description `BUSINESS_RULE_VIOLATION` — The request was well-formed and the entities exist, but a domain rule forbids it — publishing a product with no price, archiving a brand products still reference, issuing more stock than a location holds, restoring a category under an archived parent ("Restore the parent category first.") or a product under an archived brand ("Restore the brand first."). Distinct from 400: nothing about the request is malformed. */
+            /** @description `BUSINESS_RULE_VIOLATION` — The request was well-formed and the entities exist, but a domain rule forbids it — publishing a product with no price, archiving a brand products still reference, deleting media a tier badge uses ("This media is still used — tier badge on Sprout of ladder version Launch. Replace or remove it first."), issuing more stock than a location holds, restoring a category under an archived parent ("Restore the parent category first.") or a product under an archived brand ("Restore the brand first."). Distinct from 400: nothing about the request is malformed. */
             422: {
                 headers: {
                     [name: string]: unknown;
@@ -20045,7 +20074,7 @@ export interface operations {
                     "*/*": components["schemas"]["VariantPricesResponse"];
                 };
             };
-            /** @description `VALIDATION_FAILED` — The request body could not be read, a field failed validation, a required header was absent, or a domain validation rule rejected an input the caller can correct. */
+            /** @description `VALIDATION_FAILED` — The request body could not be read, a field failed validation, a required header was absent, or a domain validation rule rejected an input the caller can correct, such as a tier colour ("Must be a colour written as #RRGGBB.") or a tier badge that does not exist or is a video ("Media <id> is a video; this takes an image."). */
             400: {
                 headers: {
                     [name: string]: unknown;
@@ -20090,7 +20119,7 @@ export interface operations {
                     "application/json": components["schemas"]["ErrorResponse"];
                 };
             };
-            /** @description `BUSINESS_RULE_VIOLATION` — The request was well-formed and the entities exist, but a domain rule forbids it — publishing a product with no price, archiving a brand products still reference, issuing more stock than a location holds, restoring a category under an archived parent ("Restore the parent category first.") or a product under an archived brand ("Restore the brand first."). Distinct from 400: nothing about the request is malformed. */
+            /** @description `BUSINESS_RULE_VIOLATION` — The request was well-formed and the entities exist, but a domain rule forbids it — publishing a product with no price, archiving a brand products still reference, deleting media a tier badge uses ("This media is still used — tier badge on Sprout of ladder version Launch. Replace or remove it first."), issuing more stock than a location holds, restoring a category under an archived parent ("Restore the parent category first.") or a product under an archived brand ("Restore the brand first."). Distinct from 400: nothing about the request is malformed. */
             422: {
                 headers: {
                     [name: string]: unknown;
@@ -20134,7 +20163,7 @@ export interface operations {
                     "*/*": components["schemas"]["PricingVersionResponse"];
                 };
             };
-            /** @description `VALIDATION_FAILED` — The request body could not be read, a field failed validation, a required header was absent, or a domain validation rule rejected an input the caller can correct. */
+            /** @description `VALIDATION_FAILED` — The request body could not be read, a field failed validation, a required header was absent, or a domain validation rule rejected an input the caller can correct, such as a tier colour ("Must be a colour written as #RRGGBB.") or a tier badge that does not exist or is a video ("Media <id> is a video; this takes an image."). */
             400: {
                 headers: {
                     [name: string]: unknown;
@@ -20188,7 +20217,7 @@ export interface operations {
                     "application/json": components["schemas"]["ErrorResponse"];
                 };
             };
-            /** @description `BUSINESS_RULE_VIOLATION` — The request was well-formed and the entities exist, but a domain rule forbids it — publishing a product with no price, archiving a brand products still reference, issuing more stock than a location holds, restoring a category under an archived parent ("Restore the parent category first.") or a product under an archived brand ("Restore the brand first."). Distinct from 400: nothing about the request is malformed. */
+            /** @description `BUSINESS_RULE_VIOLATION` — The request was well-formed and the entities exist, but a domain rule forbids it — publishing a product with no price, archiving a brand products still reference, deleting media a tier badge uses ("This media is still used — tier badge on Sprout of ladder version Launch. Replace or remove it first."), issuing more stock than a location holds, restoring a category under an archived parent ("Restore the parent category first.") or a product under an archived brand ("Restore the brand first."). Distinct from 400: nothing about the request is malformed. */
             422: {
                 headers: {
                     [name: string]: unknown;
@@ -20228,7 +20257,7 @@ export interface operations {
                     "*/*": components["schemas"]["PricingVersionResponse"];
                 };
             };
-            /** @description `VALIDATION_FAILED` — The request body could not be read, a field failed validation, a required header was absent, or a domain validation rule rejected an input the caller can correct. */
+            /** @description `VALIDATION_FAILED` — The request body could not be read, a field failed validation, a required header was absent, or a domain validation rule rejected an input the caller can correct, such as a tier colour ("Must be a colour written as #RRGGBB.") or a tier badge that does not exist or is a video ("Media <id> is a video; this takes an image."). */
             400: {
                 headers: {
                     [name: string]: unknown;
@@ -20292,7 +20321,7 @@ export interface operations {
                     "*/*": components["schemas"]["PageResponseProductListItemResponse"];
                 };
             };
-            /** @description `VALIDATION_FAILED` — The request body could not be read, a field failed validation, a required header was absent, or a domain validation rule rejected an input the caller can correct. */
+            /** @description `VALIDATION_FAILED` — The request body could not be read, a field failed validation, a required header was absent, or a domain validation rule rejected an input the caller can correct, such as a tier colour ("Must be a colour written as #RRGGBB.") or a tier badge that does not exist or is a video ("Media <id> is a video; this takes an image."). */
             400: {
                 headers: {
                     [name: string]: unknown;
@@ -20352,7 +20381,7 @@ export interface operations {
                     "*/*": components["schemas"]["ProductResponse"];
                 };
             };
-            /** @description `VALIDATION_FAILED` — The request body could not be read, a field failed validation, a required header was absent, or a domain validation rule rejected an input the caller can correct. */
+            /** @description `VALIDATION_FAILED` — The request body could not be read, a field failed validation, a required header was absent, or a domain validation rule rejected an input the caller can correct, such as a tier colour ("Must be a colour written as #RRGGBB.") or a tier badge that does not exist or is a video ("Media <id> is a video; this takes an image."). */
             400: {
                 headers: {
                     [name: string]: unknown;
@@ -20397,7 +20426,7 @@ export interface operations {
                     "application/json": components["schemas"]["ErrorResponse"];
                 };
             };
-            /** @description `BUSINESS_RULE_VIOLATION` — The request was well-formed and the entities exist, but a domain rule forbids it — publishing a product with no price, archiving a brand products still reference, issuing more stock than a location holds, restoring a category under an archived parent ("Restore the parent category first.") or a product under an archived brand ("Restore the brand first."). Distinct from 400: nothing about the request is malformed. */
+            /** @description `BUSINESS_RULE_VIOLATION` — The request was well-formed and the entities exist, but a domain rule forbids it — publishing a product with no price, archiving a brand products still reference, deleting media a tier badge uses ("This media is still used — tier badge on Sprout of ladder version Launch. Replace or remove it first."), issuing more stock than a location holds, restoring a category under an archived parent ("Restore the parent category first.") or a product under an archived brand ("Restore the brand first."). Distinct from 400: nothing about the request is malformed. */
             422: {
                 headers: {
                     [name: string]: unknown;
@@ -20437,7 +20466,7 @@ export interface operations {
                     "*/*": components["schemas"]["ProductDetailResponse"];
                 };
             };
-            /** @description `VALIDATION_FAILED` — The request body could not be read, a field failed validation, a required header was absent, or a domain validation rule rejected an input the caller can correct. */
+            /** @description `VALIDATION_FAILED` — The request body could not be read, a field failed validation, a required header was absent, or a domain validation rule rejected an input the caller can correct, such as a tier colour ("Must be a colour written as #RRGGBB.") or a tier badge that does not exist or is a video ("Media <id> is a video; this takes an image."). */
             400: {
                 headers: {
                     [name: string]: unknown;
@@ -20508,7 +20537,7 @@ export interface operations {
                     "*/*": components["schemas"]["ProductResponse"];
                 };
             };
-            /** @description `VALIDATION_FAILED` — The request body could not be read, a field failed validation, a required header was absent, or a domain validation rule rejected an input the caller can correct. */
+            /** @description `VALIDATION_FAILED` — The request body could not be read, a field failed validation, a required header was absent, or a domain validation rule rejected an input the caller can correct, such as a tier colour ("Must be a colour written as #RRGGBB.") or a tier badge that does not exist or is a video ("Media <id> is a video; this takes an image."). */
             400: {
                 headers: {
                     [name: string]: unknown;
@@ -20562,7 +20591,7 @@ export interface operations {
                     "application/json": components["schemas"]["ErrorResponse"];
                 };
             };
-            /** @description `BUSINESS_RULE_VIOLATION` — The request was well-formed and the entities exist, but a domain rule forbids it — publishing a product with no price, archiving a brand products still reference, issuing more stock than a location holds, restoring a category under an archived parent ("Restore the parent category first.") or a product under an archived brand ("Restore the brand first."). Distinct from 400: nothing about the request is malformed. */
+            /** @description `BUSINESS_RULE_VIOLATION` — The request was well-formed and the entities exist, but a domain rule forbids it — publishing a product with no price, archiving a brand products still reference, deleting media a tier badge uses ("This media is still used — tier badge on Sprout of ladder version Launch. Replace or remove it first."), issuing more stock than a location holds, restoring a category under an archived parent ("Restore the parent category first.") or a product under an archived brand ("Restore the brand first."). Distinct from 400: nothing about the request is malformed. */
             422: {
                 headers: {
                     [name: string]: unknown;
@@ -20602,7 +20631,7 @@ export interface operations {
                     "*/*": components["schemas"]["ProductResponse"];
                 };
             };
-            /** @description `VALIDATION_FAILED` — The request body could not be read, a field failed validation, a required header was absent, or a domain validation rule rejected an input the caller can correct. */
+            /** @description `VALIDATION_FAILED` — The request body could not be read, a field failed validation, a required header was absent, or a domain validation rule rejected an input the caller can correct, such as a tier colour ("Must be a colour written as #RRGGBB.") or a tier badge that does not exist or is a video ("Media <id> is a video; this takes an image."). */
             400: {
                 headers: {
                     [name: string]: unknown;
@@ -20647,7 +20676,7 @@ export interface operations {
                     "application/json": components["schemas"]["ErrorResponse"];
                 };
             };
-            /** @description `BUSINESS_RULE_VIOLATION` — The request was well-formed and the entities exist, but a domain rule forbids it — publishing a product with no price, archiving a brand products still reference, issuing more stock than a location holds, restoring a category under an archived parent ("Restore the parent category first.") or a product under an archived brand ("Restore the brand first."). Distinct from 400: nothing about the request is malformed. */
+            /** @description `BUSINESS_RULE_VIOLATION` — The request was well-formed and the entities exist, but a domain rule forbids it — publishing a product with no price, archiving a brand products still reference, deleting media a tier badge uses ("This media is still used — tier badge on Sprout of ladder version Launch. Replace or remove it first."), issuing more stock than a location holds, restoring a category under an archived parent ("Restore the parent category first.") or a product under an archived brand ("Restore the brand first."). Distinct from 400: nothing about the request is malformed. */
             422: {
                 headers: {
                     [name: string]: unknown;
@@ -20687,7 +20716,7 @@ export interface operations {
                     "*/*": components["schemas"]["ProductResponse"];
                 };
             };
-            /** @description `VALIDATION_FAILED` — The request body could not be read, a field failed validation, a required header was absent, or a domain validation rule rejected an input the caller can correct. */
+            /** @description `VALIDATION_FAILED` — The request body could not be read, a field failed validation, a required header was absent, or a domain validation rule rejected an input the caller can correct, such as a tier colour ("Must be a colour written as #RRGGBB.") or a tier badge that does not exist or is a video ("Media <id> is a video; this takes an image."). */
             400: {
                 headers: {
                     [name: string]: unknown;
@@ -20732,7 +20761,7 @@ export interface operations {
                     "application/json": components["schemas"]["ErrorResponse"];
                 };
             };
-            /** @description `BUSINESS_RULE_VIOLATION` — The request was well-formed and the entities exist, but a domain rule forbids it — publishing a product with no price, archiving a brand products still reference, issuing more stock than a location holds, restoring a category under an archived parent ("Restore the parent category first.") or a product under an archived brand ("Restore the brand first."). Distinct from 400: nothing about the request is malformed. */
+            /** @description `BUSINESS_RULE_VIOLATION` — The request was well-formed and the entities exist, but a domain rule forbids it — publishing a product with no price, archiving a brand products still reference, deleting media a tier badge uses ("This media is still used — tier badge on Sprout of ladder version Launch. Replace or remove it first."), issuing more stock than a location holds, restoring a category under an archived parent ("Restore the parent category first.") or a product under an archived brand ("Restore the brand first."). Distinct from 400: nothing about the request is malformed. */
             422: {
                 headers: {
                     [name: string]: unknown;
@@ -20776,7 +20805,7 @@ export interface operations {
                     "*/*": components["schemas"]["ProductCategoryResponse"][];
                 };
             };
-            /** @description `VALIDATION_FAILED` — The request body could not be read, a field failed validation, a required header was absent, or a domain validation rule rejected an input the caller can correct. */
+            /** @description `VALIDATION_FAILED` — The request body could not be read, a field failed validation, a required header was absent, or a domain validation rule rejected an input the caller can correct, such as a tier colour ("Must be a colour written as #RRGGBB.") or a tier badge that does not exist or is a video ("Media <id> is a video; this takes an image."). */
             400: {
                 headers: {
                     [name: string]: unknown;
@@ -20830,7 +20859,7 @@ export interface operations {
                     "application/json": components["schemas"]["ErrorResponse"];
                 };
             };
-            /** @description `BUSINESS_RULE_VIOLATION` — The request was well-formed and the entities exist, but a domain rule forbids it — publishing a product with no price, archiving a brand products still reference, issuing more stock than a location holds, restoring a category under an archived parent ("Restore the parent category first.") or a product under an archived brand ("Restore the brand first."). Distinct from 400: nothing about the request is malformed. */
+            /** @description `BUSINESS_RULE_VIOLATION` — The request was well-formed and the entities exist, but a domain rule forbids it — publishing a product with no price, archiving a brand products still reference, deleting media a tier badge uses ("This media is still used — tier badge on Sprout of ladder version Launch. Replace or remove it first."), issuing more stock than a location holds, restoring a category under an archived parent ("Restore the parent category first.") or a product under an archived brand ("Restore the brand first."). Distinct from 400: nothing about the request is malformed. */
             422: {
                 headers: {
                     [name: string]: unknown;
@@ -20870,7 +20899,7 @@ export interface operations {
                     "*/*": components["schemas"]["ProductResponse"];
                 };
             };
-            /** @description `VALIDATION_FAILED` — The request body could not be read, a field failed validation, a required header was absent, or a domain validation rule rejected an input the caller can correct. */
+            /** @description `VALIDATION_FAILED` — The request body could not be read, a field failed validation, a required header was absent, or a domain validation rule rejected an input the caller can correct, such as a tier colour ("Must be a colour written as #RRGGBB.") or a tier badge that does not exist or is a video ("Media <id> is a video; this takes an image."). */
             400: {
                 headers: {
                     [name: string]: unknown;
@@ -20915,7 +20944,7 @@ export interface operations {
                     "application/json": components["schemas"]["ErrorResponse"];
                 };
             };
-            /** @description `BUSINESS_RULE_VIOLATION` — The request was well-formed and the entities exist, but a domain rule forbids it — publishing a product with no price, archiving a brand products still reference, issuing more stock than a location holds, restoring a category under an archived parent ("Restore the parent category first.") or a product under an archived brand ("Restore the brand first."). Distinct from 400: nothing about the request is malformed. */
+            /** @description `BUSINESS_RULE_VIOLATION` — The request was well-formed and the entities exist, but a domain rule forbids it — publishing a product with no price, archiving a brand products still reference, deleting media a tier badge uses ("This media is still used — tier badge on Sprout of ladder version Launch. Replace or remove it first."), issuing more stock than a location holds, restoring a category under an archived parent ("Restore the parent category first.") or a product under an archived brand ("Restore the brand first."). Distinct from 400: nothing about the request is malformed. */
             422: {
                 headers: {
                     [name: string]: unknown;
@@ -20955,7 +20984,7 @@ export interface operations {
                     "*/*": components["schemas"]["ProductResponse"];
                 };
             };
-            /** @description `VALIDATION_FAILED` — The request body could not be read, a field failed validation, a required header was absent, or a domain validation rule rejected an input the caller can correct. */
+            /** @description `VALIDATION_FAILED` — The request body could not be read, a field failed validation, a required header was absent, or a domain validation rule rejected an input the caller can correct, such as a tier colour ("Must be a colour written as #RRGGBB.") or a tier badge that does not exist or is a video ("Media <id> is a video; this takes an image."). */
             400: {
                 headers: {
                     [name: string]: unknown;
@@ -21000,7 +21029,7 @@ export interface operations {
                     "application/json": components["schemas"]["ErrorResponse"];
                 };
             };
-            /** @description `BUSINESS_RULE_VIOLATION` — The request was well-formed and the entities exist, but a domain rule forbids it — publishing a product with no price, archiving a brand products still reference, issuing more stock than a location holds, restoring a category under an archived parent ("Restore the parent category first.") or a product under an archived brand ("Restore the brand first."). Distinct from 400: nothing about the request is malformed. */
+            /** @description `BUSINESS_RULE_VIOLATION` — The request was well-formed and the entities exist, but a domain rule forbids it — publishing a product with no price, archiving a brand products still reference, deleting media a tier badge uses ("This media is still used — tier badge on Sprout of ladder version Launch. Replace or remove it first."), issuing more stock than a location holds, restoring a category under an archived parent ("Restore the parent category first.") or a product under an archived brand ("Restore the brand first."). Distinct from 400: nothing about the request is malformed. */
             422: {
                 headers: {
                     [name: string]: unknown;
@@ -21044,7 +21073,7 @@ export interface operations {
                     "*/*": components["schemas"]["ProductResponse"];
                 };
             };
-            /** @description `VALIDATION_FAILED` — The request body could not be read, a field failed validation, a required header was absent, or a domain validation rule rejected an input the caller can correct. */
+            /** @description `VALIDATION_FAILED` — The request body could not be read, a field failed validation, a required header was absent, or a domain validation rule rejected an input the caller can correct, such as a tier colour ("Must be a colour written as #RRGGBB.") or a tier badge that does not exist or is a video ("Media <id> is a video; this takes an image."). */
             400: {
                 headers: {
                     [name: string]: unknown;
@@ -21098,7 +21127,7 @@ export interface operations {
                     "application/json": components["schemas"]["ErrorResponse"];
                 };
             };
-            /** @description `BUSINESS_RULE_VIOLATION` — The request was well-formed and the entities exist, but a domain rule forbids it — publishing a product with no price, archiving a brand products still reference, issuing more stock than a location holds, restoring a category under an archived parent ("Restore the parent category first.") or a product under an archived brand ("Restore the brand first."). Distinct from 400: nothing about the request is malformed. */
+            /** @description `BUSINESS_RULE_VIOLATION` — The request was well-formed and the entities exist, but a domain rule forbids it — publishing a product with no price, archiving a brand products still reference, deleting media a tier badge uses ("This media is still used — tier badge on Sprout of ladder version Launch. Replace or remove it first."), issuing more stock than a location holds, restoring a category under an archived parent ("Restore the parent category first.") or a product under an archived brand ("Restore the brand first."). Distinct from 400: nothing about the request is malformed. */
             422: {
                 headers: {
                     [name: string]: unknown;
@@ -21138,7 +21167,7 @@ export interface operations {
                     "*/*": components["schemas"]["ProductResponse"];
                 };
             };
-            /** @description `VALIDATION_FAILED` — The request body could not be read, a field failed validation, a required header was absent, or a domain validation rule rejected an input the caller can correct. */
+            /** @description `VALIDATION_FAILED` — The request body could not be read, a field failed validation, a required header was absent, or a domain validation rule rejected an input the caller can correct, such as a tier colour ("Must be a colour written as #RRGGBB.") or a tier badge that does not exist or is a video ("Media <id> is a video; this takes an image."). */
             400: {
                 headers: {
                     [name: string]: unknown;
@@ -21183,7 +21212,7 @@ export interface operations {
                     "application/json": components["schemas"]["ErrorResponse"];
                 };
             };
-            /** @description `BUSINESS_RULE_VIOLATION` — The request was well-formed and the entities exist, but a domain rule forbids it — publishing a product with no price, archiving a brand products still reference, issuing more stock than a location holds, restoring a category under an archived parent ("Restore the parent category first.") or a product under an archived brand ("Restore the brand first."). Distinct from 400: nothing about the request is malformed. */
+            /** @description `BUSINESS_RULE_VIOLATION` — The request was well-formed and the entities exist, but a domain rule forbids it — publishing a product with no price, archiving a brand products still reference, deleting media a tier badge uses ("This media is still used — tier badge on Sprout of ladder version Launch. Replace or remove it first."), issuing more stock than a location holds, restoring a category under an archived parent ("Restore the parent category first.") or a product under an archived brand ("Restore the brand first."). Distinct from 400: nothing about the request is malformed. */
             422: {
                 headers: {
                     [name: string]: unknown;
@@ -21223,7 +21252,7 @@ export interface operations {
                     "*/*": components["schemas"]["ProductResponse"];
                 };
             };
-            /** @description `VALIDATION_FAILED` — The request body could not be read, a field failed validation, a required header was absent, or a domain validation rule rejected an input the caller can correct. */
+            /** @description `VALIDATION_FAILED` — The request body could not be read, a field failed validation, a required header was absent, or a domain validation rule rejected an input the caller can correct, such as a tier colour ("Must be a colour written as #RRGGBB.") or a tier badge that does not exist or is a video ("Media <id> is a video; this takes an image."). */
             400: {
                 headers: {
                     [name: string]: unknown;
@@ -21268,7 +21297,7 @@ export interface operations {
                     "application/json": components["schemas"]["ErrorResponse"];
                 };
             };
-            /** @description `BUSINESS_RULE_VIOLATION` — The request was well-formed and the entities exist, but a domain rule forbids it — publishing a product with no price, archiving a brand products still reference, issuing more stock than a location holds, restoring a category under an archived parent ("Restore the parent category first.") or a product under an archived brand ("Restore the brand first."). Distinct from 400: nothing about the request is malformed. */
+            /** @description `BUSINESS_RULE_VIOLATION` — The request was well-formed and the entities exist, but a domain rule forbids it — publishing a product with no price, archiving a brand products still reference, deleting media a tier badge uses ("This media is still used — tier badge on Sprout of ladder version Launch. Replace or remove it first."), issuing more stock than a location holds, restoring a category under an archived parent ("Restore the parent category first.") or a product under an archived brand ("Restore the brand first."). Distinct from 400: nothing about the request is malformed. */
             422: {
                 headers: {
                     [name: string]: unknown;
@@ -21310,7 +21339,7 @@ export interface operations {
                     "*/*": components["schemas"]["PageResponseAllowedCustomerResponse"];
                 };
             };
-            /** @description `VALIDATION_FAILED` — The request body could not be read, a field failed validation, a required header was absent, or a domain validation rule rejected an input the caller can correct. */
+            /** @description `VALIDATION_FAILED` — The request body could not be read, a field failed validation, a required header was absent, or a domain validation rule rejected an input the caller can correct, such as a tier colour ("Must be a colour written as #RRGGBB.") or a tier badge that does not exist or is a video ("Media <id> is a video; this takes an image."). */
             400: {
                 headers: {
                     [name: string]: unknown;
@@ -21378,7 +21407,7 @@ export interface operations {
                     "*/*": components["schemas"]["AllowedCustomerResponse"];
                 };
             };
-            /** @description `VALIDATION_FAILED` — The request body could not be read, a field failed validation, a required header was absent, or a domain validation rule rejected an input the caller can correct. */
+            /** @description `VALIDATION_FAILED` — The request body could not be read, a field failed validation, a required header was absent, or a domain validation rule rejected an input the caller can correct, such as a tier colour ("Must be a colour written as #RRGGBB.") or a tier badge that does not exist or is a video ("Media <id> is a video; this takes an image."). */
             400: {
                 headers: {
                     [name: string]: unknown;
@@ -21423,7 +21452,7 @@ export interface operations {
                     "application/json": components["schemas"]["ErrorResponse"];
                 };
             };
-            /** @description `BUSINESS_RULE_VIOLATION` — The request was well-formed and the entities exist, but a domain rule forbids it — publishing a product with no price, archiving a brand products still reference, issuing more stock than a location holds, restoring a category under an archived parent ("Restore the parent category first.") or a product under an archived brand ("Restore the brand first."). Distinct from 400: nothing about the request is malformed. */
+            /** @description `BUSINESS_RULE_VIOLATION` — The request was well-formed and the entities exist, but a domain rule forbids it — publishing a product with no price, archiving a brand products still reference, deleting media a tier badge uses ("This media is still used — tier badge on Sprout of ladder version Launch. Replace or remove it first."), issuing more stock than a location holds, restoring a category under an archived parent ("Restore the parent category first.") or a product under an archived brand ("Restore the brand first."). Distinct from 400: nothing about the request is malformed. */
             422: {
                 headers: {
                     [name: string]: unknown;
@@ -21462,7 +21491,7 @@ export interface operations {
                 };
                 content?: never;
             };
-            /** @description `VALIDATION_FAILED` — The request body could not be read, a field failed validation, a required header was absent, or a domain validation rule rejected an input the caller can correct. */
+            /** @description `VALIDATION_FAILED` — The request body could not be read, a field failed validation, a required header was absent, or a domain validation rule rejected an input the caller can correct, such as a tier colour ("Must be a colour written as #RRGGBB.") or a tier badge that does not exist or is a video ("Media <id> is a video; this takes an image."). */
             400: {
                 headers: {
                     [name: string]: unknown;
@@ -21507,7 +21536,7 @@ export interface operations {
                     "application/json": components["schemas"]["ErrorResponse"];
                 };
             };
-            /** @description `BUSINESS_RULE_VIOLATION` — The request was well-formed and the entities exist, but a domain rule forbids it — publishing a product with no price, archiving a brand products still reference, issuing more stock than a location holds, restoring a category under an archived parent ("Restore the parent category first.") or a product under an archived brand ("Restore the brand first."). Distinct from 400: nothing about the request is malformed. */
+            /** @description `BUSINESS_RULE_VIOLATION` — The request was well-formed and the entities exist, but a domain rule forbids it — publishing a product with no price, archiving a brand products still reference, deleting media a tier badge uses ("This media is still used — tier badge on Sprout of ladder version Launch. Replace or remove it first."), issuing more stock than a location holds, restoring a category under an archived parent ("Restore the parent category first.") or a product under an archived brand ("Restore the brand first."). Distinct from 400: nothing about the request is malformed. */
             422: {
                 headers: {
                     [name: string]: unknown;
@@ -21547,7 +21576,7 @@ export interface operations {
                     "*/*": components["schemas"]["ProductContentResponse"];
                 };
             };
-            /** @description `VALIDATION_FAILED` — The request body could not be read, a field failed validation, a required header was absent, or a domain validation rule rejected an input the caller can correct. */
+            /** @description `VALIDATION_FAILED` — The request body could not be read, a field failed validation, a required header was absent, or a domain validation rule rejected an input the caller can correct, such as a tier colour ("Must be a colour written as #RRGGBB.") or a tier badge that does not exist or is a video ("Media <id> is a video; this takes an image."). */
             400: {
                 headers: {
                     [name: string]: unknown;
@@ -21618,7 +21647,7 @@ export interface operations {
                     "*/*": components["schemas"]["BlockResponse"];
                 };
             };
-            /** @description `VALIDATION_FAILED` — The request body could not be read, a field failed validation, a required header was absent, or a domain validation rule rejected an input the caller can correct. */
+            /** @description `VALIDATION_FAILED` — The request body could not be read, a field failed validation, a required header was absent, or a domain validation rule rejected an input the caller can correct, such as a tier colour ("Must be a colour written as #RRGGBB.") or a tier badge that does not exist or is a video ("Media <id> is a video; this takes an image."). */
             400: {
                 headers: {
                     [name: string]: unknown;
@@ -21672,7 +21701,7 @@ export interface operations {
                     "application/json": components["schemas"]["ErrorResponse"];
                 };
             };
-            /** @description `BUSINESS_RULE_VIOLATION` — The request was well-formed and the entities exist, but a domain rule forbids it — publishing a product with no price, archiving a brand products still reference, issuing more stock than a location holds, restoring a category under an archived parent ("Restore the parent category first.") or a product under an archived brand ("Restore the brand first."). Distinct from 400: nothing about the request is malformed. */
+            /** @description `BUSINESS_RULE_VIOLATION` — The request was well-formed and the entities exist, but a domain rule forbids it — publishing a product with no price, archiving a brand products still reference, deleting media a tier badge uses ("This media is still used — tier badge on Sprout of ladder version Launch. Replace or remove it first."), issuing more stock than a location holds, restoring a category under an archived parent ("Restore the parent category first.") or a product under an archived brand ("Restore the brand first."). Distinct from 400: nothing about the request is malformed. */
             422: {
                 headers: {
                     [name: string]: unknown;
@@ -21717,7 +21746,7 @@ export interface operations {
                     "*/*": components["schemas"]["BlockResponse"];
                 };
             };
-            /** @description `VALIDATION_FAILED` — The request body could not be read, a field failed validation, a required header was absent, or a domain validation rule rejected an input the caller can correct. */
+            /** @description `VALIDATION_FAILED` — The request body could not be read, a field failed validation, a required header was absent, or a domain validation rule rejected an input the caller can correct, such as a tier colour ("Must be a colour written as #RRGGBB.") or a tier badge that does not exist or is a video ("Media <id> is a video; this takes an image."). */
             400: {
                 headers: {
                     [name: string]: unknown;
@@ -21771,7 +21800,7 @@ export interface operations {
                     "application/json": components["schemas"]["ErrorResponse"];
                 };
             };
-            /** @description `BUSINESS_RULE_VIOLATION` — The request was well-formed and the entities exist, but a domain rule forbids it — publishing a product with no price, archiving a brand products still reference, issuing more stock than a location holds, restoring a category under an archived parent ("Restore the parent category first.") or a product under an archived brand ("Restore the brand first."). Distinct from 400: nothing about the request is malformed. */
+            /** @description `BUSINESS_RULE_VIOLATION` — The request was well-formed and the entities exist, but a domain rule forbids it — publishing a product with no price, archiving a brand products still reference, deleting media a tier badge uses ("This media is still used — tier badge on Sprout of ladder version Launch. Replace or remove it first."), issuing more stock than a location holds, restoring a category under an archived parent ("Restore the parent category first.") or a product under an archived brand ("Restore the brand first."). Distinct from 400: nothing about the request is malformed. */
             422: {
                 headers: {
                     [name: string]: unknown;
@@ -21810,7 +21839,7 @@ export interface operations {
                 };
                 content?: never;
             };
-            /** @description `VALIDATION_FAILED` — The request body could not be read, a field failed validation, a required header was absent, or a domain validation rule rejected an input the caller can correct. */
+            /** @description `VALIDATION_FAILED` — The request body could not be read, a field failed validation, a required header was absent, or a domain validation rule rejected an input the caller can correct, such as a tier colour ("Must be a colour written as #RRGGBB.") or a tier badge that does not exist or is a video ("Media <id> is a video; this takes an image."). */
             400: {
                 headers: {
                     [name: string]: unknown;
@@ -21855,7 +21884,7 @@ export interface operations {
                     "application/json": components["schemas"]["ErrorResponse"];
                 };
             };
-            /** @description `BUSINESS_RULE_VIOLATION` — The request was well-formed and the entities exist, but a domain rule forbids it — publishing a product with no price, archiving a brand products still reference, issuing more stock than a location holds, restoring a category under an archived parent ("Restore the parent category first.") or a product under an archived brand ("Restore the brand first."). Distinct from 400: nothing about the request is malformed. */
+            /** @description `BUSINESS_RULE_VIOLATION` — The request was well-formed and the entities exist, but a domain rule forbids it — publishing a product with no price, archiving a brand products still reference, deleting media a tier badge uses ("This media is still used — tier badge on Sprout of ladder version Launch. Replace or remove it first."), issuing more stock than a location holds, restoring a category under an archived parent ("Restore the parent category first.") or a product under an archived brand ("Restore the brand first."). Distinct from 400: nothing about the request is malformed. */
             422: {
                 headers: {
                     [name: string]: unknown;
@@ -21900,7 +21929,7 @@ export interface operations {
                     "*/*": components["schemas"]["SlideResponse"];
                 };
             };
-            /** @description `VALIDATION_FAILED` — The request body could not be read, a field failed validation, a required header was absent, or a domain validation rule rejected an input the caller can correct. */
+            /** @description `VALIDATION_FAILED` — The request body could not be read, a field failed validation, a required header was absent, or a domain validation rule rejected an input the caller can correct, such as a tier colour ("Must be a colour written as #RRGGBB.") or a tier badge that does not exist or is a video ("Media <id> is a video; this takes an image."). */
             400: {
                 headers: {
                     [name: string]: unknown;
@@ -21954,7 +21983,7 @@ export interface operations {
                     "application/json": components["schemas"]["ErrorResponse"];
                 };
             };
-            /** @description `BUSINESS_RULE_VIOLATION` — The request was well-formed and the entities exist, but a domain rule forbids it — publishing a product with no price, archiving a brand products still reference, issuing more stock than a location holds, restoring a category under an archived parent ("Restore the parent category first.") or a product under an archived brand ("Restore the brand first."). Distinct from 400: nothing about the request is malformed. */
+            /** @description `BUSINESS_RULE_VIOLATION` — The request was well-formed and the entities exist, but a domain rule forbids it — publishing a product with no price, archiving a brand products still reference, deleting media a tier badge uses ("This media is still used — tier badge on Sprout of ladder version Launch. Replace or remove it first."), issuing more stock than a location holds, restoring a category under an archived parent ("Restore the parent category first.") or a product under an archived brand ("Restore the brand first."). Distinct from 400: nothing about the request is malformed. */
             422: {
                 headers: {
                     [name: string]: unknown;
@@ -22000,7 +22029,7 @@ export interface operations {
                     "*/*": components["schemas"]["SlideResponse"];
                 };
             };
-            /** @description `VALIDATION_FAILED` — The request body could not be read, a field failed validation, a required header was absent, or a domain validation rule rejected an input the caller can correct. */
+            /** @description `VALIDATION_FAILED` — The request body could not be read, a field failed validation, a required header was absent, or a domain validation rule rejected an input the caller can correct, such as a tier colour ("Must be a colour written as #RRGGBB.") or a tier badge that does not exist or is a video ("Media <id> is a video; this takes an image."). */
             400: {
                 headers: {
                     [name: string]: unknown;
@@ -22054,7 +22083,7 @@ export interface operations {
                     "application/json": components["schemas"]["ErrorResponse"];
                 };
             };
-            /** @description `BUSINESS_RULE_VIOLATION` — The request was well-formed and the entities exist, but a domain rule forbids it — publishing a product with no price, archiving a brand products still reference, issuing more stock than a location holds, restoring a category under an archived parent ("Restore the parent category first.") or a product under an archived brand ("Restore the brand first."). Distinct from 400: nothing about the request is malformed. */
+            /** @description `BUSINESS_RULE_VIOLATION` — The request was well-formed and the entities exist, but a domain rule forbids it — publishing a product with no price, archiving a brand products still reference, deleting media a tier badge uses ("This media is still used — tier badge on Sprout of ladder version Launch. Replace or remove it first."), issuing more stock than a location holds, restoring a category under an archived parent ("Restore the parent category first.") or a product under an archived brand ("Restore the brand first."). Distinct from 400: nothing about the request is malformed. */
             422: {
                 headers: {
                     [name: string]: unknown;
@@ -22094,7 +22123,7 @@ export interface operations {
                 };
                 content?: never;
             };
-            /** @description `VALIDATION_FAILED` — The request body could not be read, a field failed validation, a required header was absent, or a domain validation rule rejected an input the caller can correct. */
+            /** @description `VALIDATION_FAILED` — The request body could not be read, a field failed validation, a required header was absent, or a domain validation rule rejected an input the caller can correct, such as a tier colour ("Must be a colour written as #RRGGBB.") or a tier badge that does not exist or is a video ("Media <id> is a video; this takes an image."). */
             400: {
                 headers: {
                     [name: string]: unknown;
@@ -22139,7 +22168,7 @@ export interface operations {
                     "application/json": components["schemas"]["ErrorResponse"];
                 };
             };
-            /** @description `BUSINESS_RULE_VIOLATION` — The request was well-formed and the entities exist, but a domain rule forbids it — publishing a product with no price, archiving a brand products still reference, issuing more stock than a location holds, restoring a category under an archived parent ("Restore the parent category first.") or a product under an archived brand ("Restore the brand first."). Distinct from 400: nothing about the request is malformed. */
+            /** @description `BUSINESS_RULE_VIOLATION` — The request was well-formed and the entities exist, but a domain rule forbids it — publishing a product with no price, archiving a brand products still reference, deleting media a tier badge uses ("This media is still used — tier badge on Sprout of ladder version Launch. Replace or remove it first."), issuing more stock than a location holds, restoring a category under an archived parent ("Restore the parent category first.") or a product under an archived brand ("Restore the brand first."). Distinct from 400: nothing about the request is malformed. */
             422: {
                 headers: {
                     [name: string]: unknown;
@@ -22184,7 +22213,7 @@ export interface operations {
                     "*/*": components["schemas"]["SlideResponse"][];
                 };
             };
-            /** @description `VALIDATION_FAILED` — The request body could not be read, a field failed validation, a required header was absent, or a domain validation rule rejected an input the caller can correct. */
+            /** @description `VALIDATION_FAILED` — The request body could not be read, a field failed validation, a required header was absent, or a domain validation rule rejected an input the caller can correct, such as a tier colour ("Must be a colour written as #RRGGBB.") or a tier badge that does not exist or is a video ("Media <id> is a video; this takes an image."). */
             400: {
                 headers: {
                     [name: string]: unknown;
@@ -22238,7 +22267,7 @@ export interface operations {
                     "application/json": components["schemas"]["ErrorResponse"];
                 };
             };
-            /** @description `BUSINESS_RULE_VIOLATION` — The request was well-formed and the entities exist, but a domain rule forbids it — publishing a product with no price, archiving a brand products still reference, issuing more stock than a location holds, restoring a category under an archived parent ("Restore the parent category first.") or a product under an archived brand ("Restore the brand first."). Distinct from 400: nothing about the request is malformed. */
+            /** @description `BUSINESS_RULE_VIOLATION` — The request was well-formed and the entities exist, but a domain rule forbids it — publishing a product with no price, archiving a brand products still reference, deleting media a tier badge uses ("This media is still used — tier badge on Sprout of ladder version Launch. Replace or remove it first."), issuing more stock than a location holds, restoring a category under an archived parent ("Restore the parent category first.") or a product under an archived brand ("Restore the brand first."). Distinct from 400: nothing about the request is malformed. */
             422: {
                 headers: {
                     [name: string]: unknown;
@@ -22282,7 +22311,7 @@ export interface operations {
                     "*/*": components["schemas"]["ProductContentResponse"];
                 };
             };
-            /** @description `VALIDATION_FAILED` — The request body could not be read, a field failed validation, a required header was absent, or a domain validation rule rejected an input the caller can correct. */
+            /** @description `VALIDATION_FAILED` — The request body could not be read, a field failed validation, a required header was absent, or a domain validation rule rejected an input the caller can correct, such as a tier colour ("Must be a colour written as #RRGGBB.") or a tier badge that does not exist or is a video ("Media <id> is a video; this takes an image."). */
             400: {
                 headers: {
                     [name: string]: unknown;
@@ -22336,7 +22365,7 @@ export interface operations {
                     "application/json": components["schemas"]["ErrorResponse"];
                 };
             };
-            /** @description `BUSINESS_RULE_VIOLATION` — The request was well-formed and the entities exist, but a domain rule forbids it — publishing a product with no price, archiving a brand products still reference, issuing more stock than a location holds, restoring a category under an archived parent ("Restore the parent category first.") or a product under an archived brand ("Restore the brand first."). Distinct from 400: nothing about the request is malformed. */
+            /** @description `BUSINESS_RULE_VIOLATION` — The request was well-formed and the entities exist, but a domain rule forbids it — publishing a product with no price, archiving a brand products still reference, deleting media a tier badge uses ("This media is still used — tier badge on Sprout of ladder version Launch. Replace or remove it first."), issuing more stock than a location holds, restoring a category under an archived parent ("Restore the parent category first.") or a product under an archived brand ("Restore the brand first."). Distinct from 400: nothing about the request is malformed. */
             422: {
                 headers: {
                     [name: string]: unknown;
@@ -22380,7 +22409,7 @@ export interface operations {
                     "*/*": components["schemas"]["ProductContentResponse"];
                 };
             };
-            /** @description `VALIDATION_FAILED` — The request body could not be read, a field failed validation, a required header was absent, or a domain validation rule rejected an input the caller can correct. */
+            /** @description `VALIDATION_FAILED` — The request body could not be read, a field failed validation, a required header was absent, or a domain validation rule rejected an input the caller can correct, such as a tier colour ("Must be a colour written as #RRGGBB.") or a tier badge that does not exist or is a video ("Media <id> is a video; this takes an image."). */
             400: {
                 headers: {
                     [name: string]: unknown;
@@ -22434,7 +22463,7 @@ export interface operations {
                     "application/json": components["schemas"]["ErrorResponse"];
                 };
             };
-            /** @description `BUSINESS_RULE_VIOLATION` — The request was well-formed and the entities exist, but a domain rule forbids it — publishing a product with no price, archiving a brand products still reference, issuing more stock than a location holds, restoring a category under an archived parent ("Restore the parent category first.") or a product under an archived brand ("Restore the brand first."). Distinct from 400: nothing about the request is malformed. */
+            /** @description `BUSINESS_RULE_VIOLATION` — The request was well-formed and the entities exist, but a domain rule forbids it — publishing a product with no price, archiving a brand products still reference, deleting media a tier badge uses ("This media is still used — tier badge on Sprout of ladder version Launch. Replace or remove it first."), issuing more stock than a location holds, restoring a category under an archived parent ("Restore the parent category first.") or a product under an archived brand ("Restore the brand first."). Distinct from 400: nothing about the request is malformed. */
             422: {
                 headers: {
                     [name: string]: unknown;
@@ -22474,7 +22503,7 @@ export interface operations {
                     "*/*": components["schemas"]["ImageResponse"][];
                 };
             };
-            /** @description `VALIDATION_FAILED` — The request body could not be read, a field failed validation, a required header was absent, or a domain validation rule rejected an input the caller can correct. */
+            /** @description `VALIDATION_FAILED` — The request body could not be read, a field failed validation, a required header was absent, or a domain validation rule rejected an input the caller can correct, such as a tier colour ("Must be a colour written as #RRGGBB.") or a tier badge that does not exist or is a video ("Media <id> is a video; this takes an image."). */
             400: {
                 headers: {
                     [name: string]: unknown;
@@ -22545,7 +22574,7 @@ export interface operations {
                     "*/*": components["schemas"]["ImageResponse"];
                 };
             };
-            /** @description `VALIDATION_FAILED` — The request body could not be read, a field failed validation, a required header was absent, or a domain validation rule rejected an input the caller can correct. */
+            /** @description `VALIDATION_FAILED` — The request body could not be read, a field failed validation, a required header was absent, or a domain validation rule rejected an input the caller can correct, such as a tier colour ("Must be a colour written as #RRGGBB.") or a tier badge that does not exist or is a video ("Media <id> is a video; this takes an image."). */
             400: {
                 headers: {
                     [name: string]: unknown;
@@ -22599,7 +22628,7 @@ export interface operations {
                     "application/json": components["schemas"]["ErrorResponse"];
                 };
             };
-            /** @description `BUSINESS_RULE_VIOLATION` — The request was well-formed and the entities exist, but a domain rule forbids it — publishing a product with no price, archiving a brand products still reference, issuing more stock than a location holds, restoring a category under an archived parent ("Restore the parent category first.") or a product under an archived brand ("Restore the brand first."). Distinct from 400: nothing about the request is malformed. */
+            /** @description `BUSINESS_RULE_VIOLATION` — The request was well-formed and the entities exist, but a domain rule forbids it — publishing a product with no price, archiving a brand products still reference, deleting media a tier badge uses ("This media is still used — tier badge on Sprout of ladder version Launch. Replace or remove it first."), issuing more stock than a location holds, restoring a category under an archived parent ("Restore the parent category first.") or a product under an archived brand ("Restore the brand first."). Distinct from 400: nothing about the request is malformed. */
             422: {
                 headers: {
                     [name: string]: unknown;
@@ -22644,7 +22673,7 @@ export interface operations {
                     "*/*": components["schemas"]["ImageResponse"];
                 };
             };
-            /** @description `VALIDATION_FAILED` — The request body could not be read, a field failed validation, a required header was absent, or a domain validation rule rejected an input the caller can correct. */
+            /** @description `VALIDATION_FAILED` — The request body could not be read, a field failed validation, a required header was absent, or a domain validation rule rejected an input the caller can correct, such as a tier colour ("Must be a colour written as #RRGGBB.") or a tier badge that does not exist or is a video ("Media <id> is a video; this takes an image."). */
             400: {
                 headers: {
                     [name: string]: unknown;
@@ -22698,7 +22727,7 @@ export interface operations {
                     "application/json": components["schemas"]["ErrorResponse"];
                 };
             };
-            /** @description `BUSINESS_RULE_VIOLATION` — The request was well-formed and the entities exist, but a domain rule forbids it — publishing a product with no price, archiving a brand products still reference, issuing more stock than a location holds, restoring a category under an archived parent ("Restore the parent category first.") or a product under an archived brand ("Restore the brand first."). Distinct from 400: nothing about the request is malformed. */
+            /** @description `BUSINESS_RULE_VIOLATION` — The request was well-formed and the entities exist, but a domain rule forbids it — publishing a product with no price, archiving a brand products still reference, deleting media a tier badge uses ("This media is still used — tier badge on Sprout of ladder version Launch. Replace or remove it first."), issuing more stock than a location holds, restoring a category under an archived parent ("Restore the parent category first.") or a product under an archived brand ("Restore the brand first."). Distinct from 400: nothing about the request is malformed. */
             422: {
                 headers: {
                     [name: string]: unknown;
@@ -22737,7 +22766,7 @@ export interface operations {
                 };
                 content?: never;
             };
-            /** @description `VALIDATION_FAILED` — The request body could not be read, a field failed validation, a required header was absent, or a domain validation rule rejected an input the caller can correct. */
+            /** @description `VALIDATION_FAILED` — The request body could not be read, a field failed validation, a required header was absent, or a domain validation rule rejected an input the caller can correct, such as a tier colour ("Must be a colour written as #RRGGBB.") or a tier badge that does not exist or is a video ("Media <id> is a video; this takes an image."). */
             400: {
                 headers: {
                     [name: string]: unknown;
@@ -22782,7 +22811,7 @@ export interface operations {
                     "application/json": components["schemas"]["ErrorResponse"];
                 };
             };
-            /** @description `BUSINESS_RULE_VIOLATION` — The request was well-formed and the entities exist, but a domain rule forbids it — publishing a product with no price, archiving a brand products still reference, issuing more stock than a location holds, restoring a category under an archived parent ("Restore the parent category first.") or a product under an archived brand ("Restore the brand first."). Distinct from 400: nothing about the request is malformed. */
+            /** @description `BUSINESS_RULE_VIOLATION` — The request was well-formed and the entities exist, but a domain rule forbids it — publishing a product with no price, archiving a brand products still reference, deleting media a tier badge uses ("This media is still used — tier badge on Sprout of ladder version Launch. Replace or remove it first."), issuing more stock than a location holds, restoring a category under an archived parent ("Restore the parent category first.") or a product under an archived brand ("Restore the brand first."). Distinct from 400: nothing about the request is malformed. */
             422: {
                 headers: {
                     [name: string]: unknown;
@@ -22826,7 +22855,7 @@ export interface operations {
                     "*/*": components["schemas"]["ImageResponse"][];
                 };
             };
-            /** @description `VALIDATION_FAILED` — The request body could not be read, a field failed validation, a required header was absent, or a domain validation rule rejected an input the caller can correct. */
+            /** @description `VALIDATION_FAILED` — The request body could not be read, a field failed validation, a required header was absent, or a domain validation rule rejected an input the caller can correct, such as a tier colour ("Must be a colour written as #RRGGBB.") or a tier badge that does not exist or is a video ("Media <id> is a video; this takes an image."). */
             400: {
                 headers: {
                     [name: string]: unknown;
@@ -22880,7 +22909,7 @@ export interface operations {
                     "application/json": components["schemas"]["ErrorResponse"];
                 };
             };
-            /** @description `BUSINESS_RULE_VIOLATION` — The request was well-formed and the entities exist, but a domain rule forbids it — publishing a product with no price, archiving a brand products still reference, issuing more stock than a location holds, restoring a category under an archived parent ("Restore the parent category first.") or a product under an archived brand ("Restore the brand first."). Distinct from 400: nothing about the request is malformed. */
+            /** @description `BUSINESS_RULE_VIOLATION` — The request was well-formed and the entities exist, but a domain rule forbids it — publishing a product with no price, archiving a brand products still reference, deleting media a tier badge uses ("This media is still used — tier badge on Sprout of ladder version Launch. Replace or remove it first."), issuing more stock than a location holds, restoring a category under an archived parent ("Restore the parent category first.") or a product under an archived brand ("Restore the brand first."). Distinct from 400: nothing about the request is malformed. */
             422: {
                 headers: {
                     [name: string]: unknown;
@@ -22920,7 +22949,7 @@ export interface operations {
                     "*/*": components["schemas"]["ProductMerchandisingResponse"];
                 };
             };
-            /** @description `VALIDATION_FAILED` — The request body could not be read, a field failed validation, a required header was absent, or a domain validation rule rejected an input the caller can correct. */
+            /** @description `VALIDATION_FAILED` — The request body could not be read, a field failed validation, a required header was absent, or a domain validation rule rejected an input the caller can correct, such as a tier colour ("Must be a colour written as #RRGGBB.") or a tier badge that does not exist or is a video ("Media <id> is a video; this takes an image."). */
             400: {
                 headers: {
                     [name: string]: unknown;
@@ -22991,7 +23020,7 @@ export interface operations {
                     "*/*": components["schemas"]["ProductMerchandisingResponse"];
                 };
             };
-            /** @description `VALIDATION_FAILED` — The request body could not be read, a field failed validation, a required header was absent, or a domain validation rule rejected an input the caller can correct. */
+            /** @description `VALIDATION_FAILED` — The request body could not be read, a field failed validation, a required header was absent, or a domain validation rule rejected an input the caller can correct, such as a tier colour ("Must be a colour written as #RRGGBB.") or a tier badge that does not exist or is a video ("Media <id> is a video; this takes an image."). */
             400: {
                 headers: {
                     [name: string]: unknown;
@@ -23045,7 +23074,7 @@ export interface operations {
                     "application/json": components["schemas"]["ErrorResponse"];
                 };
             };
-            /** @description `BUSINESS_RULE_VIOLATION` — The request was well-formed and the entities exist, but a domain rule forbids it — publishing a product with no price, archiving a brand products still reference, issuing more stock than a location holds, restoring a category under an archived parent ("Restore the parent category first.") or a product under an archived brand ("Restore the brand first."). Distinct from 400: nothing about the request is malformed. */
+            /** @description `BUSINESS_RULE_VIOLATION` — The request was well-formed and the entities exist, but a domain rule forbids it — publishing a product with no price, archiving a brand products still reference, deleting media a tier badge uses ("This media is still used — tier badge on Sprout of ladder version Launch. Replace or remove it first."), issuing more stock than a location holds, restoring a category under an archived parent ("Restore the parent category first.") or a product under an archived brand ("Restore the brand first."). Distinct from 400: nothing about the request is malformed. */
             422: {
                 headers: {
                     [name: string]: unknown;
@@ -23085,7 +23114,7 @@ export interface operations {
                     "*/*": components["schemas"]["ProductOptionResponse"][];
                 };
             };
-            /** @description `VALIDATION_FAILED` — The request body could not be read, a field failed validation, a required header was absent, or a domain validation rule rejected an input the caller can correct. */
+            /** @description `VALIDATION_FAILED` — The request body could not be read, a field failed validation, a required header was absent, or a domain validation rule rejected an input the caller can correct, such as a tier colour ("Must be a colour written as #RRGGBB.") or a tier badge that does not exist or is a video ("Media <id> is a video; this takes an image."). */
             400: {
                 headers: {
                     [name: string]: unknown;
@@ -23156,7 +23185,7 @@ export interface operations {
                     "*/*": components["schemas"]["ProductOptionResponse"];
                 };
             };
-            /** @description `VALIDATION_FAILED` — The request body could not be read, a field failed validation, a required header was absent, or a domain validation rule rejected an input the caller can correct. */
+            /** @description `VALIDATION_FAILED` — The request body could not be read, a field failed validation, a required header was absent, or a domain validation rule rejected an input the caller can correct, such as a tier colour ("Must be a colour written as #RRGGBB.") or a tier badge that does not exist or is a video ("Media <id> is a video; this takes an image."). */
             400: {
                 headers: {
                     [name: string]: unknown;
@@ -23210,7 +23239,7 @@ export interface operations {
                     "application/json": components["schemas"]["ErrorResponse"];
                 };
             };
-            /** @description `BUSINESS_RULE_VIOLATION` — The request was well-formed and the entities exist, but a domain rule forbids it — publishing a product with no price, archiving a brand products still reference, issuing more stock than a location holds, restoring a category under an archived parent ("Restore the parent category first.") or a product under an archived brand ("Restore the brand first."). Distinct from 400: nothing about the request is malformed. */
+            /** @description `BUSINESS_RULE_VIOLATION` — The request was well-formed and the entities exist, but a domain rule forbids it — publishing a product with no price, archiving a brand products still reference, deleting media a tier badge uses ("This media is still used — tier badge on Sprout of ladder version Launch. Replace or remove it first."), issuing more stock than a location holds, restoring a category under an archived parent ("Restore the parent category first.") or a product under an archived brand ("Restore the brand first."). Distinct from 400: nothing about the request is malformed. */
             422: {
                 headers: {
                     [name: string]: unknown;
@@ -23251,7 +23280,7 @@ export interface operations {
                     "*/*": components["schemas"]["ProductOptionResponse"][];
                 };
             };
-            /** @description `VALIDATION_FAILED` — The request body could not be read, a field failed validation, a required header was absent, or a domain validation rule rejected an input the caller can correct. */
+            /** @description `VALIDATION_FAILED` — The request body could not be read, a field failed validation, a required header was absent, or a domain validation rule rejected an input the caller can correct, such as a tier colour ("Must be a colour written as #RRGGBB.") or a tier badge that does not exist or is a video ("Media <id> is a video; this takes an image."). */
             400: {
                 headers: {
                     [name: string]: unknown;
@@ -23296,7 +23325,7 @@ export interface operations {
                     "application/json": components["schemas"]["ErrorResponse"];
                 };
             };
-            /** @description `BUSINESS_RULE_VIOLATION` — The request was well-formed and the entities exist, but a domain rule forbids it — publishing a product with no price, archiving a brand products still reference, issuing more stock than a location holds, restoring a category under an archived parent ("Restore the parent category first.") or a product under an archived brand ("Restore the brand first."). Distinct from 400: nothing about the request is malformed. */
+            /** @description `BUSINESS_RULE_VIOLATION` — The request was well-formed and the entities exist, but a domain rule forbids it — publishing a product with no price, archiving a brand products still reference, deleting media a tier badge uses ("This media is still used — tier badge on Sprout of ladder version Launch. Replace or remove it first."), issuing more stock than a location holds, restoring a category under an archived parent ("Restore the parent category first.") or a product under an archived brand ("Restore the brand first."). Distinct from 400: nothing about the request is malformed. */
             422: {
                 headers: {
                     [name: string]: unknown;
@@ -23340,7 +23369,7 @@ export interface operations {
                     "*/*": components["schemas"]["ProductOptionResponse"][];
                 };
             };
-            /** @description `VALIDATION_FAILED` — The request body could not be read, a field failed validation, a required header was absent, or a domain validation rule rejected an input the caller can correct. */
+            /** @description `VALIDATION_FAILED` — The request body could not be read, a field failed validation, a required header was absent, or a domain validation rule rejected an input the caller can correct, such as a tier colour ("Must be a colour written as #RRGGBB.") or a tier badge that does not exist or is a video ("Media <id> is a video; this takes an image."). */
             400: {
                 headers: {
                     [name: string]: unknown;
@@ -23394,7 +23423,7 @@ export interface operations {
                     "application/json": components["schemas"]["ErrorResponse"];
                 };
             };
-            /** @description `BUSINESS_RULE_VIOLATION` — The request was well-formed and the entities exist, but a domain rule forbids it — publishing a product with no price, archiving a brand products still reference, issuing more stock than a location holds, restoring a category under an archived parent ("Restore the parent category first.") or a product under an archived brand ("Restore the brand first."). Distinct from 400: nothing about the request is malformed. */
+            /** @description `BUSINESS_RULE_VIOLATION` — The request was well-formed and the entities exist, but a domain rule forbids it — publishing a product with no price, archiving a brand products still reference, deleting media a tier badge uses ("This media is still used — tier badge on Sprout of ladder version Launch. Replace or remove it first."), issuing more stock than a location holds, restoring a category under an archived parent ("Restore the parent category first.") or a product under an archived brand ("Restore the brand first."). Distinct from 400: nothing about the request is malformed. */
             422: {
                 headers: {
                     [name: string]: unknown;
@@ -23434,7 +23463,7 @@ export interface operations {
                     "*/*": components["schemas"]["SpecValueResponse"][];
                 };
             };
-            /** @description `VALIDATION_FAILED` — The request body could not be read, a field failed validation, a required header was absent, or a domain validation rule rejected an input the caller can correct. */
+            /** @description `VALIDATION_FAILED` — The request body could not be read, a field failed validation, a required header was absent, or a domain validation rule rejected an input the caller can correct, such as a tier colour ("Must be a colour written as #RRGGBB.") or a tier badge that does not exist or is a video ("Media <id> is a video; this takes an image."). */
             400: {
                 headers: {
                     [name: string]: unknown;
@@ -23505,7 +23534,7 @@ export interface operations {
                     "*/*": components["schemas"]["SpecValueResponse"];
                 };
             };
-            /** @description `VALIDATION_FAILED` — The request body could not be read, a field failed validation, a required header was absent, or a domain validation rule rejected an input the caller can correct. */
+            /** @description `VALIDATION_FAILED` — The request body could not be read, a field failed validation, a required header was absent, or a domain validation rule rejected an input the caller can correct, such as a tier colour ("Must be a colour written as #RRGGBB.") or a tier badge that does not exist or is a video ("Media <id> is a video; this takes an image."). */
             400: {
                 headers: {
                     [name: string]: unknown;
@@ -23559,7 +23588,7 @@ export interface operations {
                     "application/json": components["schemas"]["ErrorResponse"];
                 };
             };
-            /** @description `BUSINESS_RULE_VIOLATION` — The request was well-formed and the entities exist, but a domain rule forbids it — publishing a product with no price, archiving a brand products still reference, issuing more stock than a location holds, restoring a category under an archived parent ("Restore the parent category first.") or a product under an archived brand ("Restore the brand first."). Distinct from 400: nothing about the request is malformed. */
+            /** @description `BUSINESS_RULE_VIOLATION` — The request was well-formed and the entities exist, but a domain rule forbids it — publishing a product with no price, archiving a brand products still reference, deleting media a tier badge uses ("This media is still used — tier badge on Sprout of ladder version Launch. Replace or remove it first."), issuing more stock than a location holds, restoring a category under an archived parent ("Restore the parent category first.") or a product under an archived brand ("Restore the brand first."). Distinct from 400: nothing about the request is malformed. */
             422: {
                 headers: {
                     [name: string]: unknown;
@@ -23598,7 +23627,7 @@ export interface operations {
                 };
                 content?: never;
             };
-            /** @description `VALIDATION_FAILED` — The request body could not be read, a field failed validation, a required header was absent, or a domain validation rule rejected an input the caller can correct. */
+            /** @description `VALIDATION_FAILED` — The request body could not be read, a field failed validation, a required header was absent, or a domain validation rule rejected an input the caller can correct, such as a tier colour ("Must be a colour written as #RRGGBB.") or a tier badge that does not exist or is a video ("Media <id> is a video; this takes an image."). */
             400: {
                 headers: {
                     [name: string]: unknown;
@@ -23643,7 +23672,7 @@ export interface operations {
                     "application/json": components["schemas"]["ErrorResponse"];
                 };
             };
-            /** @description `BUSINESS_RULE_VIOLATION` — The request was well-formed and the entities exist, but a domain rule forbids it — publishing a product with no price, archiving a brand products still reference, issuing more stock than a location holds, restoring a category under an archived parent ("Restore the parent category first.") or a product under an archived brand ("Restore the brand first."). Distinct from 400: nothing about the request is malformed. */
+            /** @description `BUSINESS_RULE_VIOLATION` — The request was well-formed and the entities exist, but a domain rule forbids it — publishing a product with no price, archiving a brand products still reference, deleting media a tier badge uses ("This media is still used — tier badge on Sprout of ladder version Launch. Replace or remove it first."), issuing more stock than a location holds, restoring a category under an archived parent ("Restore the parent category first.") or a product under an archived brand ("Restore the brand first."). Distinct from 400: nothing about the request is malformed. */
             422: {
                 headers: {
                     [name: string]: unknown;
@@ -23683,7 +23712,7 @@ export interface operations {
                     "*/*": components["schemas"]["VariantResponse"][];
                 };
             };
-            /** @description `VALIDATION_FAILED` — The request body could not be read, a field failed validation, a required header was absent, or a domain validation rule rejected an input the caller can correct. */
+            /** @description `VALIDATION_FAILED` — The request body could not be read, a field failed validation, a required header was absent, or a domain validation rule rejected an input the caller can correct, such as a tier colour ("Must be a colour written as #RRGGBB.") or a tier badge that does not exist or is a video ("Media <id> is a video; this takes an image."). */
             400: {
                 headers: {
                     [name: string]: unknown;
@@ -23754,7 +23783,7 @@ export interface operations {
                     "*/*": components["schemas"]["VariantResponse"];
                 };
             };
-            /** @description `VALIDATION_FAILED` — The request body could not be read, a field failed validation, a required header was absent, or a domain validation rule rejected an input the caller can correct. */
+            /** @description `VALIDATION_FAILED` — The request body could not be read, a field failed validation, a required header was absent, or a domain validation rule rejected an input the caller can correct, such as a tier colour ("Must be a colour written as #RRGGBB.") or a tier badge that does not exist or is a video ("Media <id> is a video; this takes an image."). */
             400: {
                 headers: {
                     [name: string]: unknown;
@@ -23808,7 +23837,7 @@ export interface operations {
                     "application/json": components["schemas"]["ErrorResponse"];
                 };
             };
-            /** @description `BUSINESS_RULE_VIOLATION` — The request was well-formed and the entities exist, but a domain rule forbids it — publishing a product with no price, archiving a brand products still reference, issuing more stock than a location holds, restoring a category under an archived parent ("Restore the parent category first.") or a product under an archived brand ("Restore the brand first."). Distinct from 400: nothing about the request is malformed. */
+            /** @description `BUSINESS_RULE_VIOLATION` — The request was well-formed and the entities exist, but a domain rule forbids it — publishing a product with no price, archiving a brand products still reference, deleting media a tier badge uses ("This media is still used — tier badge on Sprout of ladder version Launch. Replace or remove it first."), issuing more stock than a location holds, restoring a category under an archived parent ("Restore the parent category first.") or a product under an archived brand ("Restore the brand first."). Distinct from 400: nothing about the request is malformed. */
             422: {
                 headers: {
                     [name: string]: unknown;
@@ -23853,7 +23882,7 @@ export interface operations {
                     "*/*": components["schemas"]["VariantResponse"];
                 };
             };
-            /** @description `VALIDATION_FAILED` — The request body could not be read, a field failed validation, a required header was absent, or a domain validation rule rejected an input the caller can correct. */
+            /** @description `VALIDATION_FAILED` — The request body could not be read, a field failed validation, a required header was absent, or a domain validation rule rejected an input the caller can correct, such as a tier colour ("Must be a colour written as #RRGGBB.") or a tier badge that does not exist or is a video ("Media <id> is a video; this takes an image."). */
             400: {
                 headers: {
                     [name: string]: unknown;
@@ -23907,7 +23936,7 @@ export interface operations {
                     "application/json": components["schemas"]["ErrorResponse"];
                 };
             };
-            /** @description `BUSINESS_RULE_VIOLATION` — The request was well-formed and the entities exist, but a domain rule forbids it — publishing a product with no price, archiving a brand products still reference, issuing more stock than a location holds, restoring a category under an archived parent ("Restore the parent category first.") or a product under an archived brand ("Restore the brand first."). Distinct from 400: nothing about the request is malformed. */
+            /** @description `BUSINESS_RULE_VIOLATION` — The request was well-formed and the entities exist, but a domain rule forbids it — publishing a product with no price, archiving a brand products still reference, deleting media a tier badge uses ("This media is still used — tier badge on Sprout of ladder version Launch. Replace or remove it first."), issuing more stock than a location holds, restoring a category under an archived parent ("Restore the parent category first.") or a product under an archived brand ("Restore the brand first."). Distinct from 400: nothing about the request is malformed. */
             422: {
                 headers: {
                     [name: string]: unknown;
@@ -23948,7 +23977,7 @@ export interface operations {
                     "*/*": components["schemas"]["VariantResponse"];
                 };
             };
-            /** @description `VALIDATION_FAILED` — The request body could not be read, a field failed validation, a required header was absent, or a domain validation rule rejected an input the caller can correct. */
+            /** @description `VALIDATION_FAILED` — The request body could not be read, a field failed validation, a required header was absent, or a domain validation rule rejected an input the caller can correct, such as a tier colour ("Must be a colour written as #RRGGBB.") or a tier badge that does not exist or is a video ("Media <id> is a video; this takes an image."). */
             400: {
                 headers: {
                     [name: string]: unknown;
@@ -23993,7 +24022,7 @@ export interface operations {
                     "application/json": components["schemas"]["ErrorResponse"];
                 };
             };
-            /** @description `BUSINESS_RULE_VIOLATION` — The request was well-formed and the entities exist, but a domain rule forbids it — publishing a product with no price, archiving a brand products still reference, issuing more stock than a location holds, restoring a category under an archived parent ("Restore the parent category first.") or a product under an archived brand ("Restore the brand first."). Distinct from 400: nothing about the request is malformed. */
+            /** @description `BUSINESS_RULE_VIOLATION` — The request was well-formed and the entities exist, but a domain rule forbids it — publishing a product with no price, archiving a brand products still reference, deleting media a tier badge uses ("This media is still used — tier badge on Sprout of ladder version Launch. Replace or remove it first."), issuing more stock than a location holds, restoring a category under an archived parent ("Restore the parent category first.") or a product under an archived brand ("Restore the brand first."). Distinct from 400: nothing about the request is malformed. */
             422: {
                 headers: {
                     [name: string]: unknown;
@@ -24034,7 +24063,7 @@ export interface operations {
                     "*/*": components["schemas"]["VariantResponse"];
                 };
             };
-            /** @description `VALIDATION_FAILED` — The request body could not be read, a field failed validation, a required header was absent, or a domain validation rule rejected an input the caller can correct. */
+            /** @description `VALIDATION_FAILED` — The request body could not be read, a field failed validation, a required header was absent, or a domain validation rule rejected an input the caller can correct, such as a tier colour ("Must be a colour written as #RRGGBB.") or a tier badge that does not exist or is a video ("Media <id> is a video; this takes an image."). */
             400: {
                 headers: {
                     [name: string]: unknown;
@@ -24079,7 +24108,7 @@ export interface operations {
                     "application/json": components["schemas"]["ErrorResponse"];
                 };
             };
-            /** @description `BUSINESS_RULE_VIOLATION` — The request was well-formed and the entities exist, but a domain rule forbids it — publishing a product with no price, archiving a brand products still reference, issuing more stock than a location holds, restoring a category under an archived parent ("Restore the parent category first.") or a product under an archived brand ("Restore the brand first."). Distinct from 400: nothing about the request is malformed. */
+            /** @description `BUSINESS_RULE_VIOLATION` — The request was well-formed and the entities exist, but a domain rule forbids it — publishing a product with no price, archiving a brand products still reference, deleting media a tier badge uses ("This media is still used — tier badge on Sprout of ladder version Launch. Replace or remove it first."), issuing more stock than a location holds, restoring a category under an archived parent ("Restore the parent category first.") or a product under an archived brand ("Restore the brand first."). Distinct from 400: nothing about the request is malformed. */
             422: {
                 headers: {
                     [name: string]: unknown;
@@ -24120,7 +24149,7 @@ export interface operations {
                     "*/*": components["schemas"]["ResolvedImageResponse"][];
                 };
             };
-            /** @description `VALIDATION_FAILED` — The request body could not be read, a field failed validation, a required header was absent, or a domain validation rule rejected an input the caller can correct. */
+            /** @description `VALIDATION_FAILED` — The request body could not be read, a field failed validation, a required header was absent, or a domain validation rule rejected an input the caller can correct, such as a tier colour ("Must be a colour written as #RRGGBB.") or a tier badge that does not exist or is a video ("Media <id> is a video; this takes an image."). */
             400: {
                 headers: {
                     [name: string]: unknown;
@@ -24192,7 +24221,7 @@ export interface operations {
                     "*/*": components["schemas"]["ImageResponse"];
                 };
             };
-            /** @description `VALIDATION_FAILED` — The request body could not be read, a field failed validation, a required header was absent, or a domain validation rule rejected an input the caller can correct. */
+            /** @description `VALIDATION_FAILED` — The request body could not be read, a field failed validation, a required header was absent, or a domain validation rule rejected an input the caller can correct, such as a tier colour ("Must be a colour written as #RRGGBB.") or a tier badge that does not exist or is a video ("Media <id> is a video; this takes an image."). */
             400: {
                 headers: {
                     [name: string]: unknown;
@@ -24246,7 +24275,7 @@ export interface operations {
                     "application/json": components["schemas"]["ErrorResponse"];
                 };
             };
-            /** @description `BUSINESS_RULE_VIOLATION` — The request was well-formed and the entities exist, but a domain rule forbids it — publishing a product with no price, archiving a brand products still reference, issuing more stock than a location holds, restoring a category under an archived parent ("Restore the parent category first.") or a product under an archived brand ("Restore the brand first."). Distinct from 400: nothing about the request is malformed. */
+            /** @description `BUSINESS_RULE_VIOLATION` — The request was well-formed and the entities exist, but a domain rule forbids it — publishing a product with no price, archiving a brand products still reference, deleting media a tier badge uses ("This media is still used — tier badge on Sprout of ladder version Launch. Replace or remove it first."), issuing more stock than a location holds, restoring a category under an archived parent ("Restore the parent category first.") or a product under an archived brand ("Restore the brand first."). Distinct from 400: nothing about the request is malformed. */
             422: {
                 headers: {
                     [name: string]: unknown;
@@ -24292,7 +24321,7 @@ export interface operations {
                     "*/*": components["schemas"]["ImageResponse"];
                 };
             };
-            /** @description `VALIDATION_FAILED` — The request body could not be read, a field failed validation, a required header was absent, or a domain validation rule rejected an input the caller can correct. */
+            /** @description `VALIDATION_FAILED` — The request body could not be read, a field failed validation, a required header was absent, or a domain validation rule rejected an input the caller can correct, such as a tier colour ("Must be a colour written as #RRGGBB.") or a tier badge that does not exist or is a video ("Media <id> is a video; this takes an image."). */
             400: {
                 headers: {
                     [name: string]: unknown;
@@ -24346,7 +24375,7 @@ export interface operations {
                     "application/json": components["schemas"]["ErrorResponse"];
                 };
             };
-            /** @description `BUSINESS_RULE_VIOLATION` — The request was well-formed and the entities exist, but a domain rule forbids it — publishing a product with no price, archiving a brand products still reference, issuing more stock than a location holds, restoring a category under an archived parent ("Restore the parent category first.") or a product under an archived brand ("Restore the brand first."). Distinct from 400: nothing about the request is malformed. */
+            /** @description `BUSINESS_RULE_VIOLATION` — The request was well-formed and the entities exist, but a domain rule forbids it — publishing a product with no price, archiving a brand products still reference, deleting media a tier badge uses ("This media is still used — tier badge on Sprout of ladder version Launch. Replace or remove it first."), issuing more stock than a location holds, restoring a category under an archived parent ("Restore the parent category first.") or a product under an archived brand ("Restore the brand first."). Distinct from 400: nothing about the request is malformed. */
             422: {
                 headers: {
                     [name: string]: unknown;
@@ -24386,7 +24415,7 @@ export interface operations {
                 };
                 content?: never;
             };
-            /** @description `VALIDATION_FAILED` — The request body could not be read, a field failed validation, a required header was absent, or a domain validation rule rejected an input the caller can correct. */
+            /** @description `VALIDATION_FAILED` — The request body could not be read, a field failed validation, a required header was absent, or a domain validation rule rejected an input the caller can correct, such as a tier colour ("Must be a colour written as #RRGGBB.") or a tier badge that does not exist or is a video ("Media <id> is a video; this takes an image."). */
             400: {
                 headers: {
                     [name: string]: unknown;
@@ -24431,7 +24460,7 @@ export interface operations {
                     "application/json": components["schemas"]["ErrorResponse"];
                 };
             };
-            /** @description `BUSINESS_RULE_VIOLATION` — The request was well-formed and the entities exist, but a domain rule forbids it — publishing a product with no price, archiving a brand products still reference, issuing more stock than a location holds, restoring a category under an archived parent ("Restore the parent category first.") or a product under an archived brand ("Restore the brand first."). Distinct from 400: nothing about the request is malformed. */
+            /** @description `BUSINESS_RULE_VIOLATION` — The request was well-formed and the entities exist, but a domain rule forbids it — publishing a product with no price, archiving a brand products still reference, deleting media a tier badge uses ("This media is still used — tier badge on Sprout of ladder version Launch. Replace or remove it first."), issuing more stock than a location holds, restoring a category under an archived parent ("Restore the parent category first.") or a product under an archived brand ("Restore the brand first."). Distinct from 400: nothing about the request is malformed. */
             422: {
                 headers: {
                     [name: string]: unknown;
@@ -24476,7 +24505,7 @@ export interface operations {
                     "*/*": components["schemas"]["ImageResponse"][];
                 };
             };
-            /** @description `VALIDATION_FAILED` — The request body could not be read, a field failed validation, a required header was absent, or a domain validation rule rejected an input the caller can correct. */
+            /** @description `VALIDATION_FAILED` — The request body could not be read, a field failed validation, a required header was absent, or a domain validation rule rejected an input the caller can correct, such as a tier colour ("Must be a colour written as #RRGGBB.") or a tier badge that does not exist or is a video ("Media <id> is a video; this takes an image."). */
             400: {
                 headers: {
                     [name: string]: unknown;
@@ -24530,7 +24559,7 @@ export interface operations {
                     "application/json": components["schemas"]["ErrorResponse"];
                 };
             };
-            /** @description `BUSINESS_RULE_VIOLATION` — The request was well-formed and the entities exist, but a domain rule forbids it — publishing a product with no price, archiving a brand products still reference, issuing more stock than a location holds, restoring a category under an archived parent ("Restore the parent category first.") or a product under an archived brand ("Restore the brand first."). Distinct from 400: nothing about the request is malformed. */
+            /** @description `BUSINESS_RULE_VIOLATION` — The request was well-formed and the entities exist, but a domain rule forbids it — publishing a product with no price, archiving a brand products still reference, deleting media a tier badge uses ("This media is still used — tier badge on Sprout of ladder version Launch. Replace or remove it first."), issuing more stock than a location holds, restoring a category under an archived parent ("Restore the parent category first.") or a product under an archived brand ("Restore the brand first."). Distinct from 400: nothing about the request is malformed. */
             422: {
                 headers: {
                     [name: string]: unknown;
@@ -24571,7 +24600,7 @@ export interface operations {
                     "*/*": components["schemas"]["VariantMerchandisingResponse"];
                 };
             };
-            /** @description `VALIDATION_FAILED` — The request body could not be read, a field failed validation, a required header was absent, or a domain validation rule rejected an input the caller can correct. */
+            /** @description `VALIDATION_FAILED` — The request body could not be read, a field failed validation, a required header was absent, or a domain validation rule rejected an input the caller can correct, such as a tier colour ("Must be a colour written as #RRGGBB.") or a tier badge that does not exist or is a video ("Media <id> is a video; this takes an image."). */
             400: {
                 headers: {
                     [name: string]: unknown;
@@ -24643,7 +24672,7 @@ export interface operations {
                     "*/*": components["schemas"]["VariantMerchandisingResponse"];
                 };
             };
-            /** @description `VALIDATION_FAILED` — The request body could not be read, a field failed validation, a required header was absent, or a domain validation rule rejected an input the caller can correct. */
+            /** @description `VALIDATION_FAILED` — The request body could not be read, a field failed validation, a required header was absent, or a domain validation rule rejected an input the caller can correct, such as a tier colour ("Must be a colour written as #RRGGBB.") or a tier badge that does not exist or is a video ("Media <id> is a video; this takes an image."). */
             400: {
                 headers: {
                     [name: string]: unknown;
@@ -24697,7 +24726,7 @@ export interface operations {
                     "application/json": components["schemas"]["ErrorResponse"];
                 };
             };
-            /** @description `BUSINESS_RULE_VIOLATION` — The request was well-formed and the entities exist, but a domain rule forbids it — publishing a product with no price, archiving a brand products still reference, issuing more stock than a location holds, restoring a category under an archived parent ("Restore the parent category first.") or a product under an archived brand ("Restore the brand first."). Distinct from 400: nothing about the request is malformed. */
+            /** @description `BUSINESS_RULE_VIOLATION` — The request was well-formed and the entities exist, but a domain rule forbids it — publishing a product with no price, archiving a brand products still reference, deleting media a tier badge uses ("This media is still used — tier badge on Sprout of ladder version Launch. Replace or remove it first."), issuing more stock than a location holds, restoring a category under an archived parent ("Restore the parent category first.") or a product under an archived brand ("Restore the brand first."). Distinct from 400: nothing about the request is malformed. */
             422: {
                 headers: {
                     [name: string]: unknown;
@@ -24738,7 +24767,7 @@ export interface operations {
                     "*/*": components["schemas"]["VariantResponse"];
                 };
             };
-            /** @description `VALIDATION_FAILED` — The request body could not be read, a field failed validation, a required header was absent, or a domain validation rule rejected an input the caller can correct. */
+            /** @description `VALIDATION_FAILED` — The request body could not be read, a field failed validation, a required header was absent, or a domain validation rule rejected an input the caller can correct, such as a tier colour ("Must be a colour written as #RRGGBB.") or a tier badge that does not exist or is a video ("Media <id> is a video; this takes an image."). */
             400: {
                 headers: {
                     [name: string]: unknown;
@@ -24783,7 +24812,7 @@ export interface operations {
                     "application/json": components["schemas"]["ErrorResponse"];
                 };
             };
-            /** @description `BUSINESS_RULE_VIOLATION` — The request was well-formed and the entities exist, but a domain rule forbids it — publishing a product with no price, archiving a brand products still reference, issuing more stock than a location holds, restoring a category under an archived parent ("Restore the parent category first.") or a product under an archived brand ("Restore the brand first."). Distinct from 400: nothing about the request is malformed. */
+            /** @description `BUSINESS_RULE_VIOLATION` — The request was well-formed and the entities exist, but a domain rule forbids it — publishing a product with no price, archiving a brand products still reference, deleting media a tier badge uses ("This media is still used — tier badge on Sprout of ladder version Launch. Replace or remove it first."), issuing more stock than a location holds, restoring a category under an archived parent ("Restore the parent category first.") or a product under an archived brand ("Restore the brand first."). Distinct from 400: nothing about the request is malformed. */
             422: {
                 headers: {
                     [name: string]: unknown;
@@ -24824,7 +24853,7 @@ export interface operations {
                     "*/*": components["schemas"]["SpecValueResponse"][];
                 };
             };
-            /** @description `VALIDATION_FAILED` — The request body could not be read, a field failed validation, a required header was absent, or a domain validation rule rejected an input the caller can correct. */
+            /** @description `VALIDATION_FAILED` — The request body could not be read, a field failed validation, a required header was absent, or a domain validation rule rejected an input the caller can correct, such as a tier colour ("Must be a colour written as #RRGGBB.") or a tier badge that does not exist or is a video ("Media <id> is a video; this takes an image."). */
             400: {
                 headers: {
                     [name: string]: unknown;
@@ -24896,7 +24925,7 @@ export interface operations {
                     "*/*": components["schemas"]["SpecValueResponse"];
                 };
             };
-            /** @description `VALIDATION_FAILED` — The request body could not be read, a field failed validation, a required header was absent, or a domain validation rule rejected an input the caller can correct. */
+            /** @description `VALIDATION_FAILED` — The request body could not be read, a field failed validation, a required header was absent, or a domain validation rule rejected an input the caller can correct, such as a tier colour ("Must be a colour written as #RRGGBB.") or a tier badge that does not exist or is a video ("Media <id> is a video; this takes an image."). */
             400: {
                 headers: {
                     [name: string]: unknown;
@@ -24950,7 +24979,7 @@ export interface operations {
                     "application/json": components["schemas"]["ErrorResponse"];
                 };
             };
-            /** @description `BUSINESS_RULE_VIOLATION` — The request was well-formed and the entities exist, but a domain rule forbids it — publishing a product with no price, archiving a brand products still reference, issuing more stock than a location holds, restoring a category under an archived parent ("Restore the parent category first.") or a product under an archived brand ("Restore the brand first."). Distinct from 400: nothing about the request is malformed. */
+            /** @description `BUSINESS_RULE_VIOLATION` — The request was well-formed and the entities exist, but a domain rule forbids it — publishing a product with no price, archiving a brand products still reference, deleting media a tier badge uses ("This media is still used — tier badge on Sprout of ladder version Launch. Replace or remove it first."), issuing more stock than a location holds, restoring a category under an archived parent ("Restore the parent category first.") or a product under an archived brand ("Restore the brand first."). Distinct from 400: nothing about the request is malformed. */
             422: {
                 headers: {
                     [name: string]: unknown;
@@ -24990,7 +25019,7 @@ export interface operations {
                 };
                 content?: never;
             };
-            /** @description `VALIDATION_FAILED` — The request body could not be read, a field failed validation, a required header was absent, or a domain validation rule rejected an input the caller can correct. */
+            /** @description `VALIDATION_FAILED` — The request body could not be read, a field failed validation, a required header was absent, or a domain validation rule rejected an input the caller can correct, such as a tier colour ("Must be a colour written as #RRGGBB.") or a tier badge that does not exist or is a video ("Media <id> is a video; this takes an image."). */
             400: {
                 headers: {
                     [name: string]: unknown;
@@ -25035,7 +25064,7 @@ export interface operations {
                     "application/json": components["schemas"]["ErrorResponse"];
                 };
             };
-            /** @description `BUSINESS_RULE_VIOLATION` — The request was well-formed and the entities exist, but a domain rule forbids it — publishing a product with no price, archiving a brand products still reference, issuing more stock than a location holds, restoring a category under an archived parent ("Restore the parent category first.") or a product under an archived brand ("Restore the brand first."). Distinct from 400: nothing about the request is malformed. */
+            /** @description `BUSINESS_RULE_VIOLATION` — The request was well-formed and the entities exist, but a domain rule forbids it — publishing a product with no price, archiving a brand products still reference, deleting media a tier badge uses ("This media is still used — tier badge on Sprout of ladder version Launch. Replace or remove it first."), issuing more stock than a location holds, restoring a category under an archived parent ("Restore the parent category first.") or a product under an archived brand ("Restore the brand first."). Distinct from 400: nothing about the request is malformed. */
             422: {
                 headers: {
                     [name: string]: unknown;
@@ -25079,7 +25108,7 @@ export interface operations {
                     "*/*": components["schemas"]["VariantResponse"][];
                 };
             };
-            /** @description `VALIDATION_FAILED` — The request body could not be read, a field failed validation, a required header was absent, or a domain validation rule rejected an input the caller can correct. */
+            /** @description `VALIDATION_FAILED` — The request body could not be read, a field failed validation, a required header was absent, or a domain validation rule rejected an input the caller can correct, such as a tier colour ("Must be a colour written as #RRGGBB.") or a tier badge that does not exist or is a video ("Media <id> is a video; this takes an image."). */
             400: {
                 headers: {
                     [name: string]: unknown;
@@ -25133,7 +25162,7 @@ export interface operations {
                     "application/json": components["schemas"]["ErrorResponse"];
                 };
             };
-            /** @description `BUSINESS_RULE_VIOLATION` — The request was well-formed and the entities exist, but a domain rule forbids it — publishing a product with no price, archiving a brand products still reference, issuing more stock than a location holds, restoring a category under an archived parent ("Restore the parent category first.") or a product under an archived brand ("Restore the brand first."). Distinct from 400: nothing about the request is malformed. */
+            /** @description `BUSINESS_RULE_VIOLATION` — The request was well-formed and the entities exist, but a domain rule forbids it — publishing a product with no price, archiving a brand products still reference, deleting media a tier badge uses ("This media is still used — tier badge on Sprout of ladder version Launch. Replace or remove it first."), issuing more stock than a location holds, restoring a category under an archived parent ("Restore the parent category first.") or a product under an archived brand ("Restore the brand first."). Distinct from 400: nothing about the request is malformed. */
             422: {
                 headers: {
                     [name: string]: unknown;
@@ -25176,7 +25205,7 @@ export interface operations {
                     "*/*": components["schemas"]["ProductVisibilityPreviewResponse"];
                 };
             };
-            /** @description `VALIDATION_FAILED` — The request body could not be read, a field failed validation, a required header was absent, or a domain validation rule rejected an input the caller can correct. */
+            /** @description `VALIDATION_FAILED` — The request body could not be read, a field failed validation, a required header was absent, or a domain validation rule rejected an input the caller can correct, such as a tier colour ("Must be a colour written as #RRGGBB.") or a tier badge that does not exist or is a video ("Media <id> is a video; this takes an image."). */
             400: {
                 headers: {
                     [name: string]: unknown;
@@ -25244,7 +25273,7 @@ export interface operations {
                     "*/*": components["schemas"]["ProductVisibilityPreviewResponse"];
                 };
             };
-            /** @description `VALIDATION_FAILED` — The request body could not be read, a field failed validation, a required header was absent, or a domain validation rule rejected an input the caller can correct. */
+            /** @description `VALIDATION_FAILED` — The request body could not be read, a field failed validation, a required header was absent, or a domain validation rule rejected an input the caller can correct, such as a tier colour ("Must be a colour written as #RRGGBB.") or a tier badge that does not exist or is a video ("Media <id> is a video; this takes an image."). */
             400: {
                 headers: {
                     [name: string]: unknown;
@@ -25313,7 +25342,7 @@ export interface operations {
                     "*/*": components["schemas"]["PageResponseBrowseEntryResponse"];
                 };
             };
-            /** @description `VALIDATION_FAILED` — The request body could not be read, a field failed validation, a required header was absent, or a domain validation rule rejected an input the caller can correct. */
+            /** @description `VALIDATION_FAILED` — The request body could not be read, a field failed validation, a required header was absent, or a domain validation rule rejected an input the caller can correct, such as a tier colour ("Must be a colour written as #RRGGBB.") or a tier badge that does not exist or is a video ("Media <id> is a video; this takes an image."). */
             400: {
                 headers: {
                     [name: string]: unknown;
@@ -25373,7 +25402,7 @@ export interface operations {
                     "*/*": components["schemas"]["PageResponseBrowseEntryResponse"];
                 };
             };
-            /** @description `VALIDATION_FAILED` — The request body could not be read, a field failed validation, a required header was absent, or a domain validation rule rejected an input the caller can correct. */
+            /** @description `VALIDATION_FAILED` — The request body could not be read, a field failed validation, a required header was absent, or a domain validation rule rejected an input the caller can correct, such as a tier colour ("Must be a colour written as #RRGGBB.") or a tier badge that does not exist or is a video ("Media <id> is a video; this takes an image."). */
             400: {
                 headers: {
                     [name: string]: unknown;
@@ -25438,7 +25467,7 @@ export interface operations {
                     "*/*": components["schemas"]["ProfileResponse"];
                 };
             };
-            /** @description `VALIDATION_FAILED` — The request body could not be read, a field failed validation, a required header was absent, or a domain validation rule rejected an input the caller can correct. */
+            /** @description `VALIDATION_FAILED` — The request body could not be read, a field failed validation, a required header was absent, or a domain validation rule rejected an input the caller can correct, such as a tier colour ("Must be a colour written as #RRGGBB.") or a tier badge that does not exist or is a video ("Media <id> is a video; this takes an image."). */
             400: {
                 headers: {
                     [name: string]: unknown;
@@ -25498,7 +25527,7 @@ export interface operations {
                     "*/*": components["schemas"]["ProfileResponse"];
                 };
             };
-            /** @description `VALIDATION_FAILED` — The request body could not be read, a field failed validation, a required header was absent, or a domain validation rule rejected an input the caller can correct. */
+            /** @description `VALIDATION_FAILED` — The request body could not be read, a field failed validation, a required header was absent, or a domain validation rule rejected an input the caller can correct, such as a tier colour ("Must be a colour written as #RRGGBB.") or a tier badge that does not exist or is a video ("Media <id> is a video; this takes an image."). */
             400: {
                 headers: {
                     [name: string]: unknown;
@@ -25543,7 +25572,7 @@ export interface operations {
                     "application/json": components["schemas"]["ErrorResponse"];
                 };
             };
-            /** @description `BUSINESS_RULE_VIOLATION` — The request was well-formed and the entities exist, but a domain rule forbids it — publishing a product with no price, archiving a brand products still reference, issuing more stock than a location holds, restoring a category under an archived parent ("Restore the parent category first.") or a product under an archived brand ("Restore the brand first."). Distinct from 400: nothing about the request is malformed. */
+            /** @description `BUSINESS_RULE_VIOLATION` — The request was well-formed and the entities exist, but a domain rule forbids it — publishing a product with no price, archiving a brand products still reference, deleting media a tier badge uses ("This media is still used — tier badge on Sprout of ladder version Launch. Replace or remove it first."), issuing more stock than a location holds, restoring a category under an archived parent ("Restore the parent category first.") or a product under an archived brand ("Restore the brand first."). Distinct from 400: nothing about the request is malformed. */
             422: {
                 headers: {
                     [name: string]: unknown;
@@ -25585,7 +25614,7 @@ export interface operations {
                     "*/*": components["schemas"]["ChangePasswordResponse"];
                 };
             };
-            /** @description `VALIDATION_FAILED` — The request body could not be read, a field failed validation, a required header was absent, or a domain validation rule rejected an input the caller can correct. */
+            /** @description `VALIDATION_FAILED` — The request body could not be read, a field failed validation, a required header was absent, or a domain validation rule rejected an input the caller can correct, such as a tier colour ("Must be a colour written as #RRGGBB.") or a tier badge that does not exist or is a video ("Media <id> is a video; this takes an image."). */
             400: {
                 headers: {
                     [name: string]: unknown;
@@ -25630,7 +25659,7 @@ export interface operations {
                     "application/json": components["schemas"]["ErrorResponse"];
                 };
             };
-            /** @description `BUSINESS_RULE_VIOLATION` — The request was well-formed and the entities exist, but a domain rule forbids it — publishing a product with no price, archiving a brand products still reference, issuing more stock than a location holds, restoring a category under an archived parent ("Restore the parent category first.") or a product under an archived brand ("Restore the brand first."). Distinct from 400: nothing about the request is malformed. */
+            /** @description `BUSINESS_RULE_VIOLATION` — The request was well-formed and the entities exist, but a domain rule forbids it — publishing a product with no price, archiving a brand products still reference, deleting media a tier badge uses ("This media is still used — tier badge on Sprout of ladder version Launch. Replace or remove it first."), issuing more stock than a location holds, restoring a category under an archived parent ("Restore the parent category first.") or a product under an archived brand ("Restore the brand first."). Distinct from 400: nothing about the request is malformed. */
             422: {
                 headers: {
                     [name: string]: unknown;
@@ -25676,7 +25705,7 @@ export interface operations {
                     "*/*": components["schemas"]["PageResponsePurchaseOrderResponse"];
                 };
             };
-            /** @description `VALIDATION_FAILED` — The request body could not be read, a field failed validation, a required header was absent, or a domain validation rule rejected an input the caller can correct. */
+            /** @description `VALIDATION_FAILED` — The request body could not be read, a field failed validation, a required header was absent, or a domain validation rule rejected an input the caller can correct, such as a tier colour ("Must be a colour written as #RRGGBB.") or a tier badge that does not exist or is a video ("Media <id> is a video; this takes an image."). */
             400: {
                 headers: {
                     [name: string]: unknown;
@@ -25736,7 +25765,7 @@ export interface operations {
                     "*/*": components["schemas"]["PurchaseOrderResponse"];
                 };
             };
-            /** @description `VALIDATION_FAILED` — The request body could not be read, a field failed validation, a required header was absent, or a domain validation rule rejected an input the caller can correct. */
+            /** @description `VALIDATION_FAILED` — The request body could not be read, a field failed validation, a required header was absent, or a domain validation rule rejected an input the caller can correct, such as a tier colour ("Must be a colour written as #RRGGBB.") or a tier badge that does not exist or is a video ("Media <id> is a video; this takes an image."). */
             400: {
                 headers: {
                     [name: string]: unknown;
@@ -25781,7 +25810,7 @@ export interface operations {
                     "application/json": components["schemas"]["ErrorResponse"];
                 };
             };
-            /** @description `BUSINESS_RULE_VIOLATION` — The request was well-formed and the entities exist, but a domain rule forbids it — publishing a product with no price, archiving a brand products still reference, issuing more stock than a location holds, restoring a category under an archived parent ("Restore the parent category first.") or a product under an archived brand ("Restore the brand first."). Distinct from 400: nothing about the request is malformed. */
+            /** @description `BUSINESS_RULE_VIOLATION` — The request was well-formed and the entities exist, but a domain rule forbids it — publishing a product with no price, archiving a brand products still reference, deleting media a tier badge uses ("This media is still used — tier badge on Sprout of ladder version Launch. Replace or remove it first."), issuing more stock than a location holds, restoring a category under an archived parent ("Restore the parent category first.") or a product under an archived brand ("Restore the brand first."). Distinct from 400: nothing about the request is malformed. */
             422: {
                 headers: {
                     [name: string]: unknown;
@@ -25821,7 +25850,7 @@ export interface operations {
                     "*/*": components["schemas"]["PurchaseOrderResponse"];
                 };
             };
-            /** @description `VALIDATION_FAILED` — The request body could not be read, a field failed validation, a required header was absent, or a domain validation rule rejected an input the caller can correct. */
+            /** @description `VALIDATION_FAILED` — The request body could not be read, a field failed validation, a required header was absent, or a domain validation rule rejected an input the caller can correct, such as a tier colour ("Must be a colour written as #RRGGBB.") or a tier badge that does not exist or is a video ("Media <id> is a video; this takes an image."). */
             400: {
                 headers: {
                     [name: string]: unknown;
@@ -25892,7 +25921,7 @@ export interface operations {
                     "*/*": components["schemas"]["PurchaseOrderResponse"];
                 };
             };
-            /** @description `VALIDATION_FAILED` — The request body could not be read, a field failed validation, a required header was absent, or a domain validation rule rejected an input the caller can correct. */
+            /** @description `VALIDATION_FAILED` — The request body could not be read, a field failed validation, a required header was absent, or a domain validation rule rejected an input the caller can correct, such as a tier colour ("Must be a colour written as #RRGGBB.") or a tier badge that does not exist or is a video ("Media <id> is a video; this takes an image."). */
             400: {
                 headers: {
                     [name: string]: unknown;
@@ -25946,7 +25975,7 @@ export interface operations {
                     "application/json": components["schemas"]["ErrorResponse"];
                 };
             };
-            /** @description `BUSINESS_RULE_VIOLATION` — The request was well-formed and the entities exist, but a domain rule forbids it — publishing a product with no price, archiving a brand products still reference, issuing more stock than a location holds, restoring a category under an archived parent ("Restore the parent category first.") or a product under an archived brand ("Restore the brand first."). Distinct from 400: nothing about the request is malformed. */
+            /** @description `BUSINESS_RULE_VIOLATION` — The request was well-formed and the entities exist, but a domain rule forbids it — publishing a product with no price, archiving a brand products still reference, deleting media a tier badge uses ("This media is still used — tier badge on Sprout of ladder version Launch. Replace or remove it first."), issuing more stock than a location holds, restoring a category under an archived parent ("Restore the parent category first.") or a product under an archived brand ("Restore the brand first."). Distinct from 400: nothing about the request is malformed. */
             422: {
                 headers: {
                     [name: string]: unknown;
@@ -25986,7 +26015,7 @@ export interface operations {
                     "*/*": components["schemas"]["PurchaseOrderResponse"];
                 };
             };
-            /** @description `VALIDATION_FAILED` — The request body could not be read, a field failed validation, a required header was absent, or a domain validation rule rejected an input the caller can correct. */
+            /** @description `VALIDATION_FAILED` — The request body could not be read, a field failed validation, a required header was absent, or a domain validation rule rejected an input the caller can correct, such as a tier colour ("Must be a colour written as #RRGGBB.") or a tier badge that does not exist or is a video ("Media <id> is a video; this takes an image."). */
             400: {
                 headers: {
                     [name: string]: unknown;
@@ -26031,7 +26060,7 @@ export interface operations {
                     "application/json": components["schemas"]["ErrorResponse"];
                 };
             };
-            /** @description `BUSINESS_RULE_VIOLATION` — The request was well-formed and the entities exist, but a domain rule forbids it — publishing a product with no price, archiving a brand products still reference, issuing more stock than a location holds, restoring a category under an archived parent ("Restore the parent category first.") or a product under an archived brand ("Restore the brand first."). Distinct from 400: nothing about the request is malformed. */
+            /** @description `BUSINESS_RULE_VIOLATION` — The request was well-formed and the entities exist, but a domain rule forbids it — publishing a product with no price, archiving a brand products still reference, deleting media a tier badge uses ("This media is still used — tier badge on Sprout of ladder version Launch. Replace or remove it first."), issuing more stock than a location holds, restoring a category under an archived parent ("Restore the parent category first.") or a product under an archived brand ("Restore the brand first."). Distinct from 400: nothing about the request is malformed. */
             422: {
                 headers: {
                     [name: string]: unknown;
@@ -26075,7 +26104,7 @@ export interface operations {
                     "*/*": components["schemas"]["PurchaseOrderResponse"];
                 };
             };
-            /** @description `VALIDATION_FAILED` — The request body could not be read, a field failed validation, a required header was absent, or a domain validation rule rejected an input the caller can correct. */
+            /** @description `VALIDATION_FAILED` — The request body could not be read, a field failed validation, a required header was absent, or a domain validation rule rejected an input the caller can correct, such as a tier colour ("Must be a colour written as #RRGGBB.") or a tier badge that does not exist or is a video ("Media <id> is a video; this takes an image."). */
             400: {
                 headers: {
                     [name: string]: unknown;
@@ -26129,7 +26158,7 @@ export interface operations {
                     "application/json": components["schemas"]["ErrorResponse"];
                 };
             };
-            /** @description `BUSINESS_RULE_VIOLATION` — The request was well-formed and the entities exist, but a domain rule forbids it — publishing a product with no price, archiving a brand products still reference, issuing more stock than a location holds, restoring a category under an archived parent ("Restore the parent category first.") or a product under an archived brand ("Restore the brand first."). Distinct from 400: nothing about the request is malformed. */
+            /** @description `BUSINESS_RULE_VIOLATION` — The request was well-formed and the entities exist, but a domain rule forbids it — publishing a product with no price, archiving a brand products still reference, deleting media a tier badge uses ("This media is still used — tier badge on Sprout of ladder version Launch. Replace or remove it first."), issuing more stock than a location holds, restoring a category under an archived parent ("Restore the parent category first.") or a product under an archived brand ("Restore the brand first."). Distinct from 400: nothing about the request is malformed. */
             422: {
                 headers: {
                     [name: string]: unknown;
@@ -26169,7 +26198,7 @@ export interface operations {
                     "*/*": components["schemas"]["GoodsReceiptResponse"][];
                 };
             };
-            /** @description `VALIDATION_FAILED` — The request body could not be read, a field failed validation, a required header was absent, or a domain validation rule rejected an input the caller can correct. */
+            /** @description `VALIDATION_FAILED` — The request body could not be read, a field failed validation, a required header was absent, or a domain validation rule rejected an input the caller can correct, such as a tier colour ("Must be a colour written as #RRGGBB.") or a tier badge that does not exist or is a video ("Media <id> is a video; this takes an image."). */
             400: {
                 headers: {
                     [name: string]: unknown;
@@ -26238,7 +26267,7 @@ export interface operations {
                     "*/*": components["schemas"]["PageResponsePurchaseOrderResponse"];
                 };
             };
-            /** @description `VALIDATION_FAILED` — The request body could not be read, a field failed validation, a required header was absent, or a domain validation rule rejected an input the caller can correct. */
+            /** @description `VALIDATION_FAILED` — The request body could not be read, a field failed validation, a required header was absent, or a domain validation rule rejected an input the caller can correct, such as a tier colour ("Must be a colour written as #RRGGBB.") or a tier badge that does not exist or is a video ("Media <id> is a video; this takes an image."). */
             400: {
                 headers: {
                     [name: string]: unknown;
@@ -26294,7 +26323,7 @@ export interface operations {
                     "*/*": components["schemas"]["RoleResponse"][];
                 };
             };
-            /** @description `VALIDATION_FAILED` — The request body could not be read, a field failed validation, a required header was absent, or a domain validation rule rejected an input the caller can correct. */
+            /** @description `VALIDATION_FAILED` — The request body could not be read, a field failed validation, a required header was absent, or a domain validation rule rejected an input the caller can correct, such as a tier colour ("Must be a colour written as #RRGGBB.") or a tier badge that does not exist or is a video ("Media <id> is a video; this takes an image."). */
             400: {
                 headers: {
                     [name: string]: unknown;
@@ -26354,7 +26383,7 @@ export interface operations {
                     "*/*": components["schemas"]["RoleResponse"];
                 };
             };
-            /** @description `VALIDATION_FAILED` — The request body could not be read, a field failed validation, a required header was absent, or a domain validation rule rejected an input the caller can correct. */
+            /** @description `VALIDATION_FAILED` — The request body could not be read, a field failed validation, a required header was absent, or a domain validation rule rejected an input the caller can correct, such as a tier colour ("Must be a colour written as #RRGGBB.") or a tier badge that does not exist or is a video ("Media <id> is a video; this takes an image."). */
             400: {
                 headers: {
                     [name: string]: unknown;
@@ -26399,7 +26428,7 @@ export interface operations {
                     "application/json": components["schemas"]["ErrorResponse"];
                 };
             };
-            /** @description `BUSINESS_RULE_VIOLATION` — The request was well-formed and the entities exist, but a domain rule forbids it — publishing a product with no price, archiving a brand products still reference, issuing more stock than a location holds, restoring a category under an archived parent ("Restore the parent category first.") or a product under an archived brand ("Restore the brand first."). Distinct from 400: nothing about the request is malformed. */
+            /** @description `BUSINESS_RULE_VIOLATION` — The request was well-formed and the entities exist, but a domain rule forbids it — publishing a product with no price, archiving a brand products still reference, deleting media a tier badge uses ("This media is still used — tier badge on Sprout of ladder version Launch. Replace or remove it first."), issuing more stock than a location holds, restoring a category under an archived parent ("Restore the parent category first.") or a product under an archived brand ("Restore the brand first."). Distinct from 400: nothing about the request is malformed. */
             422: {
                 headers: {
                     [name: string]: unknown;
@@ -26439,7 +26468,7 @@ export interface operations {
                     "*/*": components["schemas"]["RoleResponse"];
                 };
             };
-            /** @description `VALIDATION_FAILED` — The request body could not be read, a field failed validation, a required header was absent, or a domain validation rule rejected an input the caller can correct. */
+            /** @description `VALIDATION_FAILED` — The request body could not be read, a field failed validation, a required header was absent, or a domain validation rule rejected an input the caller can correct, such as a tier colour ("Must be a colour written as #RRGGBB.") or a tier badge that does not exist or is a video ("Media <id> is a video; this takes an image."). */
             400: {
                 headers: {
                     [name: string]: unknown;
@@ -26510,7 +26539,7 @@ export interface operations {
                     "*/*": components["schemas"]["RoleResponse"];
                 };
             };
-            /** @description `VALIDATION_FAILED` — The request body could not be read, a field failed validation, a required header was absent, or a domain validation rule rejected an input the caller can correct. */
+            /** @description `VALIDATION_FAILED` — The request body could not be read, a field failed validation, a required header was absent, or a domain validation rule rejected an input the caller can correct, such as a tier colour ("Must be a colour written as #RRGGBB.") or a tier badge that does not exist or is a video ("Media <id> is a video; this takes an image."). */
             400: {
                 headers: {
                     [name: string]: unknown;
@@ -26564,7 +26593,7 @@ export interface operations {
                     "application/json": components["schemas"]["ErrorResponse"];
                 };
             };
-            /** @description `BUSINESS_RULE_VIOLATION` — The request was well-formed and the entities exist, but a domain rule forbids it — publishing a product with no price, archiving a brand products still reference, issuing more stock than a location holds, restoring a category under an archived parent ("Restore the parent category first.") or a product under an archived brand ("Restore the brand first."). Distinct from 400: nothing about the request is malformed. */
+            /** @description `BUSINESS_RULE_VIOLATION` — The request was well-formed and the entities exist, but a domain rule forbids it — publishing a product with no price, archiving a brand products still reference, deleting media a tier badge uses ("This media is still used — tier badge on Sprout of ladder version Launch. Replace or remove it first."), issuing more stock than a location holds, restoring a category under an archived parent ("Restore the parent category first.") or a product under an archived brand ("Restore the brand first."). Distinct from 400: nothing about the request is malformed. */
             422: {
                 headers: {
                     [name: string]: unknown;
@@ -26602,7 +26631,7 @@ export interface operations {
                 };
                 content?: never;
             };
-            /** @description `VALIDATION_FAILED` — The request body could not be read, a field failed validation, a required header was absent, or a domain validation rule rejected an input the caller can correct. */
+            /** @description `VALIDATION_FAILED` — The request body could not be read, a field failed validation, a required header was absent, or a domain validation rule rejected an input the caller can correct, such as a tier colour ("Must be a colour written as #RRGGBB.") or a tier badge that does not exist or is a video ("Media <id> is a video; this takes an image."). */
             400: {
                 headers: {
                     [name: string]: unknown;
@@ -26647,7 +26676,7 @@ export interface operations {
                     "application/json": components["schemas"]["ErrorResponse"];
                 };
             };
-            /** @description `BUSINESS_RULE_VIOLATION` — The request was well-formed and the entities exist, but a domain rule forbids it — publishing a product with no price, archiving a brand products still reference, issuing more stock than a location holds, restoring a category under an archived parent ("Restore the parent category first.") or a product under an archived brand ("Restore the brand first."). Distinct from 400: nothing about the request is malformed. */
+            /** @description `BUSINESS_RULE_VIOLATION` — The request was well-formed and the entities exist, but a domain rule forbids it — publishing a product with no price, archiving a brand products still reference, deleting media a tier badge uses ("This media is still used — tier badge on Sprout of ladder version Launch. Replace or remove it first."), issuing more stock than a location holds, restoring a category under an archived parent ("Restore the parent category first.") or a product under an archived brand ("Restore the brand first."). Distinct from 400: nothing about the request is malformed. */
             422: {
                 headers: {
                     [name: string]: unknown;
@@ -26691,7 +26720,7 @@ export interface operations {
                     "*/*": components["schemas"]["StockMovementResponse"];
                 };
             };
-            /** @description `VALIDATION_FAILED` — The request body could not be read, a field failed validation, a required header was absent, or a domain validation rule rejected an input the caller can correct. */
+            /** @description `VALIDATION_FAILED` — The request body could not be read, a field failed validation, a required header was absent, or a domain validation rule rejected an input the caller can correct, such as a tier colour ("Must be a colour written as #RRGGBB.") or a tier badge that does not exist or is a video ("Media <id> is a video; this takes an image."). */
             400: {
                 headers: {
                     [name: string]: unknown;
@@ -26736,7 +26765,7 @@ export interface operations {
                     "application/json": components["schemas"]["ErrorResponse"];
                 };
             };
-            /** @description `BUSINESS_RULE_VIOLATION` — The request was well-formed and the entities exist, but a domain rule forbids it — publishing a product with no price, archiving a brand products still reference, issuing more stock than a location holds, restoring a category under an archived parent ("Restore the parent category first.") or a product under an archived brand ("Restore the brand first."). Distinct from 400: nothing about the request is malformed. */
+            /** @description `BUSINESS_RULE_VIOLATION` — The request was well-formed and the entities exist, but a domain rule forbids it — publishing a product with no price, archiving a brand products still reference, deleting media a tier badge uses ("This media is still used — tier badge on Sprout of ladder version Launch. Replace or remove it first."), issuing more stock than a location holds, restoring a category under an archived parent ("Restore the parent category first.") or a product under an archived brand ("Restore the brand first."). Distinct from 400: nothing about the request is malformed. */
             422: {
                 headers: {
                     [name: string]: unknown;
@@ -26774,7 +26803,7 @@ export interface operations {
                     "*/*": components["schemas"]["AvailabilityReconcileResponse"];
                 };
             };
-            /** @description `VALIDATION_FAILED` — The request body could not be read, a field failed validation, a required header was absent, or a domain validation rule rejected an input the caller can correct. */
+            /** @description `VALIDATION_FAILED` — The request body could not be read, a field failed validation, a required header was absent, or a domain validation rule rejected an input the caller can correct, such as a tier colour ("Must be a colour written as #RRGGBB.") or a tier badge that does not exist or is a video ("Media <id> is a video; this takes an image."). */
             400: {
                 headers: {
                     [name: string]: unknown;
@@ -26810,7 +26839,7 @@ export interface operations {
                     "application/json": components["schemas"]["ErrorResponse"];
                 };
             };
-            /** @description `BUSINESS_RULE_VIOLATION` — The request was well-formed and the entities exist, but a domain rule forbids it — publishing a product with no price, archiving a brand products still reference, issuing more stock than a location holds, restoring a category under an archived parent ("Restore the parent category first.") or a product under an archived brand ("Restore the brand first."). Distinct from 400: nothing about the request is malformed. */
+            /** @description `BUSINESS_RULE_VIOLATION` — The request was well-formed and the entities exist, but a domain rule forbids it — publishing a product with no price, archiving a brand products still reference, deleting media a tier badge uses ("This media is still used — tier badge on Sprout of ladder version Launch. Replace or remove it first."), issuing more stock than a location holds, restoring a category under an archived parent ("Restore the parent category first.") or a product under an archived brand ("Restore the brand first."). Distinct from 400: nothing about the request is malformed. */
             422: {
                 headers: {
                     [name: string]: unknown;
@@ -26854,7 +26883,7 @@ export interface operations {
                     "*/*": components["schemas"]["PageResponseExpiringStockResponse"];
                 };
             };
-            /** @description `VALIDATION_FAILED` — The request body could not be read, a field failed validation, a required header was absent, or a domain validation rule rejected an input the caller can correct. */
+            /** @description `VALIDATION_FAILED` — The request body could not be read, a field failed validation, a required header was absent, or a domain validation rule rejected an input the caller can correct, such as a tier colour ("Must be a colour written as #RRGGBB.") or a tier badge that does not exist or is a video ("Media <id> is a video; this takes an image."). */
             400: {
                 headers: {
                     [name: string]: unknown;
@@ -26916,7 +26945,7 @@ export interface operations {
                     "*/*": components["schemas"]["PageResponseStockLevelResponse"];
                 };
             };
-            /** @description `VALIDATION_FAILED` — The request body could not be read, a field failed validation, a required header was absent, or a domain validation rule rejected an input the caller can correct. */
+            /** @description `VALIDATION_FAILED` — The request body could not be read, a field failed validation, a required header was absent, or a domain validation rule rejected an input the caller can correct, such as a tier colour ("Must be a colour written as #RRGGBB.") or a tier badge that does not exist or is a video ("Media <id> is a video; this takes an image."). */
             400: {
                 headers: {
                     [name: string]: unknown;
@@ -26978,7 +27007,7 @@ export interface operations {
                     "*/*": components["schemas"]["PageResponseStockLevelResponse"];
                 };
             };
-            /** @description `VALIDATION_FAILED` — The request body could not be read, a field failed validation, a required header was absent, or a domain validation rule rejected an input the caller can correct. */
+            /** @description `VALIDATION_FAILED` — The request body could not be read, a field failed validation, a required header was absent, or a domain validation rule rejected an input the caller can correct, such as a tier colour ("Must be a colour written as #RRGGBB.") or a tier badge that does not exist or is a video ("Media <id> is a video; this takes an image."). */
             400: {
                 headers: {
                     [name: string]: unknown;
@@ -27054,7 +27083,7 @@ export interface operations {
                     "*/*": components["schemas"]["PageResponseStockMovementResponse"];
                 };
             };
-            /** @description `VALIDATION_FAILED` — The request body could not be read, a field failed validation, a required header was absent, or a domain validation rule rejected an input the caller can correct. */
+            /** @description `VALIDATION_FAILED` — The request body could not be read, a field failed validation, a required header was absent, or a domain validation rule rejected an input the caller can correct, such as a tier colour ("Must be a colour written as #RRGGBB.") or a tier badge that does not exist or is a video ("Media <id> is a video; this takes an image."). */
             400: {
                 headers: {
                     [name: string]: unknown;
@@ -27110,7 +27139,7 @@ export interface operations {
                     "*/*": components["schemas"]["MovementTypeReasons"][];
                 };
             };
-            /** @description `VALIDATION_FAILED` — The request body could not be read, a field failed validation, a required header was absent, or a domain validation rule rejected an input the caller can correct. */
+            /** @description `VALIDATION_FAILED` — The request body could not be read, a field failed validation, a required header was absent, or a domain validation rule rejected an input the caller can correct, such as a tier colour ("Must be a colour written as #RRGGBB.") or a tier badge that does not exist or is a video ("Media <id> is a video; this takes an image."). */
             400: {
                 headers: {
                     [name: string]: unknown;
@@ -27166,7 +27195,7 @@ export interface operations {
                     "*/*": components["schemas"]["RebuildResponse"];
                 };
             };
-            /** @description `VALIDATION_FAILED` — The request body could not be read, a field failed validation, a required header was absent, or a domain validation rule rejected an input the caller can correct. */
+            /** @description `VALIDATION_FAILED` — The request body could not be read, a field failed validation, a required header was absent, or a domain validation rule rejected an input the caller can correct, such as a tier colour ("Must be a colour written as #RRGGBB.") or a tier badge that does not exist or is a video ("Media <id> is a video; this takes an image."). */
             400: {
                 headers: {
                     [name: string]: unknown;
@@ -27202,7 +27231,7 @@ export interface operations {
                     "application/json": components["schemas"]["ErrorResponse"];
                 };
             };
-            /** @description `BUSINESS_RULE_VIOLATION` — The request was well-formed and the entities exist, but a domain rule forbids it — publishing a product with no price, archiving a brand products still reference, issuing more stock than a location holds, restoring a category under an archived parent ("Restore the parent category first.") or a product under an archived brand ("Restore the brand first."). Distinct from 400: nothing about the request is malformed. */
+            /** @description `BUSINESS_RULE_VIOLATION` — The request was well-formed and the entities exist, but a domain rule forbids it — publishing a product with no price, archiving a brand products still reference, deleting media a tier badge uses ("This media is still used — tier badge on Sprout of ladder version Launch. Replace or remove it first."), issuing more stock than a location holds, restoring a category under an archived parent ("Restore the parent category first.") or a product under an archived brand ("Restore the brand first."). Distinct from 400: nothing about the request is malformed. */
             422: {
                 headers: {
                     [name: string]: unknown;
@@ -27240,7 +27269,7 @@ export interface operations {
                     "*/*": components["schemas"]["ReconcileResponse"];
                 };
             };
-            /** @description `VALIDATION_FAILED` — The request body could not be read, a field failed validation, a required header was absent, or a domain validation rule rejected an input the caller can correct. */
+            /** @description `VALIDATION_FAILED` — The request body could not be read, a field failed validation, a required header was absent, or a domain validation rule rejected an input the caller can correct, such as a tier colour ("Must be a colour written as #RRGGBB.") or a tier badge that does not exist or is a video ("Media <id> is a video; this takes an image."). */
             400: {
                 headers: {
                     [name: string]: unknown;
@@ -27302,7 +27331,7 @@ export interface operations {
                     "*/*": components["schemas"]["PageResponseStockTotalResponse"];
                 };
             };
-            /** @description `VALIDATION_FAILED` — The request body could not be read, a field failed validation, a required header was absent, or a domain validation rule rejected an input the caller can correct. */
+            /** @description `VALIDATION_FAILED` — The request body could not be read, a field failed validation, a required header was absent, or a domain validation rule rejected an input the caller can correct, such as a tier colour ("Must be a colour written as #RRGGBB.") or a tier badge that does not exist or is a video ("Media <id> is a video; this takes an image."). */
             400: {
                 headers: {
                     [name: string]: unknown;
@@ -27364,7 +27393,7 @@ export interface operations {
                     "*/*": components["schemas"]["TransferResponse"];
                 };
             };
-            /** @description `VALIDATION_FAILED` — The request body could not be read, a field failed validation, a required header was absent, or a domain validation rule rejected an input the caller can correct. */
+            /** @description `VALIDATION_FAILED` — The request body could not be read, a field failed validation, a required header was absent, or a domain validation rule rejected an input the caller can correct, such as a tier colour ("Must be a colour written as #RRGGBB.") or a tier badge that does not exist or is a video ("Media <id> is a video; this takes an image."). */
             400: {
                 headers: {
                     [name: string]: unknown;
@@ -27409,7 +27438,7 @@ export interface operations {
                     "application/json": components["schemas"]["ErrorResponse"];
                 };
             };
-            /** @description `BUSINESS_RULE_VIOLATION` — The request was well-formed and the entities exist, but a domain rule forbids it — publishing a product with no price, archiving a brand products still reference, issuing more stock than a location holds, restoring a category under an archived parent ("Restore the parent category first.") or a product under an archived brand ("Restore the brand first."). Distinct from 400: nothing about the request is malformed. */
+            /** @description `BUSINESS_RULE_VIOLATION` — The request was well-formed and the entities exist, but a domain rule forbids it — publishing a product with no price, archiving a brand products still reference, deleting media a tier badge uses ("This media is still used — tier badge on Sprout of ladder version Launch. Replace or remove it first."), issuing more stock than a location holds, restoring a category under an archived parent ("Restore the parent category first.") or a product under an archived brand ("Restore the brand first."). Distinct from 400: nothing about the request is malformed. */
             422: {
                 headers: {
                     [name: string]: unknown;
@@ -27449,7 +27478,7 @@ export interface operations {
                     "*/*": components["schemas"]["TransferResponse"];
                 };
             };
-            /** @description `VALIDATION_FAILED` — The request body could not be read, a field failed validation, a required header was absent, or a domain validation rule rejected an input the caller can correct. */
+            /** @description `VALIDATION_FAILED` — The request body could not be read, a field failed validation, a required header was absent, or a domain validation rule rejected an input the caller can correct, such as a tier colour ("Must be a colour written as #RRGGBB.") or a tier badge that does not exist or is a video ("Media <id> is a video; this takes an image."). */
             400: {
                 headers: {
                     [name: string]: unknown;
@@ -27518,7 +27547,7 @@ export interface operations {
                     "*/*": components["schemas"]["PageResponseSupplierResponse"];
                 };
             };
-            /** @description `VALIDATION_FAILED` — The request body could not be read, a field failed validation, a required header was absent, or a domain validation rule rejected an input the caller can correct. */
+            /** @description `VALIDATION_FAILED` — The request body could not be read, a field failed validation, a required header was absent, or a domain validation rule rejected an input the caller can correct, such as a tier colour ("Must be a colour written as #RRGGBB.") or a tier badge that does not exist or is a video ("Media <id> is a video; this takes an image."). */
             400: {
                 headers: {
                     [name: string]: unknown;
@@ -27578,7 +27607,7 @@ export interface operations {
                     "*/*": components["schemas"]["SupplierResponse"];
                 };
             };
-            /** @description `VALIDATION_FAILED` — The request body could not be read, a field failed validation, a required header was absent, or a domain validation rule rejected an input the caller can correct. */
+            /** @description `VALIDATION_FAILED` — The request body could not be read, a field failed validation, a required header was absent, or a domain validation rule rejected an input the caller can correct, such as a tier colour ("Must be a colour written as #RRGGBB.") or a tier badge that does not exist or is a video ("Media <id> is a video; this takes an image."). */
             400: {
                 headers: {
                     [name: string]: unknown;
@@ -27623,7 +27652,7 @@ export interface operations {
                     "application/json": components["schemas"]["ErrorResponse"];
                 };
             };
-            /** @description `BUSINESS_RULE_VIOLATION` — The request was well-formed and the entities exist, but a domain rule forbids it — publishing a product with no price, archiving a brand products still reference, issuing more stock than a location holds, restoring a category under an archived parent ("Restore the parent category first.") or a product under an archived brand ("Restore the brand first."). Distinct from 400: nothing about the request is malformed. */
+            /** @description `BUSINESS_RULE_VIOLATION` — The request was well-formed and the entities exist, but a domain rule forbids it — publishing a product with no price, archiving a brand products still reference, deleting media a tier badge uses ("This media is still used — tier badge on Sprout of ladder version Launch. Replace or remove it first."), issuing more stock than a location holds, restoring a category under an archived parent ("Restore the parent category first.") or a product under an archived brand ("Restore the brand first."). Distinct from 400: nothing about the request is malformed. */
             422: {
                 headers: {
                     [name: string]: unknown;
@@ -27663,7 +27692,7 @@ export interface operations {
                     "*/*": components["schemas"]["SupplierResponse"];
                 };
             };
-            /** @description `VALIDATION_FAILED` — The request body could not be read, a field failed validation, a required header was absent, or a domain validation rule rejected an input the caller can correct. */
+            /** @description `VALIDATION_FAILED` — The request body could not be read, a field failed validation, a required header was absent, or a domain validation rule rejected an input the caller can correct, such as a tier colour ("Must be a colour written as #RRGGBB.") or a tier badge that does not exist or is a video ("Media <id> is a video; this takes an image."). */
             400: {
                 headers: {
                     [name: string]: unknown;
@@ -27734,7 +27763,7 @@ export interface operations {
                     "*/*": components["schemas"]["SupplierResponse"];
                 };
             };
-            /** @description `VALIDATION_FAILED` — The request body could not be read, a field failed validation, a required header was absent, or a domain validation rule rejected an input the caller can correct. */
+            /** @description `VALIDATION_FAILED` — The request body could not be read, a field failed validation, a required header was absent, or a domain validation rule rejected an input the caller can correct, such as a tier colour ("Must be a colour written as #RRGGBB.") or a tier badge that does not exist or is a video ("Media <id> is a video; this takes an image."). */
             400: {
                 headers: {
                     [name: string]: unknown;
@@ -27788,7 +27817,7 @@ export interface operations {
                     "application/json": components["schemas"]["ErrorResponse"];
                 };
             };
-            /** @description `BUSINESS_RULE_VIOLATION` — The request was well-formed and the entities exist, but a domain rule forbids it — publishing a product with no price, archiving a brand products still reference, issuing more stock than a location holds, restoring a category under an archived parent ("Restore the parent category first.") or a product under an archived brand ("Restore the brand first."). Distinct from 400: nothing about the request is malformed. */
+            /** @description `BUSINESS_RULE_VIOLATION` — The request was well-formed and the entities exist, but a domain rule forbids it — publishing a product with no price, archiving a brand products still reference, deleting media a tier badge uses ("This media is still used — tier badge on Sprout of ladder version Launch. Replace or remove it first."), issuing more stock than a location holds, restoring a category under an archived parent ("Restore the parent category first.") or a product under an archived brand ("Restore the brand first."). Distinct from 400: nothing about the request is malformed. */
             422: {
                 headers: {
                     [name: string]: unknown;
@@ -27828,7 +27857,7 @@ export interface operations {
                     "*/*": components["schemas"]["SupplierResponse"];
                 };
             };
-            /** @description `VALIDATION_FAILED` — The request body could not be read, a field failed validation, a required header was absent, or a domain validation rule rejected an input the caller can correct. */
+            /** @description `VALIDATION_FAILED` — The request body could not be read, a field failed validation, a required header was absent, or a domain validation rule rejected an input the caller can correct, such as a tier colour ("Must be a colour written as #RRGGBB.") or a tier badge that does not exist or is a video ("Media <id> is a video; this takes an image."). */
             400: {
                 headers: {
                     [name: string]: unknown;
@@ -27873,7 +27902,7 @@ export interface operations {
                     "application/json": components["schemas"]["ErrorResponse"];
                 };
             };
-            /** @description `BUSINESS_RULE_VIOLATION` — The request was well-formed and the entities exist, but a domain rule forbids it — publishing a product with no price, archiving a brand products still reference, issuing more stock than a location holds, restoring a category under an archived parent ("Restore the parent category first.") or a product under an archived brand ("Restore the brand first."). Distinct from 400: nothing about the request is malformed. */
+            /** @description `BUSINESS_RULE_VIOLATION` — The request was well-formed and the entities exist, but a domain rule forbids it — publishing a product with no price, archiving a brand products still reference, deleting media a tier badge uses ("This media is still used — tier badge on Sprout of ladder version Launch. Replace or remove it first."), issuing more stock than a location holds, restoring a category under an archived parent ("Restore the parent category first.") or a product under an archived brand ("Restore the brand first."). Distinct from 400: nothing about the request is malformed. */
             422: {
                 headers: {
                     [name: string]: unknown;
@@ -27913,7 +27942,7 @@ export interface operations {
                     "*/*": components["schemas"]["SupplierResponse"];
                 };
             };
-            /** @description `VALIDATION_FAILED` — The request body could not be read, a field failed validation, a required header was absent, or a domain validation rule rejected an input the caller can correct. */
+            /** @description `VALIDATION_FAILED` — The request body could not be read, a field failed validation, a required header was absent, or a domain validation rule rejected an input the caller can correct, such as a tier colour ("Must be a colour written as #RRGGBB.") or a tier badge that does not exist or is a video ("Media <id> is a video; this takes an image."). */
             400: {
                 headers: {
                     [name: string]: unknown;
@@ -27958,7 +27987,7 @@ export interface operations {
                     "application/json": components["schemas"]["ErrorResponse"];
                 };
             };
-            /** @description `BUSINESS_RULE_VIOLATION` — The request was well-formed and the entities exist, but a domain rule forbids it — publishing a product with no price, archiving a brand products still reference, issuing more stock than a location holds, restoring a category under an archived parent ("Restore the parent category first.") or a product under an archived brand ("Restore the brand first."). Distinct from 400: nothing about the request is malformed. */
+            /** @description `BUSINESS_RULE_VIOLATION` — The request was well-formed and the entities exist, but a domain rule forbids it — publishing a product with no price, archiving a brand products still reference, deleting media a tier badge uses ("This media is still used — tier badge on Sprout of ladder version Launch. Replace or remove it first."), issuing more stock than a location holds, restoring a category under an archived parent ("Restore the parent category first.") or a product under an archived brand ("Restore the brand first."). Distinct from 400: nothing about the request is malformed. */
             422: {
                 headers: {
                     [name: string]: unknown;
@@ -27996,7 +28025,7 @@ export interface operations {
                     "*/*": components["schemas"]["TagResponse"][];
                 };
             };
-            /** @description `VALIDATION_FAILED` — The request body could not be read, a field failed validation, a required header was absent, or a domain validation rule rejected an input the caller can correct. */
+            /** @description `VALIDATION_FAILED` — The request body could not be read, a field failed validation, a required header was absent, or a domain validation rule rejected an input the caller can correct, such as a tier colour ("Must be a colour written as #RRGGBB.") or a tier badge that does not exist or is a video ("Media <id> is a video; this takes an image."). */
             400: {
                 headers: {
                     [name: string]: unknown;
@@ -28056,7 +28085,7 @@ export interface operations {
                     "*/*": components["schemas"]["TagResponse"];
                 };
             };
-            /** @description `VALIDATION_FAILED` — The request body could not be read, a field failed validation, a required header was absent, or a domain validation rule rejected an input the caller can correct. */
+            /** @description `VALIDATION_FAILED` — The request body could not be read, a field failed validation, a required header was absent, or a domain validation rule rejected an input the caller can correct, such as a tier colour ("Must be a colour written as #RRGGBB.") or a tier badge that does not exist or is a video ("Media <id> is a video; this takes an image."). */
             400: {
                 headers: {
                     [name: string]: unknown;
@@ -28101,7 +28130,7 @@ export interface operations {
                     "application/json": components["schemas"]["ErrorResponse"];
                 };
             };
-            /** @description `BUSINESS_RULE_VIOLATION` — The request was well-formed and the entities exist, but a domain rule forbids it — publishing a product with no price, archiving a brand products still reference, issuing more stock than a location holds, restoring a category under an archived parent ("Restore the parent category first.") or a product under an archived brand ("Restore the brand first."). Distinct from 400: nothing about the request is malformed. */
+            /** @description `BUSINESS_RULE_VIOLATION` — The request was well-formed and the entities exist, but a domain rule forbids it — publishing a product with no price, archiving a brand products still reference, deleting media a tier badge uses ("This media is still used — tier badge on Sprout of ladder version Launch. Replace or remove it first."), issuing more stock than a location holds, restoring a category under an archived parent ("Restore the parent category first.") or a product under an archived brand ("Restore the brand first."). Distinct from 400: nothing about the request is malformed. */
             422: {
                 headers: {
                     [name: string]: unknown;
@@ -28145,7 +28174,7 @@ export interface operations {
                     "*/*": components["schemas"]["TagResponse"];
                 };
             };
-            /** @description `VALIDATION_FAILED` — The request body could not be read, a field failed validation, a required header was absent, or a domain validation rule rejected an input the caller can correct. */
+            /** @description `VALIDATION_FAILED` — The request body could not be read, a field failed validation, a required header was absent, or a domain validation rule rejected an input the caller can correct, such as a tier colour ("Must be a colour written as #RRGGBB.") or a tier badge that does not exist or is a video ("Media <id> is a video; this takes an image."). */
             400: {
                 headers: {
                     [name: string]: unknown;
@@ -28199,7 +28228,7 @@ export interface operations {
                     "application/json": components["schemas"]["ErrorResponse"];
                 };
             };
-            /** @description `BUSINESS_RULE_VIOLATION` — The request was well-formed and the entities exist, but a domain rule forbids it — publishing a product with no price, archiving a brand products still reference, issuing more stock than a location holds, restoring a category under an archived parent ("Restore the parent category first.") or a product under an archived brand ("Restore the brand first."). Distinct from 400: nothing about the request is malformed. */
+            /** @description `BUSINESS_RULE_VIOLATION` — The request was well-formed and the entities exist, but a domain rule forbids it — publishing a product with no price, archiving a brand products still reference, deleting media a tier badge uses ("This media is still used — tier badge on Sprout of ladder version Launch. Replace or remove it first."), issuing more stock than a location holds, restoring a category under an archived parent ("Restore the parent category first.") or a product under an archived brand ("Restore the brand first."). Distinct from 400: nothing about the request is malformed. */
             422: {
                 headers: {
                     [name: string]: unknown;
@@ -28237,7 +28266,7 @@ export interface operations {
                 };
                 content?: never;
             };
-            /** @description `VALIDATION_FAILED` — The request body could not be read, a field failed validation, a required header was absent, or a domain validation rule rejected an input the caller can correct. */
+            /** @description `VALIDATION_FAILED` — The request body could not be read, a field failed validation, a required header was absent, or a domain validation rule rejected an input the caller can correct, such as a tier colour ("Must be a colour written as #RRGGBB.") or a tier badge that does not exist or is a video ("Media <id> is a video; this takes an image."). */
             400: {
                 headers: {
                     [name: string]: unknown;
@@ -28282,7 +28311,7 @@ export interface operations {
                     "application/json": components["schemas"]["ErrorResponse"];
                 };
             };
-            /** @description `BUSINESS_RULE_VIOLATION` — The request was well-formed and the entities exist, but a domain rule forbids it — publishing a product with no price, archiving a brand products still reference, issuing more stock than a location holds, restoring a category under an archived parent ("Restore the parent category first.") or a product under an archived brand ("Restore the brand first."). Distinct from 400: nothing about the request is malformed. */
+            /** @description `BUSINESS_RULE_VIOLATION` — The request was well-formed and the entities exist, but a domain rule forbids it — publishing a product with no price, archiving a brand products still reference, deleting media a tier badge uses ("This media is still used — tier badge on Sprout of ladder version Launch. Replace or remove it first."), issuing more stock than a location holds, restoring a category under an archived parent ("Restore the parent category first.") or a product under an archived brand ("Restore the brand first."). Distinct from 400: nothing about the request is malformed. */
             422: {
                 headers: {
                     [name: string]: unknown;
@@ -28325,7 +28354,7 @@ export interface operations {
                     "*/*": components["schemas"]["PageResponseTeamMemberResponse"];
                 };
             };
-            /** @description `VALIDATION_FAILED` — The request body could not be read, a field failed validation, a required header was absent, or a domain validation rule rejected an input the caller can correct. */
+            /** @description `VALIDATION_FAILED` — The request body could not be read, a field failed validation, a required header was absent, or a domain validation rule rejected an input the caller can correct, such as a tier colour ("Must be a colour written as #RRGGBB.") or a tier badge that does not exist or is a video ("Media <id> is a video; this takes an image."). */
             400: {
                 headers: {
                     [name: string]: unknown;
@@ -28385,7 +28414,7 @@ export interface operations {
                     "*/*": components["schemas"]["InvitedTeamMemberResponse"];
                 };
             };
-            /** @description `VALIDATION_FAILED` — The request body could not be read, a field failed validation, a required header was absent, or a domain validation rule rejected an input the caller can correct. */
+            /** @description `VALIDATION_FAILED` — The request body could not be read, a field failed validation, a required header was absent, or a domain validation rule rejected an input the caller can correct, such as a tier colour ("Must be a colour written as #RRGGBB.") or a tier badge that does not exist or is a video ("Media <id> is a video; this takes an image."). */
             400: {
                 headers: {
                     [name: string]: unknown;
@@ -28430,7 +28459,7 @@ export interface operations {
                     "application/json": components["schemas"]["ErrorResponse"];
                 };
             };
-            /** @description `BUSINESS_RULE_VIOLATION` — The request was well-formed and the entities exist, but a domain rule forbids it — publishing a product with no price, archiving a brand products still reference, issuing more stock than a location holds, restoring a category under an archived parent ("Restore the parent category first.") or a product under an archived brand ("Restore the brand first."). Distinct from 400: nothing about the request is malformed. */
+            /** @description `BUSINESS_RULE_VIOLATION` — The request was well-formed and the entities exist, but a domain rule forbids it — publishing a product with no price, archiving a brand products still reference, deleting media a tier badge uses ("This media is still used — tier badge on Sprout of ladder version Launch. Replace or remove it first."), issuing more stock than a location holds, restoring a category under an archived parent ("Restore the parent category first.") or a product under an archived brand ("Restore the brand first."). Distinct from 400: nothing about the request is malformed. */
             422: {
                 headers: {
                     [name: string]: unknown;
@@ -28470,7 +28499,7 @@ export interface operations {
                     "*/*": components["schemas"]["TeamMemberResponse"];
                 };
             };
-            /** @description `VALIDATION_FAILED` — The request body could not be read, a field failed validation, a required header was absent, or a domain validation rule rejected an input the caller can correct. */
+            /** @description `VALIDATION_FAILED` — The request body could not be read, a field failed validation, a required header was absent, or a domain validation rule rejected an input the caller can correct, such as a tier colour ("Must be a colour written as #RRGGBB.") or a tier badge that does not exist or is a video ("Media <id> is a video; this takes an image."). */
             400: {
                 headers: {
                     [name: string]: unknown;
@@ -28541,7 +28570,7 @@ export interface operations {
                     "*/*": components["schemas"]["TeamMemberResponse"];
                 };
             };
-            /** @description `VALIDATION_FAILED` — The request body could not be read, a field failed validation, a required header was absent, or a domain validation rule rejected an input the caller can correct. */
+            /** @description `VALIDATION_FAILED` — The request body could not be read, a field failed validation, a required header was absent, or a domain validation rule rejected an input the caller can correct, such as a tier colour ("Must be a colour written as #RRGGBB.") or a tier badge that does not exist or is a video ("Media <id> is a video; this takes an image."). */
             400: {
                 headers: {
                     [name: string]: unknown;
@@ -28595,7 +28624,7 @@ export interface operations {
                     "application/json": components["schemas"]["ErrorResponse"];
                 };
             };
-            /** @description `BUSINESS_RULE_VIOLATION` — The request was well-formed and the entities exist, but a domain rule forbids it — publishing a product with no price, archiving a brand products still reference, issuing more stock than a location holds, restoring a category under an archived parent ("Restore the parent category first.") or a product under an archived brand ("Restore the brand first."). Distinct from 400: nothing about the request is malformed. */
+            /** @description `BUSINESS_RULE_VIOLATION` — The request was well-formed and the entities exist, but a domain rule forbids it — publishing a product with no price, archiving a brand products still reference, deleting media a tier badge uses ("This media is still used — tier badge on Sprout of ladder version Launch. Replace or remove it first."), issuing more stock than a location holds, restoring a category under an archived parent ("Restore the parent category first.") or a product under an archived brand ("Restore the brand first."). Distinct from 400: nothing about the request is malformed. */
             422: {
                 headers: {
                     [name: string]: unknown;
@@ -28635,7 +28664,7 @@ export interface operations {
                     "*/*": components["schemas"]["TeamMemberResponse"];
                 };
             };
-            /** @description `VALIDATION_FAILED` — The request body could not be read, a field failed validation, a required header was absent, or a domain validation rule rejected an input the caller can correct. */
+            /** @description `VALIDATION_FAILED` — The request body could not be read, a field failed validation, a required header was absent, or a domain validation rule rejected an input the caller can correct, such as a tier colour ("Must be a colour written as #RRGGBB.") or a tier badge that does not exist or is a video ("Media <id> is a video; this takes an image."). */
             400: {
                 headers: {
                     [name: string]: unknown;
@@ -28680,7 +28709,7 @@ export interface operations {
                     "application/json": components["schemas"]["ErrorResponse"];
                 };
             };
-            /** @description `BUSINESS_RULE_VIOLATION` — The request was well-formed and the entities exist, but a domain rule forbids it — publishing a product with no price, archiving a brand products still reference, issuing more stock than a location holds, restoring a category under an archived parent ("Restore the parent category first.") or a product under an archived brand ("Restore the brand first."). Distinct from 400: nothing about the request is malformed. */
+            /** @description `BUSINESS_RULE_VIOLATION` — The request was well-formed and the entities exist, but a domain rule forbids it — publishing a product with no price, archiving a brand products still reference, deleting media a tier badge uses ("This media is still used — tier badge on Sprout of ladder version Launch. Replace or remove it first."), issuing more stock than a location holds, restoring a category under an archived parent ("Restore the parent category first.") or a product under an archived brand ("Restore the brand first."). Distinct from 400: nothing about the request is malformed. */
             422: {
                 headers: {
                     [name: string]: unknown;
@@ -28720,7 +28749,7 @@ export interface operations {
                     "*/*": components["schemas"]["TeamMemberResponse"];
                 };
             };
-            /** @description `VALIDATION_FAILED` — The request body could not be read, a field failed validation, a required header was absent, or a domain validation rule rejected an input the caller can correct. */
+            /** @description `VALIDATION_FAILED` — The request body could not be read, a field failed validation, a required header was absent, or a domain validation rule rejected an input the caller can correct, such as a tier colour ("Must be a colour written as #RRGGBB.") or a tier badge that does not exist or is a video ("Media <id> is a video; this takes an image."). */
             400: {
                 headers: {
                     [name: string]: unknown;
@@ -28765,7 +28794,7 @@ export interface operations {
                     "application/json": components["schemas"]["ErrorResponse"];
                 };
             };
-            /** @description `BUSINESS_RULE_VIOLATION` — The request was well-formed and the entities exist, but a domain rule forbids it — publishing a product with no price, archiving a brand products still reference, issuing more stock than a location holds, restoring a category under an archived parent ("Restore the parent category first.") or a product under an archived brand ("Restore the brand first."). Distinct from 400: nothing about the request is malformed. */
+            /** @description `BUSINESS_RULE_VIOLATION` — The request was well-formed and the entities exist, but a domain rule forbids it — publishing a product with no price, archiving a brand products still reference, deleting media a tier badge uses ("This media is still used — tier badge on Sprout of ladder version Launch. Replace or remove it first."), issuing more stock than a location holds, restoring a category under an archived parent ("Restore the parent category first.") or a product under an archived brand ("Restore the brand first."). Distinct from 400: nothing about the request is malformed. */
             422: {
                 headers: {
                     [name: string]: unknown;
@@ -28805,7 +28834,7 @@ export interface operations {
                     "*/*": components["schemas"]["ForceLogoutResponse"];
                 };
             };
-            /** @description `VALIDATION_FAILED` — The request body could not be read, a field failed validation, a required header was absent, or a domain validation rule rejected an input the caller can correct. */
+            /** @description `VALIDATION_FAILED` — The request body could not be read, a field failed validation, a required header was absent, or a domain validation rule rejected an input the caller can correct, such as a tier colour ("Must be a colour written as #RRGGBB.") or a tier badge that does not exist or is a video ("Media <id> is a video; this takes an image."). */
             400: {
                 headers: {
                     [name: string]: unknown;
@@ -28850,7 +28879,7 @@ export interface operations {
                     "application/json": components["schemas"]["ErrorResponse"];
                 };
             };
-            /** @description `BUSINESS_RULE_VIOLATION` — The request was well-formed and the entities exist, but a domain rule forbids it — publishing a product with no price, archiving a brand products still reference, issuing more stock than a location holds, restoring a category under an archived parent ("Restore the parent category first.") or a product under an archived brand ("Restore the brand first."). Distinct from 400: nothing about the request is malformed. */
+            /** @description `BUSINESS_RULE_VIOLATION` — The request was well-formed and the entities exist, but a domain rule forbids it — publishing a product with no price, archiving a brand products still reference, deleting media a tier badge uses ("This media is still used — tier badge on Sprout of ladder version Launch. Replace or remove it first."), issuing more stock than a location holds, restoring a category under an archived parent ("Restore the parent category first.") or a product under an archived brand ("Restore the brand first."). Distinct from 400: nothing about the request is malformed. */
             422: {
                 headers: {
                     [name: string]: unknown;
@@ -28890,7 +28919,7 @@ export interface operations {
                     "*/*": components["schemas"]["InvitedTeamMemberResponse"];
                 };
             };
-            /** @description `VALIDATION_FAILED` — The request body could not be read, a field failed validation, a required header was absent, or a domain validation rule rejected an input the caller can correct. */
+            /** @description `VALIDATION_FAILED` — The request body could not be read, a field failed validation, a required header was absent, or a domain validation rule rejected an input the caller can correct, such as a tier colour ("Must be a colour written as #RRGGBB.") or a tier badge that does not exist or is a video ("Media <id> is a video; this takes an image."). */
             400: {
                 headers: {
                     [name: string]: unknown;
@@ -28935,7 +28964,7 @@ export interface operations {
                     "application/json": components["schemas"]["ErrorResponse"];
                 };
             };
-            /** @description `BUSINESS_RULE_VIOLATION` — The request was well-formed and the entities exist, but a domain rule forbids it — publishing a product with no price, archiving a brand products still reference, issuing more stock than a location holds, restoring a category under an archived parent ("Restore the parent category first.") or a product under an archived brand ("Restore the brand first."). Distinct from 400: nothing about the request is malformed. */
+            /** @description `BUSINESS_RULE_VIOLATION` — The request was well-formed and the entities exist, but a domain rule forbids it — publishing a product with no price, archiving a brand products still reference, deleting media a tier badge uses ("This media is still used — tier badge on Sprout of ladder version Launch. Replace or remove it first."), issuing more stock than a location holds, restoring a category under an archived parent ("Restore the parent category first.") or a product under an archived brand ("Restore the brand first."). Distinct from 400: nothing about the request is malformed. */
             422: {
                 headers: {
                     [name: string]: unknown;
@@ -28975,7 +29004,7 @@ export interface operations {
                     "*/*": components["schemas"]["PasswordResetLinkResponse"];
                 };
             };
-            /** @description `VALIDATION_FAILED` — The request body could not be read, a field failed validation, a required header was absent, or a domain validation rule rejected an input the caller can correct. */
+            /** @description `VALIDATION_FAILED` — The request body could not be read, a field failed validation, a required header was absent, or a domain validation rule rejected an input the caller can correct, such as a tier colour ("Must be a colour written as #RRGGBB.") or a tier badge that does not exist or is a video ("Media <id> is a video; this takes an image."). */
             400: {
                 headers: {
                     [name: string]: unknown;
@@ -29020,7 +29049,7 @@ export interface operations {
                     "application/json": components["schemas"]["ErrorResponse"];
                 };
             };
-            /** @description `BUSINESS_RULE_VIOLATION` — The request was well-formed and the entities exist, but a domain rule forbids it — publishing a product with no price, archiving a brand products still reference, issuing more stock than a location holds, restoring a category under an archived parent ("Restore the parent category first.") or a product under an archived brand ("Restore the brand first."). Distinct from 400: nothing about the request is malformed. */
+            /** @description `BUSINESS_RULE_VIOLATION` — The request was well-formed and the entities exist, but a domain rule forbids it — publishing a product with no price, archiving a brand products still reference, deleting media a tier badge uses ("This media is still used — tier badge on Sprout of ladder version Launch. Replace or remove it first."), issuing more stock than a location holds, restoring a category under an archived parent ("Restore the parent category first.") or a product under an archived brand ("Restore the brand first."). Distinct from 400: nothing about the request is malformed. */
             422: {
                 headers: {
                     [name: string]: unknown;
@@ -29064,7 +29093,7 @@ export interface operations {
                     "*/*": components["schemas"]["TeamMemberResponse"];
                 };
             };
-            /** @description `VALIDATION_FAILED` — The request body could not be read, a field failed validation, a required header was absent, or a domain validation rule rejected an input the caller can correct. */
+            /** @description `VALIDATION_FAILED` — The request body could not be read, a field failed validation, a required header was absent, or a domain validation rule rejected an input the caller can correct, such as a tier colour ("Must be a colour written as #RRGGBB.") or a tier badge that does not exist or is a video ("Media <id> is a video; this takes an image."). */
             400: {
                 headers: {
                     [name: string]: unknown;
@@ -29118,7 +29147,7 @@ export interface operations {
                     "application/json": components["schemas"]["ErrorResponse"];
                 };
             };
-            /** @description `BUSINESS_RULE_VIOLATION` — The request was well-formed and the entities exist, but a domain rule forbids it — publishing a product with no price, archiving a brand products still reference, issuing more stock than a location holds, restoring a category under an archived parent ("Restore the parent category first.") or a product under an archived brand ("Restore the brand first."). Distinct from 400: nothing about the request is malformed. */
+            /** @description `BUSINESS_RULE_VIOLATION` — The request was well-formed and the entities exist, but a domain rule forbids it — publishing a product with no price, archiving a brand products still reference, deleting media a tier badge uses ("This media is still used — tier badge on Sprout of ladder version Launch. Replace or remove it first."), issuing more stock than a location holds, restoring a category under an archived parent ("Restore the parent category first.") or a product under an archived brand ("Restore the brand first."). Distinct from 400: nothing about the request is malformed. */
             422: {
                 headers: {
                     [name: string]: unknown;
@@ -29158,7 +29187,7 @@ export interface operations {
                     "*/*": components["schemas"]["TeamMemberResponse"];
                 };
             };
-            /** @description `VALIDATION_FAILED` — The request body could not be read, a field failed validation, a required header was absent, or a domain validation rule rejected an input the caller can correct. */
+            /** @description `VALIDATION_FAILED` — The request body could not be read, a field failed validation, a required header was absent, or a domain validation rule rejected an input the caller can correct, such as a tier colour ("Must be a colour written as #RRGGBB.") or a tier badge that does not exist or is a video ("Media <id> is a video; this takes an image."). */
             400: {
                 headers: {
                     [name: string]: unknown;
@@ -29203,7 +29232,7 @@ export interface operations {
                     "application/json": components["schemas"]["ErrorResponse"];
                 };
             };
-            /** @description `BUSINESS_RULE_VIOLATION` — The request was well-formed and the entities exist, but a domain rule forbids it — publishing a product with no price, archiving a brand products still reference, issuing more stock than a location holds, restoring a category under an archived parent ("Restore the parent category first.") or a product under an archived brand ("Restore the brand first."). Distinct from 400: nothing about the request is malformed. */
+            /** @description `BUSINESS_RULE_VIOLATION` — The request was well-formed and the entities exist, but a domain rule forbids it — publishing a product with no price, archiving a brand products still reference, deleting media a tier badge uses ("This media is still used — tier badge on Sprout of ladder version Launch. Replace or remove it first."), issuing more stock than a location holds, restoring a category under an archived parent ("Restore the parent category first.") or a product under an archived brand ("Restore the brand first."). Distinct from 400: nothing about the request is malformed. */
             422: {
                 headers: {
                     [name: string]: unknown;
@@ -29246,7 +29275,7 @@ export interface operations {
                     "*/*": components["schemas"]["PageResponseUserSummaryResponse"];
                 };
             };
-            /** @description `VALIDATION_FAILED` — The request body could not be read, a field failed validation, a required header was absent, or a domain validation rule rejected an input the caller can correct. */
+            /** @description `VALIDATION_FAILED` — The request body could not be read, a field failed validation, a required header was absent, or a domain validation rule rejected an input the caller can correct, such as a tier colour ("Must be a colour written as #RRGGBB.") or a tier badge that does not exist or is a video ("Media <id> is a video; this takes an image."). */
             400: {
                 headers: {
                     [name: string]: unknown;
@@ -29306,7 +29335,7 @@ export interface operations {
                     "*/*": components["schemas"]["UserResponse"];
                 };
             };
-            /** @description `VALIDATION_FAILED` — The request body could not be read, a field failed validation, a required header was absent, or a domain validation rule rejected an input the caller can correct. */
+            /** @description `VALIDATION_FAILED` — The request body could not be read, a field failed validation, a required header was absent, or a domain validation rule rejected an input the caller can correct, such as a tier colour ("Must be a colour written as #RRGGBB.") or a tier badge that does not exist or is a video ("Media <id> is a video; this takes an image."). */
             400: {
                 headers: {
                     [name: string]: unknown;
@@ -29351,7 +29380,7 @@ export interface operations {
                     "application/json": components["schemas"]["ErrorResponse"];
                 };
             };
-            /** @description `BUSINESS_RULE_VIOLATION` — The request was well-formed and the entities exist, but a domain rule forbids it — publishing a product with no price, archiving a brand products still reference, issuing more stock than a location holds, restoring a category under an archived parent ("Restore the parent category first.") or a product under an archived brand ("Restore the brand first."). Distinct from 400: nothing about the request is malformed. */
+            /** @description `BUSINESS_RULE_VIOLATION` — The request was well-formed and the entities exist, but a domain rule forbids it — publishing a product with no price, archiving a brand products still reference, deleting media a tier badge uses ("This media is still used — tier badge on Sprout of ladder version Launch. Replace or remove it first."), issuing more stock than a location holds, restoring a category under an archived parent ("Restore the parent category first.") or a product under an archived brand ("Restore the brand first."). Distinct from 400: nothing about the request is malformed. */
             422: {
                 headers: {
                     [name: string]: unknown;
@@ -29391,7 +29420,7 @@ export interface operations {
                     "*/*": components["schemas"]["UserResponse"];
                 };
             };
-            /** @description `VALIDATION_FAILED` — The request body could not be read, a field failed validation, a required header was absent, or a domain validation rule rejected an input the caller can correct. */
+            /** @description `VALIDATION_FAILED` — The request body could not be read, a field failed validation, a required header was absent, or a domain validation rule rejected an input the caller can correct, such as a tier colour ("Must be a colour written as #RRGGBB.") or a tier badge that does not exist or is a video ("Media <id> is a video; this takes an image."). */
             400: {
                 headers: {
                     [name: string]: unknown;
@@ -29462,7 +29491,7 @@ export interface operations {
                     "*/*": components["schemas"]["UserResponse"];
                 };
             };
-            /** @description `VALIDATION_FAILED` — The request body could not be read, a field failed validation, a required header was absent, or a domain validation rule rejected an input the caller can correct. */
+            /** @description `VALIDATION_FAILED` — The request body could not be read, a field failed validation, a required header was absent, or a domain validation rule rejected an input the caller can correct, such as a tier colour ("Must be a colour written as #RRGGBB.") or a tier badge that does not exist or is a video ("Media <id> is a video; this takes an image."). */
             400: {
                 headers: {
                     [name: string]: unknown;
@@ -29516,7 +29545,7 @@ export interface operations {
                     "application/json": components["schemas"]["ErrorResponse"];
                 };
             };
-            /** @description `BUSINESS_RULE_VIOLATION` — The request was well-formed and the entities exist, but a domain rule forbids it — publishing a product with no price, archiving a brand products still reference, issuing more stock than a location holds, restoring a category under an archived parent ("Restore the parent category first.") or a product under an archived brand ("Restore the brand first."). Distinct from 400: nothing about the request is malformed. */
+            /** @description `BUSINESS_RULE_VIOLATION` — The request was well-formed and the entities exist, but a domain rule forbids it — publishing a product with no price, archiving a brand products still reference, deleting media a tier badge uses ("This media is still used — tier badge on Sprout of ladder version Launch. Replace or remove it first."), issuing more stock than a location holds, restoring a category under an archived parent ("Restore the parent category first.") or a product under an archived brand ("Restore the brand first."). Distinct from 400: nothing about the request is malformed. */
             422: {
                 headers: {
                     [name: string]: unknown;
@@ -29556,7 +29585,7 @@ export interface operations {
                     "*/*": components["schemas"]["ConsumerAddressResponse"][];
                 };
             };
-            /** @description `VALIDATION_FAILED` — The request body could not be read, a field failed validation, a required header was absent, or a domain validation rule rejected an input the caller can correct. */
+            /** @description `VALIDATION_FAILED` — The request body could not be read, a field failed validation, a required header was absent, or a domain validation rule rejected an input the caller can correct, such as a tier colour ("Must be a colour written as #RRGGBB.") or a tier badge that does not exist or is a video ("Media <id> is a video; this takes an image."). */
             400: {
                 headers: {
                     [name: string]: unknown;
@@ -29627,7 +29656,7 @@ export interface operations {
                     "*/*": components["schemas"]["UserResponse"];
                 };
             };
-            /** @description `VALIDATION_FAILED` — The request body could not be read, a field failed validation, a required header was absent, or a domain validation rule rejected an input the caller can correct. */
+            /** @description `VALIDATION_FAILED` — The request body could not be read, a field failed validation, a required header was absent, or a domain validation rule rejected an input the caller can correct, such as a tier colour ("Must be a colour written as #RRGGBB.") or a tier badge that does not exist or is a video ("Media <id> is a video; this takes an image."). */
             400: {
                 headers: {
                     [name: string]: unknown;
@@ -29681,7 +29710,7 @@ export interface operations {
                     "application/json": components["schemas"]["ErrorResponse"];
                 };
             };
-            /** @description `BUSINESS_RULE_VIOLATION` — The request was well-formed and the entities exist, but a domain rule forbids it — publishing a product with no price, archiving a brand products still reference, issuing more stock than a location holds, restoring a category under an archived parent ("Restore the parent category first.") or a product under an archived brand ("Restore the brand first."). Distinct from 400: nothing about the request is malformed. */
+            /** @description `BUSINESS_RULE_VIOLATION` — The request was well-formed and the entities exist, but a domain rule forbids it — publishing a product with no price, archiving a brand products still reference, deleting media a tier badge uses ("This media is still used — tier badge on Sprout of ladder version Launch. Replace or remove it first."), issuing more stock than a location holds, restoring a category under an archived parent ("Restore the parent category first.") or a product under an archived brand ("Restore the brand first."). Distinct from 400: nothing about the request is malformed. */
             422: {
                 headers: {
                     [name: string]: unknown;
@@ -29723,7 +29752,7 @@ export interface operations {
                     "*/*": components["schemas"]["PageResponseProfileIntakeResponse"];
                 };
             };
-            /** @description `VALIDATION_FAILED` — The request body could not be read, a field failed validation, a required header was absent, or a domain validation rule rejected an input the caller can correct. */
+            /** @description `VALIDATION_FAILED` — The request body could not be read, a field failed validation, a required header was absent, or a domain validation rule rejected an input the caller can correct, such as a tier colour ("Must be a colour written as #RRGGBB.") or a tier badge that does not exist or is a video ("Media <id> is a video; this takes an image."). */
             400: {
                 headers: {
                     [name: string]: unknown;
@@ -29794,7 +29823,7 @@ export interface operations {
                     "*/*": components["schemas"]["UserResponse"];
                 };
             };
-            /** @description `VALIDATION_FAILED` — The request body could not be read, a field failed validation, a required header was absent, or a domain validation rule rejected an input the caller can correct. */
+            /** @description `VALIDATION_FAILED` — The request body could not be read, a field failed validation, a required header was absent, or a domain validation rule rejected an input the caller can correct, such as a tier colour ("Must be a colour written as #RRGGBB.") or a tier badge that does not exist or is a video ("Media <id> is a video; this takes an image."). */
             400: {
                 headers: {
                     [name: string]: unknown;
@@ -29848,7 +29877,7 @@ export interface operations {
                     "application/json": components["schemas"]["ErrorResponse"];
                 };
             };
-            /** @description `BUSINESS_RULE_VIOLATION` — The request was well-formed and the entities exist, but a domain rule forbids it — publishing a product with no price, archiving a brand products still reference, issuing more stock than a location holds, restoring a category under an archived parent ("Restore the parent category first.") or a product under an archived brand ("Restore the brand first."). Distinct from 400: nothing about the request is malformed. */
+            /** @description `BUSINESS_RULE_VIOLATION` — The request was well-formed and the entities exist, but a domain rule forbids it — publishing a product with no price, archiving a brand products still reference, deleting media a tier badge uses ("This media is still used — tier badge on Sprout of ladder version Launch. Replace or remove it first."), issuing more stock than a location holds, restoring a category under an archived parent ("Restore the parent category first.") or a product under an archived brand ("Restore the brand first."). Distinct from 400: nothing about the request is malformed. */
             422: {
                 headers: {
                     [name: string]: unknown;
@@ -29892,7 +29921,7 @@ export interface operations {
                     "*/*": components["schemas"]["UserResponse"];
                 };
             };
-            /** @description `VALIDATION_FAILED` — The request body could not be read, a field failed validation, a required header was absent, or a domain validation rule rejected an input the caller can correct. */
+            /** @description `VALIDATION_FAILED` — The request body could not be read, a field failed validation, a required header was absent, or a domain validation rule rejected an input the caller can correct, such as a tier colour ("Must be a colour written as #RRGGBB.") or a tier badge that does not exist or is a video ("Media <id> is a video; this takes an image."). */
             400: {
                 headers: {
                     [name: string]: unknown;
@@ -29946,7 +29975,7 @@ export interface operations {
                     "application/json": components["schemas"]["ErrorResponse"];
                 };
             };
-            /** @description `BUSINESS_RULE_VIOLATION` — The request was well-formed and the entities exist, but a domain rule forbids it — publishing a product with no price, archiving a brand products still reference, issuing more stock than a location holds, restoring a category under an archived parent ("Restore the parent category first.") or a product under an archived brand ("Restore the brand first."). Distinct from 400: nothing about the request is malformed. */
+            /** @description `BUSINESS_RULE_VIOLATION` — The request was well-formed and the entities exist, but a domain rule forbids it — publishing a product with no price, archiving a brand products still reference, deleting media a tier badge uses ("This media is still used — tier badge on Sprout of ladder version Launch. Replace or remove it first."), issuing more stock than a location holds, restoring a category under an archived parent ("Restore the parent category first.") or a product under an archived brand ("Restore the brand first."). Distinct from 400: nothing about the request is malformed. */
             422: {
                 headers: {
                     [name: string]: unknown;
@@ -29990,7 +30019,7 @@ export interface operations {
                     "*/*": components["schemas"]["UserResponse"];
                 };
             };
-            /** @description `VALIDATION_FAILED` — The request body could not be read, a field failed validation, a required header was absent, or a domain validation rule rejected an input the caller can correct. */
+            /** @description `VALIDATION_FAILED` — The request body could not be read, a field failed validation, a required header was absent, or a domain validation rule rejected an input the caller can correct, such as a tier colour ("Must be a colour written as #RRGGBB.") or a tier badge that does not exist or is a video ("Media <id> is a video; this takes an image."). */
             400: {
                 headers: {
                     [name: string]: unknown;
@@ -30044,7 +30073,7 @@ export interface operations {
                     "application/json": components["schemas"]["ErrorResponse"];
                 };
             };
-            /** @description `BUSINESS_RULE_VIOLATION` — The request was well-formed and the entities exist, but a domain rule forbids it — publishing a product with no price, archiving a brand products still reference, issuing more stock than a location holds, restoring a category under an archived parent ("Restore the parent category first.") or a product under an archived brand ("Restore the brand first."). Distinct from 400: nothing about the request is malformed. */
+            /** @description `BUSINESS_RULE_VIOLATION` — The request was well-formed and the entities exist, but a domain rule forbids it — publishing a product with no price, archiving a brand products still reference, deleting media a tier badge uses ("This media is still used — tier badge on Sprout of ladder version Launch. Replace or remove it first."), issuing more stock than a location holds, restoring a category under an archived parent ("Restore the parent category first.") or a product under an archived brand ("Restore the brand first."). Distinct from 400: nothing about the request is malformed. */
             422: {
                 headers: {
                     [name: string]: unknown;
@@ -30085,7 +30114,7 @@ export interface operations {
                     "*/*": components["schemas"]["PageResponseWaitlistEntryResponse"];
                 };
             };
-            /** @description `VALIDATION_FAILED` — The request body could not be read, a field failed validation, a required header was absent, or a domain validation rule rejected an input the caller can correct. */
+            /** @description `VALIDATION_FAILED` — The request body could not be read, a field failed validation, a required header was absent, or a domain validation rule rejected an input the caller can correct, such as a tier colour ("Must be a colour written as #RRGGBB.") or a tier badge that does not exist or is a video ("Media <id> is a video; this takes an image."). */
             400: {
                 headers: {
                     [name: string]: unknown;
@@ -30147,7 +30176,7 @@ export interface operations {
                     "*/*": components["schemas"]["InviteResponse"];
                 };
             };
-            /** @description `VALIDATION_FAILED` — The request body could not be read, a field failed validation, a required header was absent, or a domain validation rule rejected an input the caller can correct. */
+            /** @description `VALIDATION_FAILED` — The request body could not be read, a field failed validation, a required header was absent, or a domain validation rule rejected an input the caller can correct, such as a tier colour ("Must be a colour written as #RRGGBB.") or a tier badge that does not exist or is a video ("Media <id> is a video; this takes an image."). */
             400: {
                 headers: {
                     [name: string]: unknown;
@@ -30201,7 +30230,7 @@ export interface operations {
                     "application/json": components["schemas"]["ErrorResponse"];
                 };
             };
-            /** @description `BUSINESS_RULE_VIOLATION` — The request was well-formed and the entities exist, but a domain rule forbids it — publishing a product with no price, archiving a brand products still reference, issuing more stock than a location holds, restoring a category under an archived parent ("Restore the parent category first.") or a product under an archived brand ("Restore the brand first."). Distinct from 400: nothing about the request is malformed. */
+            /** @description `BUSINESS_RULE_VIOLATION` — The request was well-formed and the entities exist, but a domain rule forbids it — publishing a product with no price, archiving a brand products still reference, deleting media a tier badge uses ("This media is still used — tier badge on Sprout of ladder version Launch. Replace or remove it first."), issuing more stock than a location holds, restoring a category under an archived parent ("Restore the parent category first.") or a product under an archived brand ("Restore the brand first."). Distinct from 400: nothing about the request is malformed. */
             422: {
                 headers: {
                     [name: string]: unknown;
@@ -30244,7 +30273,7 @@ export interface operations {
                     "*/*": components["schemas"]["PageResponseWarehouseResponse"];
                 };
             };
-            /** @description `VALIDATION_FAILED` — The request body could not be read, a field failed validation, a required header was absent, or a domain validation rule rejected an input the caller can correct. */
+            /** @description `VALIDATION_FAILED` — The request body could not be read, a field failed validation, a required header was absent, or a domain validation rule rejected an input the caller can correct, such as a tier colour ("Must be a colour written as #RRGGBB.") or a tier badge that does not exist or is a video ("Media <id> is a video; this takes an image."). */
             400: {
                 headers: {
                     [name: string]: unknown;
@@ -30304,7 +30333,7 @@ export interface operations {
                     "*/*": components["schemas"]["WarehouseResponse"];
                 };
             };
-            /** @description `VALIDATION_FAILED` — The request body could not be read, a field failed validation, a required header was absent, or a domain validation rule rejected an input the caller can correct. */
+            /** @description `VALIDATION_FAILED` — The request body could not be read, a field failed validation, a required header was absent, or a domain validation rule rejected an input the caller can correct, such as a tier colour ("Must be a colour written as #RRGGBB.") or a tier badge that does not exist or is a video ("Media <id> is a video; this takes an image."). */
             400: {
                 headers: {
                     [name: string]: unknown;
@@ -30349,7 +30378,7 @@ export interface operations {
                     "application/json": components["schemas"]["ErrorResponse"];
                 };
             };
-            /** @description `BUSINESS_RULE_VIOLATION` — The request was well-formed and the entities exist, but a domain rule forbids it — publishing a product with no price, archiving a brand products still reference, issuing more stock than a location holds, restoring a category under an archived parent ("Restore the parent category first.") or a product under an archived brand ("Restore the brand first."). Distinct from 400: nothing about the request is malformed. */
+            /** @description `BUSINESS_RULE_VIOLATION` — The request was well-formed and the entities exist, but a domain rule forbids it — publishing a product with no price, archiving a brand products still reference, deleting media a tier badge uses ("This media is still used — tier badge on Sprout of ladder version Launch. Replace or remove it first."), issuing more stock than a location holds, restoring a category under an archived parent ("Restore the parent category first.") or a product under an archived brand ("Restore the brand first."). Distinct from 400: nothing about the request is malformed. */
             422: {
                 headers: {
                     [name: string]: unknown;
@@ -30389,7 +30418,7 @@ export interface operations {
                     "*/*": components["schemas"]["WarehouseResponse"];
                 };
             };
-            /** @description `VALIDATION_FAILED` — The request body could not be read, a field failed validation, a required header was absent, or a domain validation rule rejected an input the caller can correct. */
+            /** @description `VALIDATION_FAILED` — The request body could not be read, a field failed validation, a required header was absent, or a domain validation rule rejected an input the caller can correct, such as a tier colour ("Must be a colour written as #RRGGBB.") or a tier badge that does not exist or is a video ("Media <id> is a video; this takes an image."). */
             400: {
                 headers: {
                     [name: string]: unknown;
@@ -30460,7 +30489,7 @@ export interface operations {
                     "*/*": components["schemas"]["WarehouseResponse"];
                 };
             };
-            /** @description `VALIDATION_FAILED` — The request body could not be read, a field failed validation, a required header was absent, or a domain validation rule rejected an input the caller can correct. */
+            /** @description `VALIDATION_FAILED` — The request body could not be read, a field failed validation, a required header was absent, or a domain validation rule rejected an input the caller can correct, such as a tier colour ("Must be a colour written as #RRGGBB.") or a tier badge that does not exist or is a video ("Media <id> is a video; this takes an image."). */
             400: {
                 headers: {
                     [name: string]: unknown;
@@ -30514,7 +30543,7 @@ export interface operations {
                     "application/json": components["schemas"]["ErrorResponse"];
                 };
             };
-            /** @description `BUSINESS_RULE_VIOLATION` — The request was well-formed and the entities exist, but a domain rule forbids it — publishing a product with no price, archiving a brand products still reference, issuing more stock than a location holds, restoring a category under an archived parent ("Restore the parent category first.") or a product under an archived brand ("Restore the brand first."). Distinct from 400: nothing about the request is malformed. */
+            /** @description `BUSINESS_RULE_VIOLATION` — The request was well-formed and the entities exist, but a domain rule forbids it — publishing a product with no price, archiving a brand products still reference, deleting media a tier badge uses ("This media is still used — tier badge on Sprout of ladder version Launch. Replace or remove it first."), issuing more stock than a location holds, restoring a category under an archived parent ("Restore the parent category first.") or a product under an archived brand ("Restore the brand first."). Distinct from 400: nothing about the request is malformed. */
             422: {
                 headers: {
                     [name: string]: unknown;
@@ -30554,7 +30583,7 @@ export interface operations {
                     "*/*": components["schemas"]["WarehouseResponse"];
                 };
             };
-            /** @description `VALIDATION_FAILED` — The request body could not be read, a field failed validation, a required header was absent, or a domain validation rule rejected an input the caller can correct. */
+            /** @description `VALIDATION_FAILED` — The request body could not be read, a field failed validation, a required header was absent, or a domain validation rule rejected an input the caller can correct, such as a tier colour ("Must be a colour written as #RRGGBB.") or a tier badge that does not exist or is a video ("Media <id> is a video; this takes an image."). */
             400: {
                 headers: {
                     [name: string]: unknown;
@@ -30599,7 +30628,7 @@ export interface operations {
                     "application/json": components["schemas"]["ErrorResponse"];
                 };
             };
-            /** @description `BUSINESS_RULE_VIOLATION` — The request was well-formed and the entities exist, but a domain rule forbids it — publishing a product with no price, archiving a brand products still reference, issuing more stock than a location holds, restoring a category under an archived parent ("Restore the parent category first.") or a product under an archived brand ("Restore the brand first."). Distinct from 400: nothing about the request is malformed. */
+            /** @description `BUSINESS_RULE_VIOLATION` — The request was well-formed and the entities exist, but a domain rule forbids it — publishing a product with no price, archiving a brand products still reference, deleting media a tier badge uses ("This media is still used — tier badge on Sprout of ladder version Launch. Replace or remove it first."), issuing more stock than a location holds, restoring a category under an archived parent ("Restore the parent category first.") or a product under an archived brand ("Restore the brand first."). Distinct from 400: nothing about the request is malformed. */
             422: {
                 headers: {
                     [name: string]: unknown;
@@ -30639,7 +30668,7 @@ export interface operations {
                     "*/*": components["schemas"]["WarehouseResponse"];
                 };
             };
-            /** @description `VALIDATION_FAILED` — The request body could not be read, a field failed validation, a required header was absent, or a domain validation rule rejected an input the caller can correct. */
+            /** @description `VALIDATION_FAILED` — The request body could not be read, a field failed validation, a required header was absent, or a domain validation rule rejected an input the caller can correct, such as a tier colour ("Must be a colour written as #RRGGBB.") or a tier badge that does not exist or is a video ("Media <id> is a video; this takes an image."). */
             400: {
                 headers: {
                     [name: string]: unknown;
@@ -30684,7 +30713,7 @@ export interface operations {
                     "application/json": components["schemas"]["ErrorResponse"];
                 };
             };
-            /** @description `BUSINESS_RULE_VIOLATION` — The request was well-formed and the entities exist, but a domain rule forbids it — publishing a product with no price, archiving a brand products still reference, issuing more stock than a location holds, restoring a category under an archived parent ("Restore the parent category first.") or a product under an archived brand ("Restore the brand first."). Distinct from 400: nothing about the request is malformed. */
+            /** @description `BUSINESS_RULE_VIOLATION` — The request was well-formed and the entities exist, but a domain rule forbids it — publishing a product with no price, archiving a brand products still reference, deleting media a tier badge uses ("This media is still used — tier badge on Sprout of ladder version Launch. Replace or remove it first."), issuing more stock than a location holds, restoring a category under an archived parent ("Restore the parent category first.") or a product under an archived brand ("Restore the brand first."). Distinct from 400: nothing about the request is malformed. */
             422: {
                 headers: {
                     [name: string]: unknown;

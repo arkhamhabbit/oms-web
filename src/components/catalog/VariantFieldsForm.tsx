@@ -1,3 +1,4 @@
+import { TierBadge } from '@/components/membership/TierBadge'
 import * as React from 'react'
 import { useQueryClient } from '@tanstack/react-query'
 import { toast } from 'sonner'
@@ -188,9 +189,7 @@ function VariantFieldsForm({
 
   return (
     <div className="flex flex-col gap-4">
-      {optionLabel && (
-        <p className="text-sm font-medium text-muted-foreground">{optionLabel}</p>
-      )}
+      {optionLabel && <p className="text-sm font-medium text-muted-foreground">{optionLabel}</p>}
       {variant.missingForSale && variant.missingForSale.length > 0 && (
         <p className="rounded-md border border-amber-300 bg-amber-50 p-2 text-sm text-amber-900">
           Not ready for approval — missing: {variant.missingForSale.join(', ')}.
@@ -208,8 +207,8 @@ function VariantFieldsForm({
           />
           {!skuCodesEditable && (
             <p className="text-xs text-muted-foreground">
-              Frozen — this product has been ACTIVE, and the code is already on warehouse labels
-              and GRNs.
+              Frozen — this product has been ACTIVE, and the code is already on warehouse labels and
+              GRNs.
             </p>
           )}
         </div>
@@ -325,7 +324,8 @@ function VariantFieldsForm({
               <SelectItem value={AS_PRODUCT}>As the product</SelectItem>
               {tierChoices.map((t) => (
                 <SelectItem key={t.code} value={t.code!}>
-                  {t.name} ({t.code})
+                  <TierBadge code={t.code} />
+                  <span className="font-mono text-xs text-muted-foreground">{t.code}</span>
                 </SelectItem>
               ))}
               {storedTierMissing && (

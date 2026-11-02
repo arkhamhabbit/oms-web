@@ -7,6 +7,7 @@ import {
   TableHeader,
   TableRow,
 } from '@/components/ui/table'
+import { TierBadgeImage, TierSwatch } from '@/components/membership/TierBadge'
 import { minorToMajorString } from '@/lib/money'
 
 const points = (value: number | undefined) => (value ?? 0).toLocaleString('en-IN')
@@ -36,8 +37,13 @@ function TierLadderTable({ tiers }: { tiers: Tier[] }) {
           <TableRow key={tier.id ?? tier.code}>
             <TableCell>{tier.rank}</TableCell>
             <TableCell>
-              <span className="font-medium">{tier.name}</span>{' '}
-              <span className="font-mono text-xs text-muted-foreground">{tier.code}</span>
+              <span className="flex items-center gap-2">
+                <TierSwatch colourHex={tier.colourHex} />
+                <TierBadgeImage tier={tier} className="size-6" />
+                <span className="font-medium">{tier.name}</span>
+                <span className="font-mono text-xs text-muted-foreground">{tier.code}</span>
+                <span className="sr-only">colour {tier.colourHex}</span>
+              </span>
             </TableCell>
             <TableCell className="text-right">{points(tier.thresholdPoints12mo)}</TableCell>
             <TableCell className="text-right">{points(tier.maintainThresholdPoints)}</TableCell>

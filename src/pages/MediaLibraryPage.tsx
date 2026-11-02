@@ -9,7 +9,7 @@ import { MediaLibraryGrid } from '@/components/media/MediaLibraryGrid'
 import { MediaUploader } from '@/components/media/MediaUploader'
 import { useBreadcrumb } from '@/layouts/breadcrumb-context'
 import { usePermissions } from '@/auth/usePermissions'
-import { toastApiError } from '@/lib/api-error'
+import { ApiClientError, toastApiError } from '@/lib/api-error'
 import { useDeleteMediaMutation, useMediaReferencesQuery, type Media } from '@/api/media'
 
 function DeleteMediaDialog({
@@ -24,6 +24,8 @@ function DeleteMediaDialog({
   const references = useMediaReferencesQuery(media?.id)
   const deleteMedia = useDeleteMediaMutation()
   const used = references.data ?? []
+  // The server's own sentence when it refuses (a reference made since the list was read).
+  const [refusal, setRefusal] = React.useState<string | undefined>()
 
   return (
     <ConfirmDialog
@@ -42,7 +44,11 @@ function DeleteMediaDialog({
             onDeleted(media!.id!)
             onClose()
           })
-          .catch((error) => toastApiError(error))
+          .catch((error) =>
+            error instanceof ApiClientError && (error.status === 409 || error.status === 422)
+              ? setRefusal(error.message)
+              : toastApiError(error)
+          )
       }
     >
       <p className="text-sm">
@@ -65,6 +71,11 @@ function DeleteMediaDialog({
         </div>
       ) : (
         <p className="mt-2 text-sm text-muted-foreground">Nothing uses it.</p>
+      )}
+      {refusal && (
+        <p role="alert" className="mt-2 text-sm text-destructive">
+          {refusal}
+        </p>
       )}
     </ConfirmDialog>
   )
@@ -116,6 +127,7 @@ function MediaLibraryPage() {
         </CardContent>
       </Card>
       <DeleteMediaDialog
+        key={deleting?.id}
         media={deleting}
         onClose={() => setDeleting(null)}
         onDeleted={setRemovedId}

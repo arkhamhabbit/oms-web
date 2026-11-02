@@ -30,6 +30,8 @@ export function useEffectiveLadderQuery(enabled = true) {
   return useQuery({
     queryKey: [MEMBERSHIP_KEY, 'effective'],
     enabled,
+    // Every tier badge in the console reads this one query (D7.18); a publish invalidates it.
+    staleTime: 60_000,
     queryFn: () => unwrap(api.GET('/api/admin/membership/versions/effective')),
     select: (version) => version.tiers ?? [],
   })

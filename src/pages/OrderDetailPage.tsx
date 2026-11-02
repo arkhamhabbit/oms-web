@@ -38,6 +38,7 @@ import {
   RefundSettlementDialog,
   type RefundSettlementKind,
 } from '@/components/orders/RefundSettlementDialog'
+import { TierBadge } from '@/components/membership/TierBadge'
 import { ConsumerLink } from '@/components/orders/ConsumerLink'
 
 const rupees = (minor: number | undefined) => `₹${minorToMajorString(minor ?? 0)}`
@@ -112,7 +113,12 @@ function OrderDetailPage() {
           name={order.consumerName}
           mobile={order.consumerMobile}
         />
-        {order.tierCode ? ` · Tier ${order.tierCode}` : ''}
+        {order.tierCode && (
+          <>
+            {' · Tier '}
+            <TierBadge code={order.tierCode} />
+          </>
+        )}
       </p>
 
       {actions.length > 0 && (
@@ -293,9 +299,15 @@ function OrderDetailPage() {
                 ['Refund', order.payment?.gatewayRefundId],
                 ['Refund requested', formatDateTime(order.payment?.refundRequestedAt)],
                 ['Refunded', formatDateTime(order.payment?.refundedAt)],
-                ['Refund method', labelOf(REFUND_METHOD_LABEL, order.payment?.refundMethod ?? undefined)],
+                [
+                  'Refund method',
+                  labelOf(REFUND_METHOD_LABEL, order.payment?.refundMethod ?? undefined),
+                ],
                 ['Refund reference', order.payment?.refundReference],
-                ['Refund attempts', isRefundPending(order.payment) ? order.payment?.refundAttempts : undefined],
+                [
+                  'Refund attempts',
+                  isRefundPending(order.payment) ? order.payment?.refundAttempts : undefined,
+                ],
                 ['Last refund error', order.payment?.lastRefundError],
               ]}
             />

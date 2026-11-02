@@ -11,13 +11,9 @@ import {
   TableHeader,
   TableRow,
 } from '@/components/ui/table'
+import { TierBadge } from '@/components/membership/TierBadge'
 import { isApiError } from '@/lib/api-error'
-import {
-  useEffectiveLadderQuery,
-  useUserTierHistoryQuery,
-  useUserTierQuery,
-  type TierTransition,
-} from '@/api/membership'
+import { useUserTierHistoryQuery, useUserTierQuery, type TierTransition } from '@/api/membership'
 import { formatDate, formatDateTime } from '@/lib/dates'
 
 const HISTORY_PAGE_SIZE = 10
@@ -38,16 +34,12 @@ const date = (value: string | undefined) => formatDate(value) || '—'
 /**
  * A member's tier, read-only (D7.15). The tier is OMS state that only the server transitions —
  * there is deliberately no override here; none exists server-side. Tier codes are shown with the
- * name from the ladder in effect now, falling back to the bare code for one it no longer has.
+ * badge coloured from the ladder in effect now, neutral with the bare code for one it no longer has.
  */
 function MemberTierCard({ userId }: { userId: string }) {
   const tier = useUserTierQuery(userId)
-  const ladder = useEffectiveLadderQuery()
   const [page, setPage] = React.useState(0)
   const history = useUserTierHistoryQuery(userId, page, HISTORY_PAGE_SIZE)
-
-  const names = new Map((ladder.data ?? []).map((t) => [t.code, t.name]))
-  const label = (code: string | undefined) => (code ? (names.get(code) ?? code) : '—')
 
   const state = tier.data
   const current = state?.tier
@@ -71,7 +63,8 @@ function MemberTierCard({ userId }: { userId: string }) {
         {state && !state.provisioned && (
           <p className="text-sm text-muted-foreground">
             Not a member yet — a customer becomes one when they claim their account, and starts on
-            the first tier ({label(current?.tierCode)}).
+            the first tier (<TierBadge code={current?.tierCode} name={current?.tierName} />
+            ).
           </p>
         )}
         {state && state.provisioned && (
@@ -79,7 +72,7 @@ function MemberTierCard({ userId }: { userId: string }) {
             <div>
               <dt className="text-muted-foreground">Current tier</dt>
               <dd className="flex items-center gap-2 font-medium">
-                {current?.tierName ?? label(current?.tierCode)}
+                <TierBadge code={current?.tierCode} name={current?.tierName} />
                 <span className="font-mono text-xs text-muted-foreground">{current?.tierCode}</span>
               </dd>
             </div>
@@ -112,8 +105,8 @@ function MemberTierCard({ userId }: { userId: string }) {
               <dd>
                 {state.nextTierCode ? (
                   <>
-                    {label(state.nextTierCode)} at {points(state.nextTierReachPoints)} Bits —{' '}
-                    <strong>{points(state.pointsToNextTier)}</strong> to go
+                    <TierBadge code={state.nextTierCode} /> at {points(state.nextTierReachPoints)}{' '}
+                    Bits — <strong>{points(state.pointsToNextTier)}</strong> to go
                   </>
                 ) : (
                   'At the top tier'
@@ -152,8 +145,14 @@ function MemberTierCard({ userId }: { userId: string }) {
                     <TableCell>{when(row.at)}</TableCell>
                     <TableCell>{row.reason ? REASON[row.reason] : '—'}</TableCell>
                     <TableCell>
-                      {row.fromCode ? `${label(row.fromCode)} → ` : ''}
-                      {label(row.toCode)}
+                      <span className="flex flex-wrap items-center gap-1.5">
+                        {row.fromCode && (
+                          <>
+                            <TierBadge code={row.fromCode} /> →
+                          </>
+                        )}
+                        <TierBadge code={row.toCode} />
+                      </span>
                     </TableCell>
                     <TableCell>
                       {date(row.cycleStart)} – {date(row.cycleEnd)}
