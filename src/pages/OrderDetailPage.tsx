@@ -1,12 +1,22 @@
 import * as React from 'react'
 import { Link, useParams } from 'react-router-dom'
-import { ArrowLeftIcon } from 'lucide-react'
+import { ArrowLeftIcon, MoreHorizontalIcon } from 'lucide-react'
 
 import { OrderActionDialog } from '@/components/orders/OrderActionDialog'
+import { OrderNotesFeed } from '@/components/orders/OrderNotesFeed'
+import { OrderPaymentCard } from '@/components/orders/OrderPaymentCard'
+import { OrderRefundsCard } from '@/components/orders/OrderRefundsCard'
 import { OrderStatusBadge } from '@/components/orders/OrderStatusBadge'
+import { OrderTotals } from '@/components/orders/OrderTotals'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from '@/components/ui/dropdown-menu'
 import {
   Table,
   TableBody,
@@ -18,30 +28,11 @@ import {
 import { useBreadcrumb } from '@/layouts/breadcrumb-context'
 import { usePermissions } from '@/auth/usePermissions'
 import { isApiError } from '@/lib/api-error'
-import { minorToMajorString } from '@/lib/money'
-import {
-  ACTION_LABEL,
-  ACTION_PERMISSION,
-  actionsFor,
-  isRefundPending,
-  REFUND_SETTLEMENT_PERMISSION,
-} from '@/lib/orders'
-import { useOrderQuery, type FulfilAction, type OrderDetail } from '@/api/orders'
+import { ACTION_LABEL, ACTION_PERMISSION, actionsFor, rupees, trackingUrl } from '@/lib/orders'
+import { useOrderQuery, useOrdersQuery, type FulfilAction, type OrderDetail } from '@/api/orders'
 import { formatDateTime } from '@/lib/dates'
-import {
-  labelOf,
-  ORDER_STATUS_LABEL,
-  PAYMENT_STATUS_LABEL,
-  REFUND_METHOD_LABEL,
-} from '@/lib/labels'
-import {
-  RefundSettlementDialog,
-  type RefundSettlementKind,
-} from '@/components/orders/RefundSettlementDialog'
 import { TierBadge } from '@/components/membership/TierBadge'
 import { ConsumerLink } from '@/components/orders/ConsumerLink'
-
-const rupees = (minor: number | undefined) => `₹${minorToMajorString(minor ?? 0)}`
 
 function BackLink() {
   return (
@@ -54,29 +45,37 @@ function BackLink() {
   )
 }
 
+const DASH = '—'
+
 function Facts({ rows }: { rows: [string, React.ReactNode][] }) {
   return (
     <dl className="grid gap-x-6 gap-y-3 text-sm sm:grid-cols-2">
       {rows.map(([label, value]) => (
         <div key={label}>
           <dt className="text-muted-foreground">{label}</dt>
-          <dd className="font-medium break-words">{value || '—'}</dd>
+          <dd className="font-medium break-words">{value || DASH}</dd>
         </div>
       ))}
     </dl>
   )
 }
 
+const PRIMARY: FulfilAction[] = ['pack', 'ship', 'out-for-delivery', 'deliver']
+
 function OrderDetailPage() {
   const { id = '' } = useParams()
   const { has } = usePermissions()
   const orderQuery = useOrderQuery(id)
   const order = orderQuery.data
+  // "N orders" for this customer: the list filtered by them, one row asked for, the total read.
+  const customerOrders = useOrdersQuery(
+    { page: 0, size: 1, consumerId: order?.consumerId },
+    !!order?.consumerId
+  )
 
   useBreadcrumb([{ label: 'Orders', to: '/orders' }, { label: order?.number ?? 'Order' }])
 
   const [action, setAction] = React.useState<FulfilAction | undefined>()
-  const [settlement, setSettlement] = React.useState<RefundSettlementKind | undefined>()
 
   if (orderQuery.isLoading) {
     return <p className="text-sm text-muted-foreground">Loading…</p>
@@ -95,250 +94,194 @@ function OrderDetailPage() {
   }
 
   const actions = actionsFor(order.status)
+  const primary = actions.find((a) => PRIMARY.includes(a))
+  const overflow = actions.filter((a) => a !== primary)
+  const owed = order.refundState === 'OWED'
+  const tracking = trackingUrl(order.carrier, order.trackingReference)
+  const orderCount = order.consumerId ? customerOrders.data?.totalElements : undefined
 
   return (
-    <div className="flex max-w-4xl flex-col gap-4">
+    <div className="flex flex-col gap-4">
       <BackLink />
       <div className="flex flex-wrap items-center gap-3">
         <h1 className="font-mono text-xl font-semibold">{order.number}</h1>
         <OrderStatusBadge status={order.status} />
+        <TierBadge code={order.tierCode} />
         {order.priceHonoured && (
           <Badge variant="outline">Price honoured (pricing moved after the quote)</Badge>
         )}
-      </div>
-      <p className="-mt-2 text-sm text-muted-foreground">
-        Placed {formatDateTime(order.placedAt)} · Consumer{' '}
-        <ConsumerLink
-          consumerId={order.consumerId}
-          name={order.consumerName}
-          mobile={order.consumerMobile}
-        />
-        {order.tierCode && (
-          <>
-            {' · Tier '}
-            <TierBadge code={order.tierCode} />
-          </>
-        )}
-      </p>
-
-      {actions.length > 0 && (
-        <Card>
-          <CardHeader>
-            <CardTitle>Actions</CardTitle>
-            <CardDescription>
-              Each one asks to confirm first. The server decides whether the order may take it.
-            </CardDescription>
-          </CardHeader>
-          <CardContent className="flex flex-wrap items-center gap-2">
-            {actions.map((a) => {
-              const allowed = has(ACTION_PERMISSION[a])
-              return (
-                <Button
-                  key={a}
-                  variant={a === 'cancel' || a === 'refund' ? 'outline' : 'default'}
-                  disabled={!allowed}
-                  title={allowed ? undefined : `Needs ${ACTION_PERMISSION[a]}`}
-                  onClick={() => setAction(a)}
-                >
-                  {ACTION_LABEL[a]}
+        <span className="text-sm text-muted-foreground">Placed {formatDateTime(order.placedAt)}</span>
+        <div className="ml-auto flex items-center gap-2">
+          {primary && (
+            <Button
+              disabled={!has(ACTION_PERMISSION[primary])}
+              title={has(ACTION_PERMISSION[primary]) ? undefined : `Needs ${ACTION_PERMISSION[primary]}`}
+              onClick={() => setAction(primary)}
+            >
+              {ACTION_LABEL[primary]}
+            </Button>
+          )}
+          {overflow.length > 0 && (
+            <DropdownMenu>
+              <DropdownMenuTrigger asChild>
+                <Button variant="outline" size="icon" aria-label="More order actions">
+                  <MoreHorizontalIcon />
                 </Button>
-              )
-            })}
-          </CardContent>
-        </Card>
-      )}
-
-      {isRefundPending(order.payment) && (
-        <Card className="border-destructive/40">
-          <CardHeader>
-            <CardTitle>Refund needs attention</CardTitle>
-            <CardDescription>
-              The gateway has not completed this refund. Retry it, or record that the shopper was
-              paid back outside the gateway.
-            </CardDescription>
-          </CardHeader>
-          <CardContent className="flex flex-col gap-3">
-            {order.payment?.lastRefundError && (
-              <p role="status" className="text-sm">
-                {order.payment.lastRefundError}
-              </p>
-            )}
-            <p className="text-xs text-muted-foreground">
-              Attempts so far: {order.payment?.refundAttempts ?? 0}
-              {order.payment?.refundNextAttemptAt
-                ? ` · next automatic attempt ${formatDateTime(order.payment.refundNextAttemptAt)}`
-                : ' · automatic attempts have stopped'}
-            </p>
-            <div className="flex flex-wrap items-center gap-2">
-              {(['retry', 'mark-refunded'] as const).map((kind) => {
-                const allowed = has(REFUND_SETTLEMENT_PERMISSION)
-                return (
-                  <Button
-                    key={kind}
-                    variant={kind === 'retry' ? 'default' : 'outline'}
-                    disabled={!allowed}
-                    title={allowed ? undefined : `Needs ${REFUND_SETTLEMENT_PERMISSION}`}
-                    onClick={() => setSettlement(kind)}
+              </DropdownMenuTrigger>
+              <DropdownMenuContent align="end">
+                {overflow.map((a) => (
+                  <DropdownMenuItem
+                    key={a}
+                    disabled={!has(ACTION_PERMISSION[a])}
+                    onSelect={() => setAction(a)}
                   >
-                    {kind === 'retry' ? 'Retry refund' : 'Mark as refunded'}
-                  </Button>
-                )
-              })}
-            </div>
-          </CardContent>
-        </Card>
-      )}
-
-      <Card>
-        <CardHeader>
-          <CardTitle>Lines</CardTitle>
-          <CardDescription>
-            As sold: the order keeps these even if the catalog moves.
-          </CardDescription>
-        </CardHeader>
-        <CardContent>
-          <Table>
-            <TableHeader>
-              <TableRow>
-                <TableHead>SKU</TableHead>
-                <TableHead>Item</TableHead>
-                <TableHead className="text-right">Qty</TableHead>
-                <TableHead className="text-right">Unit price</TableHead>
-                <TableHead className="text-right">Paid with Bits</TableHead>
-                <TableHead className="text-right">GST</TableHead>
-                <TableHead className="text-right">Line total</TableHead>
-              </TableRow>
-            </TableHeader>
-            <TableBody>
-              {(order.lines ?? []).map((line) => (
-                <TableRow key={line.lineNumber}>
-                  <TableCell className="font-mono">{line.skuCode}</TableCell>
-                  <TableCell>
-                    <div>{line.productName}</div>
-                    <div className="text-xs text-muted-foreground">
-                      {[line.variantName, ...(line.optionLabels ?? [])].filter(Boolean).join(' · ')}
-                    </div>
-                  </TableCell>
-                  <TableCell className="text-right">{line.quantity}</TableCell>
-                  <TableCell className="text-right">
-                    {rupees(line.unitPriceMinor)}
-                    {line.paidWithBits && line.bitsPerUnit
-                      ? ` + ${line.bitsPerUnit.toLocaleString('en-IN')} Bits`
-                      : ''}
-                  </TableCell>
-                  <TableCell className="text-right">
-                    {line.paidWithBits
-                      ? `${(line.lineBits ?? 0).toLocaleString('en-IN')} Bits`
-                      : 'No'}
-                  </TableCell>
-                  <TableCell className="text-right">{line.gstRate ?? 0}%</TableCell>
-                  <TableCell className="text-right">{rupees(line.lineTotalMinor)}</TableCell>
-                </TableRow>
-              ))}
-            </TableBody>
-          </Table>
-        </CardContent>
-      </Card>
-
-      <div className="grid gap-4 md:grid-cols-2">
-        <Card>
-          <CardHeader>
-            <CardTitle>Totals</CardTitle>
-            <CardDescription>GST is included in the prices.</CardDescription>
-          </CardHeader>
-          <CardContent>
-            <Facts
-              rows={[
-                ['Items (MRP)', rupees(order.mrpTotalMinor)],
-                ['Items', rupees(order.itemTotalMinor)],
-                ['Shipping', order.freeShipping ? 'Free (tier)' : rupees(order.shippingMinor)],
-                ['Carrots redeemed', `− ${rupees(order.carrotsRedeemedMinor)}`],
-                ['Bits spent', `${(order.bitsSpent ?? 0).toLocaleString('en-IN')} Bits`],
-                ['Payable', rupees(order.payableMinor)],
-                ['GST included', rupees(order.gstMinor)],
-              ]}
-            />
-            {(order.gstBreakdown ?? []).length > 0 && (
-              <ul className="mt-3 text-xs text-muted-foreground">
-                {order.gstBreakdown!.map((g) => (
-                  <li key={g.rate}>
-                    {g.rate}%: taxable {rupees(g.taxableMinor)}, tax {rupees(g.taxMinor)}
-                  </li>
+                    {ACTION_LABEL[a]}
+                    {!has(ACTION_PERMISSION[a]) && ` (needs ${ACTION_PERMISSION[a]})`}
+                  </DropdownMenuItem>
                 ))}
-              </ul>
-            )}
-          </CardContent>
-        </Card>
-
-        <Card>
-          <CardHeader>
-            <CardTitle>Delivery address</CardTitle>
-            <CardDescription>As placed.</CardDescription>
-          </CardHeader>
-          <CardContent>
-            <AddressBlock order={order} />
-          </CardContent>
-        </Card>
+              </DropdownMenuContent>
+            </DropdownMenu>
+          )}
+        </div>
       </div>
 
-      <div className="grid gap-4 md:grid-cols-2">
-        <Card>
-          <CardHeader>
-            <CardTitle>Payment</CardTitle>
-          </CardHeader>
-          <CardContent>
-            <Facts
-              rows={[
-                ['Status', labelOf(PAYMENT_STATUS_LABEL, order.payment?.status)],
-                ['Method', order.payment?.method ?? order.paymentMethod],
-                ['Amount', rupees(order.payment?.amountMinor)],
-                ['Gateway', order.payment?.gateway],
-                ['Gateway order', order.payment?.gatewayOrderId],
-                ['Gateway payment', order.payment?.gatewayPaymentId],
-                ['Captured', formatDateTime(order.payment?.capturedAt)],
-                ['Refund', order.payment?.gatewayRefundId],
-                ['Refund requested', formatDateTime(order.payment?.refundRequestedAt)],
-                ['Refunded', formatDateTime(order.payment?.refundedAt)],
-                [
-                  'Refund method',
-                  labelOf(REFUND_METHOD_LABEL, order.payment?.refundMethod ?? undefined),
-                ],
-                ['Refund reference', order.payment?.refundReference],
-                [
-                  'Refund attempts',
-                  isRefundPending(order.payment) ? order.payment?.refundAttempts : undefined,
-                ],
-                ['Last refund error', order.payment?.lastRefundError],
-              ]}
-            />
-          </CardContent>
-        </Card>
-
-        <div className="flex flex-col gap-4">
+      <div className="grid items-start gap-4 xl:grid-cols-3">
+        <div className="flex min-w-0 flex-col gap-4 xl:col-span-2">
           <Card>
             <CardHeader>
-              <CardTitle>Invoice</CardTitle>
+              <CardTitle>Customer and addresses</CardTitle>
+              <CardDescription>Addresses are a snapshot at order time.</CardDescription>
             </CardHeader>
-            <CardContent>
-              {order.invoice ? (
-                <Facts
-                  rows={[
-                    ['Number', <span className="font-mono">{order.invoice.number}</span>],
-                    ['Issued', formatDateTime(order.invoice.issuedAt)],
-                    ['Financial year', order.invoice.financialYear],
-                    ['Taxable value', rupees(order.invoice.taxableMinor)],
-                  ]}
+            <CardContent className="grid gap-6 md:grid-cols-3">
+              <section aria-label="Customer" className="flex flex-col gap-1 text-sm">
+                <h3 className="font-medium">Customer</h3>
+                <ConsumerLink
+                  consumerId={order.consumerId}
+                  name={order.consumerName}
+                  mobile={order.consumerMobile}
                 />
-              ) : (
-                <p className="text-sm text-muted-foreground">
-                  Numbered when the order is confirmed.
+                <div>
+                  <TierBadge code={order.tierCode} />
+                </div>
+                {order.consumerId && (
+                  <Link
+                    to={`/orders?consumerId=${order.consumerId}`}
+                    className="w-fit text-muted-foreground underline underline-offset-2 hover:text-foreground"
+                  >
+                    {orderCount === undefined
+                      ? 'All orders'
+                      : `${orderCount} ${orderCount === 1 ? 'order' : 'orders'}`}
+                  </Link>
+                )}
+              </section>
+              <section aria-label="Shipping address" className="flex flex-col gap-1 text-sm">
+                <h3 className="font-medium">Shipping address</h3>
+                <AddressBlock order={order} />
+              </section>
+              <section aria-label="Billing and GST" className="flex flex-col gap-1 text-sm">
+                <h3 className="font-medium">Billing / GST</h3>
+                <p className="text-muted-foreground">
+                  No separate billing or GSTIN is recorded on this order; the invoice uses the
+                  shipping address.
                 </p>
-              )}
+              </section>
             </CardContent>
           </Card>
+
           <Card>
             <CardHeader>
-              <CardTitle>Earn summary</CardTitle>
+              <CardTitle>Items</CardTitle>
+              <CardDescription>
+                As sold: the order keeps these even if the catalog moves.
+              </CardDescription>
+            </CardHeader>
+            <CardContent className="flex flex-col gap-4">
+              <Table className="[&_td]:px-2 [&_td]:whitespace-normal [&_th]:px-2">
+                <TableHeader>
+                  <TableRow>
+                    <TableHead>Item</TableHead>
+                    <TableHead>SKU</TableHead>
+                    <TableHead className="text-right">Qty</TableHead>
+                    <TableHead className="text-right">Unit price</TableHead>
+                    <TableHead className="text-right">Paid with Bits</TableHead>
+                    <TableHead className="text-right">GST</TableHead>
+                    <TableHead className="text-right">Line total</TableHead>
+                  </TableRow>
+                </TableHeader>
+                <TableBody>
+                  {(order.lines ?? []).map((line) => (
+                    <TableRow key={line.lineNumber}>
+                      <TableCell>
+                        <div>{line.productName}</div>
+                        <div className="text-xs text-muted-foreground">
+                          {[line.variantName, ...(line.optionLabels ?? [])]
+                            .filter(Boolean)
+                            .join(' · ')}
+                        </div>
+                      </TableCell>
+                      <TableCell className="font-mono text-xs">{line.skuCode}</TableCell>
+                      <TableCell className="text-right">{line.quantity}</TableCell>
+                      <TableCell className="text-right">{rupees(line.unitPriceMinor)}</TableCell>
+                      <TableCell className="text-right">
+                        {line.paidWithBits
+                          ? `${(line.lineBits ?? 0).toLocaleString('en-IN')} Bits (${(line.bitsPerUnit ?? 0).toLocaleString('en-IN')} each)`
+                          : 'No'}
+                      </TableCell>
+                      <TableCell className="text-right">{line.gstRate ?? 0}%</TableCell>
+                      <TableCell className="text-right">{rupees(line.lineTotalMinor)}</TableCell>
+                    </TableRow>
+                  ))}
+                </TableBody>
+              </Table>
+              <OrderTotals order={order} />
+            </CardContent>
+          </Card>
+
+          <OrderPaymentCard order={order} />
+
+          <OrderRefundsCard order={order} onStale={() => void orderQuery.refetch()} />
+
+          <Card>
+            <CardHeader>
+              <CardTitle>Shipment</CardTitle>
+            </CardHeader>
+            <CardContent>
+              <Facts
+                rows={[
+                  ['Carrier', order.carrier],
+                  [
+                    'Tracking reference',
+                    tracking ? (
+                      <a
+                        href={tracking}
+                        target="_blank"
+                        rel="noreferrer"
+                        className="underline underline-offset-2"
+                      >
+                        {order.trackingReference}
+                      </a>
+                    ) : (
+                      order.trackingReference
+                    ),
+                  ],
+                  ['Packed', order.packedAt ? formatDateTime(order.packedAt) : undefined],
+                  ['Shipped', order.shippedAt ? formatDateTime(order.shippedAt) : undefined],
+                  [
+                    'Out for delivery',
+                    order.outForDeliveryAt ? formatDateTime(order.outForDeliveryAt) : undefined,
+                  ],
+                  [
+                    'Delivered',
+                    order.deliveredAt ? formatDateTime(order.deliveredAt) : undefined,
+                  ],
+                ]}
+              />
+            </CardContent>
+          </Card>
+
+          <Card>
+            <CardHeader>
+              <CardTitle>Earns</CardTitle>
               <CardDescription>What this order earns the shopper.</CardDescription>
             </CardHeader>
             <CardContent>
@@ -346,72 +289,62 @@ function OrderDetailPage() {
                 rows={[
                   ['Bits', `${(order.earnPoints ?? 0).toLocaleString('en-IN')} Bits`],
                   ['Carrots', rupees(order.earnCarrotsMinor)],
-                  [
-                    'Posted',
-                    order.earnsPostedAt
-                      ? formatDateTime(order.earnsPostedAt)
-                      : order.status === 'CONFIRMED' ||
-                          order.status === 'PACKED' ||
-                          order.status === 'SHIPPED' ||
-                          order.status === 'OUT_FOR_DELIVERY' ||
-                          order.status === 'DELIVERED'
-                        ? 'Owed — the repair sweep posts it'
-                        : 'Not earned',
-                  ],
+                  ['Posted', earnsState(order)],
                   ['First order', order.firstOrder ? 'Yes' : 'No'],
                 ]}
               />
             </CardContent>
           </Card>
         </div>
+
+        <aside className="flex min-w-0 flex-col gap-4 xl:sticky xl:top-4">
+          <Card>
+            <CardHeader>
+              <CardTitle>Order actions</CardTitle>
+              <CardDescription>
+                Each one asks to confirm first. The server decides whether the order may take it.
+              </CardDescription>
+            </CardHeader>
+            <CardContent className="flex flex-col gap-2">
+              {actions.length === 0 && (
+                <p className="text-sm text-muted-foreground">
+                  No action applies to an order that is {order.status?.toLowerCase().replace(/_/g, ' ')}.
+                </p>
+              )}
+              {actions.map((a) => {
+                const allowed = has(ACTION_PERMISSION[a])
+                return (
+                  <div key={a} className="flex items-center justify-between gap-2 text-sm">
+                    <Button
+                      size="sm"
+                      variant={a === primary ? 'default' : 'outline'}
+                      disabled={!allowed}
+                      onClick={() => setAction(a)}
+                    >
+                      {ACTION_LABEL[a]}
+                    </Button>
+                    {!allowed && (
+                      <span className="text-xs text-muted-foreground">
+                        Needs {ACTION_PERMISSION[a]}
+                      </span>
+                    )}
+                  </div>
+                )
+              })}
+              {owed && (
+                <a
+                  href="#refunds"
+                  className="text-sm font-medium text-destructive underline underline-offset-2"
+                >
+                  Refunds owed: go to the refund
+                </a>
+              )}
+            </CardContent>
+          </Card>
+          <OrderNotesFeed order={order} />
+        </aside>
       </div>
 
-      {(order.carrier || order.trackingReference) && (
-        <Card>
-          <CardHeader>
-            <CardTitle>Shipment</CardTitle>
-          </CardHeader>
-          <CardContent>
-            <Facts
-              rows={[
-                ['Carrier', order.carrier],
-                ['Tracking reference', order.trackingReference],
-              ]}
-            />
-          </CardContent>
-        </Card>
-      )}
-
-      <Card>
-        <CardHeader>
-          <CardTitle>Timeline</CardTitle>
-          <CardDescription>Every status change, oldest first.</CardDescription>
-        </CardHeader>
-        <CardContent>
-          <ol className="flex flex-col gap-3 border-l pl-4">
-            {(order.events ?? []).map((event) => (
-              <li key={event.id} className="text-sm">
-                <div className="font-medium">
-                  {event.fromStatus
-                    ? `${ORDER_STATUS_LABEL[event.fromStatus]} → ${ORDER_STATUS_LABEL[event.toStatus!]}`
-                    : `Placed (${ORDER_STATUS_LABEL[event.toStatus!]})`}
-                </div>
-                <div className="text-xs text-muted-foreground">
-                  {formatDateTime(event.occurredAt)} · {event.actorKind?.toLowerCase()}
-                  {event.note ? ` · ${event.note}` : ''}
-                </div>
-              </li>
-            ))}
-          </ol>
-        </CardContent>
-      </Card>
-
-      <RefundSettlementDialog
-        order={order}
-        kind={settlement}
-        onClose={() => setSettlement(undefined)}
-        onStale={() => void orderQuery.refetch()}
-      />
       <OrderActionDialog
         order={order}
         action={action}
@@ -420,6 +353,17 @@ function OrderDetailPage() {
       />
     </div>
   )
+}
+
+function earnsState(order: OrderDetail): string {
+  if (order.status === 'CANCELLED' || order.status === 'REFUNDED') {
+    return 'Reversed (order cancelled)'
+  }
+  if (order.earnsPostedAt) {
+    return formatDateTime(order.earnsPostedAt)
+  }
+  const earned = ['CONFIRMED', 'PACKED', 'SHIPPED', 'OUT_FOR_DELIVERY', 'DELIVERED']
+  return earned.includes(order.status ?? '') ? 'Owed — the repair sweep posts it' : 'Not earned'
 }
 
 function AddressBlock({ order }: { order: OrderDetail }) {

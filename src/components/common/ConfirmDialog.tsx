@@ -41,7 +41,7 @@ function ConfirmDialog({
         <DialogHeader>
           <DialogTitle>{title}</DialogTitle>
           <DialogDescription asChild>
-            <div className="flex flex-col gap-2 text-sm text-muted-foreground">{children}</div>
+            <div className="flex flex-col gap-2 pb-4 text-sm text-muted-foreground">{children}</div>
           </DialogDescription>
         </DialogHeader>
         <DialogFooter>

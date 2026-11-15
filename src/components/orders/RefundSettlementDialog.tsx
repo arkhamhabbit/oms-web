@@ -8,17 +8,18 @@ import { Label } from '@/components/ui/label'
 import { useRefundSettlementMutation, type OrderDetail } from '@/api/orders'
 import { isApiError, isVersionConflict } from '@/lib/api-error'
 import { REFUND_LABELS } from '@/lib/field-labels'
+import { rupees } from '@/lib/orders'
 import { fieldMessage, toRefusal, type Refusal } from '@/lib/refusal'
 
-export type RefundSettlementKind = 'retry' | 'mark-refunded'
+export type RefundSettlementKind = 'gateway' | 'mark-refunded'
 
 const COPY: Record<RefundSettlementKind, { title: string; confirm: string }> = {
-  retry: { title: 'Retry the refund', confirm: 'Retry refund' },
+  gateway: { title: 'Refund via Razorpay', confirm: 'Refund via Razorpay' },
   'mark-refunded': { title: 'Mark as refunded', confirm: 'Mark as refunded' },
 }
 
 /**
- * The two ways an admin closes out a refund the gateway keeps refusing (D9.6). Mounted only while
+ * The two ways an admin settles a refund that is owed (D9.8). Mounted only while
  * one is chosen, so the idempotency key is minted once per opening. A refusal stays in the dialog,
  * the reference's beside its box.
  */
@@ -73,7 +74,7 @@ function Body({
         reason: reason.trim(),
       })
       .then(() => {
-        toast.success(manual ? 'Marked as refunded' : 'Refund retried')
+        toast.success(manual ? 'Marked as refunded' : 'Refund requested from Razorpay')
         onClose()
       })
       .catch((error) => {
@@ -93,7 +94,7 @@ function Body({
       onOpenChange={(open) => !open && onClose()}
       title={copy.title}
       confirmLabel={copy.confirm}
-      destructive={manual}
+      destructive
       pending={mutation.isPending}
       confirmDisabled={manual && !reference.trim()}
       onConfirm={confirm}
@@ -105,10 +106,19 @@ function Body({
           gateway is not asked again.
         </p>
       ) : (
-        <p>
-          Start a fresh round of refund attempts for {order.number}: the attempt count goes back to
-          zero and one attempt runs now. If the gateway refuses again, the refund stays pending.
-        </p>
+        <>
+          <p>
+            OMS will refund exactly{' '}
+            <strong className="text-foreground" data-testid="refund-amount">
+              {rupees(order.payment?.amountMinor)}
+            </strong>{' '}
+            for {order.number} to the shopper&rsquo;s original payment method through Razorpay.
+          </p>
+          <p>
+            It calls the gateway <strong className="text-foreground">once</strong> and never
+            retries by itself. If Razorpay does not answer, use Refresh.
+          </p>
+        </>
       )}
       {manual && (
         <div className="grid gap-3 text-foreground">

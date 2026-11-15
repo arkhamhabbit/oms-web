@@ -28,7 +28,7 @@ describe('labels', () => {
     expect(USER_STATUS_LABEL.SUSPENDED).toBe('Suspended')
     expect(CATALOG_STATUS_LABEL.IN_REVIEW).toBe('In review')
     expect(ATTRIBUTE_DATA_TYPE_LABEL.SINGLE_SELECT).toBe('Single select')
-    expect(PAYMENT_STATUS_LABEL.REFUND_PENDING).toBe('Refund pending')
+    expect(PAYMENT_STATUS_LABEL.REFUND_PENDING).toBe('Refund owed')
     expect(PO_STATUS_LABEL.PARTIALLY_RECEIVED).toBe('Partially received')
     expect(ORDER_STATUS_LABEL.OUT_FOR_DELIVERY).toBe('Out for delivery')
     expect(MOVEMENT_TYPE_LABEL.EXPIRY_WRITE_OFF).toBe('Expiry write-off')

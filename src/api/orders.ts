@@ -9,6 +9,8 @@ export type OrderSummary = Schemas['OrderSummaryResponse']
 export type OrderDetail = Schemas['OrderDetailResponse']
 export type OrderLine = Schemas['OrderLineResponse']
 export type OrderEvent = Schemas['OrderEventResponse']
+export type OrderRefund = Schemas['PaymentRefundResponse']
+export type RefundState = NonNullable<OrderSummary['refundState']>
 export type OrderStatus = NonNullable<OrderDetail['status']>
 export type OrderPayment = Schemas['PaymentResponse']
 export type OrderSettings = Schemas['OrderSettingsResponse']
@@ -23,14 +25,16 @@ export interface OrderListParams {
   status?: OrderStatus
   number?: string
   consumerId?: string
+  refundState?: RefundState
   /** ISO instant, inclusive. */
   from?: string
   /** ISO instant, exclusive. */
   to?: string
 }
 
-export function useOrdersQuery(params: OrderListParams) {
+export function useOrdersQuery(params: OrderListParams, enabled = true) {
   return useQuery({
+    enabled,
     queryKey: [ORDERS_KEY, 'list', params],
     queryFn: () =>
       unwrap(
@@ -41,6 +45,7 @@ export function useOrdersQuery(params: OrderListParams) {
               status: params.status,
               number: params.number || undefined,
               consumerId: params.consumerId || undefined,
+              refundState: params.refundState,
               from: params.from,
               to: params.to,
             },
@@ -128,7 +133,8 @@ export function useOrderActionMutation(id: string) {
 }
 
 export interface RefundSettlementInput {
-  action: 'retry' | 'mark-refunded'
+  /** `gateway` asks Razorpay once, for the amount OMS computes (D9.8); `mark-refunded` records a settlement made elsewhere. */
+  action: 'gateway' | 'mark-refunded'
   version: number
   idempotencyKey: string
   /** How a manual settlement was paid (mark-refunded only; required there). */
@@ -137,8 +143,8 @@ export interface RefundSettlementInput {
 }
 
 /**
- * D9.6 — the two admin actions on a refund the gateway keeps refusing: start a fresh round of
- * attempts, or record that the shopper was paid back outside the gateway. Both are idempotent per key.
+ * D9.8: the two admin actions on a refund that is owed. Neither sends an amount: OMS computes it.
+ * Both are idempotent per key. (`refund/retry` is a deprecated alias and is not called.)
  */
 export function useRefundSettlementMutation(id: string) {
   const queryClient = useQueryClient()
@@ -147,9 +153,9 @@ export function useRefundSettlementMutation(id: string) {
       const base = {
         params: { path: { id }, header: { 'Idempotency-Key': input.idempotencyKey } },
       }
-      return input.action === 'retry'
+      return input.action === 'gateway'
         ? unwrap<OrderDetail>(
-            api.POST('/api/admin/orders/{id}/refund/retry', {
+            api.POST('/api/admin/orders/{id}/refund/gateway', {
               ...base,
               body: { version: input.version },
             })
@@ -165,6 +171,36 @@ export function useRefundSettlementMutation(id: string) {
             })
           )
     },
+    onSuccess: () => queryClient.invalidateQueries({ queryKey: [ORDERS_KEY] }),
+  })
+}
+
+/** A read-only status check of a refund in flight at the gateway: reading is not initiating. */
+export function useRefreshRefundMutation(id: string) {
+  const queryClient = useQueryClient()
+  return useMutation({
+    mutationFn: (input: { version: number; idempotencyKey: string }) =>
+      unwrap<OrderDetail>(
+        api.POST('/api/admin/orders/{id}/refund/refresh', {
+          params: { path: { id }, header: { 'Idempotency-Key': input.idempotencyKey } },
+          body: { version: input.version },
+        })
+      ),
+    onSuccess: () => queryClient.invalidateQueries({ queryKey: [ORDERS_KEY] }),
+  })
+}
+
+/** A private note (up to 2000 characters). It does not change the order, so it carries no version. */
+export function useAddOrderNoteMutation(id: string) {
+  const queryClient = useQueryClient()
+  return useMutation({
+    mutationFn: (input: { text: string; idempotencyKey: string }) =>
+      unwrap<OrderDetail>(
+        api.POST('/api/admin/orders/{id}/notes', {
+          params: { path: { id }, header: { 'Idempotency-Key': input.idempotencyKey } },
+          body: { text: input.text },
+        })
+      ),
     onSuccess: () => queryClient.invalidateQueries({ queryKey: [ORDERS_KEY] }),
   })
 }
