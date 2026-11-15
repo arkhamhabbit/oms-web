@@ -153,12 +153,47 @@ export const PAYMENT_STATUS_LABEL = {
   CREATED: 'Awaiting payment',
   CAPTURED: 'Captured',
   FAILED: 'Failed',
-  REFUND_PENDING: 'Refund pending',
+  REFUND_PENDING: 'Refund owed',
+  REFUND_INITIATED: 'Refund initiated',
   REFUNDED: 'Refunded',
+  VOIDED: 'Voided (never captured)',
+} as const
+
+/** The gateway's word for the payment, as OMS last heard it (D9.7). */
+export const GATEWAY_STATUS_LABEL = {
+  CREATED: 'Created',
+  AUTHORIZED: 'Authorized, not captured',
+  CAPTURED: 'Captured',
+  REFUNDED: 'Refunded',
+  FAILED: 'Failed',
+} as const
+
+export const REFUND_STATE_LABEL = {
+  NONE: 'No refund',
+  OWED: 'Refund owed',
+  INITIATED: 'Refund initiated',
+  REFUNDED: 'Refunded',
+  VOIDED: 'Voided',
+} as const
+
+export const REFUND_OUTCOME_LABEL = {
+  REQUESTED: 'Requested, no answer',
+  INITIATED: 'Initiated at Razorpay',
+  PROCESSED: 'Processed',
+  FAILED: 'Failed',
+  REFUSED: 'Refused',
+  SETTLED: 'Settled manually',
+} as const
+
+export const REFUND_REQUESTER_LABEL = {
+  CONSUMER: 'the shopper',
+  ADMIN: 'an admin',
+  SYSTEM: 'the system',
+  GATEWAY: 'the gateway',
 } as const
 
 export const REFUND_METHOD_LABEL = {
-  GATEWAY: 'Gateway',
+  GATEWAY: 'Razorpay',
   MANUAL: 'Manual',
 } as const
 

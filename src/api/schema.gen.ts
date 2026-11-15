@@ -2072,8 +2072,9 @@ export interface paths {
         /**
          * Lists orders, newest placement first.
          * @description Lists orders, newest placement first. Every filter is optional: <code>status</code>, <code>
-         *      consumerId</code>, <code>number</code> (exact, e.g. <code>HBT_10000001</code>), and a placement window <code>
-         *      from</code> (inclusive) / <code>to</code> (exclusive).
+         *      consumerId</code>, <code>number</code> (exact, e.g. <code>HBT_10000001</code>), a placement window <code>from</code>
+         *      (inclusive) / <code>to</code> (exclusive), and <code>refundState</code> — <code>OWED</code> is "Refunds owed":
+         *      money owed back that no one has refunded yet.
          *
          *     **Requires permission:** `orders.read`.
          */
@@ -2124,8 +2125,11 @@ export interface paths {
          * Cancels an order
          * @description Cancels an order. An unpaid one: its holds go back. A confirmed one, within the cancel window
          *      (until SHIPPED by default — see the settings): its stock goes back on the shelf, the Bits and
-         *      Carrots it spent are returned, its payment is refunded in full at the gateway and what it
-         *      earned is reversed; it becomes REFUNDED once the gateway accepts the refund.
+         *      Carrots it spent are returned and what it earned is reversed; its payment is <b>owed back</b>
+         *      (<code>REFUND_PENDING</code>, refund state <code>OWED</code>). Nothing is sent to the gateway: an admin
+         *      refunds it with <code>refund/gateway</code> or <code>refund/mark-refunded</code>, and the order becomes
+         *      REFUNDED when that settles. A payment the gateway only authorised is <code>VOIDED</code>: nothing is
+         *      owed.
          *
          *      <p>422 <code>BUSINESS_RULE_VIOLATION</code> past the window (refund a shipped order instead). An
          *      order already CANCELLED or REFUNDED is returned unchanged.
@@ -2183,6 +2187,33 @@ export interface paths {
         get: operations["orderGetOrderInvoice"];
         put?: never;
         post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/admin/orders/{id}/notes": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Adds a private note to the order: kept in its history (<code>events</code>, kind <code>NOTE</code>) with
+         *      the author's name, never shown to the shopper
+         * @description Adds a private note to the order: kept in its history (<code>events</code>, kind <code>NOTE</code>) with
+         *      the author's name, never shown to the shopper. The order itself does not change, so no <code>
+         *      version</code> is needed. Audited.
+         *
+         *      <p>400 <code>VALIDATION_FAILED</code> for an empty note or one over 2000 characters.
+         *
+         *     **Requires permission:** `orders.write`.
+         */
+        post: operations["orderAddOrderNote"];
         delete?: never;
         options?: never;
         head?: never;
@@ -2248,12 +2279,14 @@ export interface paths {
         get?: never;
         put?: never;
         /**
-         * Refunds a SHIPPED, OUT_FOR_DELIVERY or DELIVERED order in full: the Bits and Carrots it spent
-         *      are returned, the payment is refunded at the gateway and what it earned is reversed
-         * @description Refunds a SHIPPED, OUT_FOR_DELIVERY or DELIVERED order in full: the Bits and Carrots it spent
-         *      are returned, the payment is refunded at the gateway and what it earned is reversed. It becomes
-         *      REFUNDED once the gateway accepts; a gateway failure leaves the refund owed and retried. No
-         *      stock moves — the goods are with the shopper. Partial refunds and returns are not offered yet.
+         * Decides a SHIPPED, OUT_FOR_DELIVERY or DELIVERED order is refunded in full: the Bits and
+         *      Carrots it spent are returned, what it earned is reversed, and its payment is <b>owed back</b>
+         *      (<code>REFUND_PENDING</code>)
+         * @description Decides a SHIPPED, OUT_FOR_DELIVERY or DELIVERED order is refunded in full: the Bits and
+         *      Carrots it spent are returned, what it earned is reversed, and its payment is <b>owed back</b>
+         *      (<code>REFUND_PENDING</code>). Nothing is sent to the gateway: refund it with <code>refund/gateway</code>
+         *      or <code>refund/mark-refunded</code>; the order becomes REFUNDED when that settles. No stock moves —
+         *      the goods are with the shopper. Partial refunds and returns are not offered yet.
          *
          *      <p>422 <code>BUSINESS_RULE_VIOLATION</code> for an order not shipped yet (cancel it instead).
          *
@@ -2262,6 +2295,41 @@ export interface paths {
          *     **Concurrency** — send back the `version` you read. If the record has been changed by someone else since, this returns **409 `VERSION_CONFLICT`** with a `version` field error and writes nothing. Re-read it, show the operator what moved, and submit again with the new `version`.
          */
         post: operations["orderRefundOrder"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/admin/orders/{id}/refund/gateway": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Refunds the order's payment through the payment gateway — the admin's decision, one gateway
+         *      call per request
+         * @description Refunds the order's payment through the payment gateway — the admin's decision, one gateway
+         *      call per request. OMS computes the amount (the payment in full; the request carries none) and
+         *      sends the order number and the admin with it. The response shows how it went: <code>
+         *      REFUND_INITIATED</code> with a new row in <code>refunds</code> (the gateway is paying it back; it becomes
+         *      REFUNDED when the gateway says processed — see <code>refund/refresh</code>), REFUNDED at once, or
+         *      still <code>REFUND_PENDING</code> with <code>lastRefundError</code> when the gateway refused — press
+         *      again when ready. Nothing ever retries it by itself. Audited.
+         *
+         *      <p>422 <code>BUSINESS_RULE_VIOLATION</code>: "The payment was never captured, so there is nothing to
+         *      refund." when the gateway only authorised it (the payment becomes VOIDED); when the payment is
+         *      not REFUND_PENDING; or when a gateway refund for it is already in progress.
+         *
+         *     **Requires permission:** `orders.refund`.
+         *
+         *     **Concurrency** — send back the `version` you read. If the record has been changed by someone else since, this returns **409 `VERSION_CONFLICT`** with a `version` field error and writes nothing. Re-read it, show the operator what moved, and submit again with the new `version`.
+         */
+        post: operations["orderRefundOrderThroughGateway"];
         delete?: never;
         options?: never;
         head?: never;
@@ -2278,20 +2346,53 @@ export interface paths {
         get?: never;
         put?: never;
         /**
-         * Records a refund settled outside the gateway
-         * @description Records a refund settled outside the gateway — when the gateway cannot refund the
-         *      payment and the admin paid the shopper back another way. The payment becomes REFUNDED with
-         *      <code>refundMethod</code> MANUAL and the <code>reference</code> given, and the order REFUNDED as on the
-         *      gateway path. Nothing is sent to the gateway. Audited.
+         * Records a refund settled outside the gateway — when the admin paid the shopper back another
+         *      way
+         * @description Records a refund settled outside the gateway — when the admin paid the shopper back another
+         *      way. The payment becomes REFUNDED with <code>refundMethod</code> MANUAL and the <code>reference</code>
+         *      given, a <code>SETTLED</code> row is added to <code>refunds</code>, and the order becomes REFUNDED as on
+         *      the gateway path. Nothing is sent to the gateway. Audited.
          *
-         *      <p>422 <code>BUSINESS_RULE_VIOLATION</code> unless the payment is REFUND_PENDING: one already
-         *      refunded, or never owed back, is refused.
+         *      <p>422 <code>BUSINESS_RULE_VIOLATION</code> unless the payment is REFUND_PENDING with no gateway
+         *      refund in progress: one already refunded, being refunded, or never owed back, is refused.
          *
          *     **Requires permission:** `orders.refund`.
          *
          *     **Concurrency** — send back the `version` you read. If the record has been changed by someone else since, this returns **409 `VERSION_CONFLICT`** with a `version` field error and writes nothing. Re-read it, show the operator what moved, and submit again with the new `version`.
          */
         post: operations["orderMarkOrderRefunded"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/admin/orders/{id}/refund/refresh": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Reads where the order's gateway refund stands at the gateway and records it: processed (the
+         *      payment and order become REFUNDED), failed (back to <code>REFUND_PENDING</code> with <code>
+         *      lastRefundError</code>; refund it again or mark it refunded), or still pending
+         * @description Reads where the order's gateway refund stands at the gateway and records it: processed (the
+         *      payment and order become REFUNDED), failed (back to <code>REFUND_PENDING</code> with <code>
+         *      lastRefundError</code>; refund it again or mark it refunded), or still pending. A read — it never
+         *      asks the gateway for a refund. OMS also checks by itself every few minutes and on the gateway's
+         *      refund webhooks.
+         *
+         *      <p>422 <code>BUSINESS_RULE_VIOLATION</code> when no gateway refund is in progress.
+         *
+         *     **Requires permission:** `orders.refund`.
+         *
+         *     **Concurrency** — send back the `version` you read. If the record has been changed by someone else since, this returns **409 `VERSION_CONFLICT`** with a `version` field error and writes nothing. Re-read it, show the operator what moved, and submit again with the new `version`.
+         */
+        post: operations["orderRefreshOrderRefund"];
         delete?: never;
         options?: never;
         head?: never;
@@ -2308,13 +2409,12 @@ export interface paths {
         get?: never;
         put?: never;
         /**
-         * Retries a refund the gateway refused
-         * @description Retries a refund the gateway refused. The sweep stops after a bounded number of attempts
-         *      and leaves the payment REFUND_PENDING; this starts a fresh round — the attempt counter back to
-         *      zero — and runs the first attempt now. The response shows how it went: REFUNDED, or still
-         *      pending with <code>lastRefundError</code> saying why. Audited.
-         *
-         *      <p>422 <code>BUSINESS_RULE_VIOLATION</code> unless the payment is REFUND_PENDING.
+         * Deprecated alias of <code>refund/gateway</code>, kept for one release so a console built before it
+         *      keeps working: exactly the same behaviour, refusals and audit.
+         * @deprecated
+         * @description Deprecated alias of <code>refund/gateway</code>, kept for one release so a console built before it
+         *      keeps working: exactly the same behaviour, refusals and audit. It no longer starts a "round" of
+         *      attempts — nothing retries a refund by itself. Use <code>refund/gateway</code>.
          *
          *     **Requires permission:** `orders.refund`.
          *
@@ -5800,6 +5900,14 @@ export interface components {
              */
             valueForExistingVariant: string;
         };
+        /**
+         * @description An admin's private note on the order (0.14). Kept in the order's history with its author; never
+         *      shown to the shopper.
+         */
+        AddOrderNoteRequest: {
+            /** @description the note, up to 2000 characters */
+            text: string;
+        };
         /** @description Where the order goes, as it was when placed. */
         AddressResponse: {
             /** Format: uuid */
@@ -7250,6 +7358,7 @@ export interface components {
              * @description when its earns were posted; null while owed or for an unconfirmed order
              */
             earnsPostedAt?: string;
+            /** @description its history, oldest first, with admins' private notes among the steps */
             events?: components["schemas"]["OrderEventResponse"][];
             /** Format: date-time */
             expiredAt?: string;
@@ -7296,6 +7405,13 @@ export interface components {
             pricingVersionId?: string;
             /** Format: date-time */
             refundedAt?: string;
+            /** @description every attempt to pay its refund back, newest first */
+            refunds?: components["schemas"]["PaymentRefundResponse"][];
+            /**
+             * @description where its refund stands — see the order list
+             * @enum {string}
+             */
+            refundState?: "NONE" | "OWED" | "INITIATED" | "REFUNDED" | "VOIDED";
             /** Format: date-time */
             shippedAt?: string;
             /** Format: int64 */
@@ -7317,6 +7433,8 @@ export interface components {
              * @enum {string}
              */
             actorKind?: "CONSUMER" | "ADMIN" | "SYSTEM" | "GATEWAY";
+            /** @description the team member's name now, for an admin's entry */
+            actorName?: string | null;
             /**
              * @description null for the placement
              * @enum {string}
@@ -7324,6 +7442,12 @@ export interface components {
             fromStatus?: "PENDING_PAYMENT" | "CONFIRMED" | "PACKED" | "SHIPPED" | "OUT_FOR_DELIVERY" | "DELIVERED" | "PAYMENT_FAILED" | "EXPIRED" | "CANCELLED" | "REFUNDED";
             /** Format: uuid */
             id?: string;
+            /**
+             * @description <code>STATUS</code> (a step of the order's life) or <code>NOTE</code> (an admin's private
+             *          note: <code>note</code> is its text; never shown to the shopper)
+             * @enum {string}
+             */
+            kind?: "STATUS" | "NOTE";
             note?: string;
             /** Format: date-time */
             occurredAt?: string;
@@ -7444,6 +7568,14 @@ export interface components {
             paymentMethod?: "UPI" | "CARD" | "NETBANKING" | "WALLET" | "OTHER";
             /** Format: date-time */
             placedAt?: string;
+            /**
+             * @description where the order's refund stands: <code>NONE</code>, <code>OWED</code> (owed back, not
+             *          started — an admin has to refund it or mark it refunded), <code>INITIATED</code> (the gateway is
+             *          paying it back), <code>REFUNDED</code> or <code>VOIDED</code> (never charged, nothing to refund).
+             *          "Refunds owed" is <code>OWED</code>
+             * @enum {string}
+             */
+            refundState?: "NONE" | "OWED" | "INITIATED" | "REFUNDED" | "VOIDED";
             /** Format: int64 */
             shippingMinor?: number;
             /** @enum {string} */
@@ -8448,6 +8580,65 @@ export interface components {
         PasswordResetLinkResponse: {
             resetLink?: string;
         };
+        /**
+         * @description One attempt to pay a refund back (0.14): an admin's press of "Refund via the gateway", or their
+         *      record of a refund settled outside it. Rows are never deleted or rewritten.
+         */
+        PaymentRefundResponse: {
+            /** Format: int64 */
+            amountMinor?: number;
+            /**
+             * @description recorded from the payment's own fields when refund history began, for a
+             *          refund that happened before it
+             */
+            backfilled?: boolean;
+            currency?: string;
+            /** Format: date-time */
+            failedAt?: string | null;
+            /** @description why it failed or was refused, as a sentence */
+            failureSentence?: string | null;
+            gatewayRefundId?: string | null;
+            /**
+             * @description the gateway's own word for the refund as last heard (<code>pending</code>,
+             *          <code>processed</code>, <code>failed</code>)
+             */
+            gatewayStatus?: string | null;
+            /** Format: uuid */
+            id?: string;
+            /** Format: date-time */
+            initiatedAt?: string | null;
+            /**
+             * @description <code>GATEWAY</code> or <code>MANUAL</code>
+             * @enum {string}
+             */
+            method?: "GATEWAY" | "MANUAL";
+            /**
+             * @description <code>REQUESTED</code> (OMS is asking the gateway, or did not hear its answer and is
+             *          finding out), <code>INITIATED</code> (accepted; being paid back), <code>PROCESSED</code> (paid back),
+             *          <code>FAILED</code> (accepted, then failed by the gateway), <code>REFUSED</code> (refused by the
+             *          gateway; nothing started) or <code>SETTLED</code> (settled outside the gateway)
+             * @enum {string}
+             */
+            outcome?: "REQUESTED" | "INITIATED" | "PROCESSED" | "FAILED" | "REFUSED" | "SETTLED";
+            /** Format: date-time */
+            processedAt?: string | null;
+            reason?: string | null;
+            /** @description the admin's reference for a <code>MANUAL</code> settlement */
+            reference?: string | null;
+            /** Format: date-time */
+            requestedAt?: string;
+            /**
+             * Format: uuid
+             * @description the team member who pressed; null on a row recorded from an older payment
+             */
+            requestedBy?: string | null;
+            /** @description their name now */
+            requestedByName?: string | null;
+            /** @description <code>normal</code> or <code>instant</code>, once the gateway reports it */
+            speedProcessed?: string | null;
+            /** @description <code>normal</code> or <code>optimum</code>, when the gateway reports it */
+            speedRequested?: string | null;
+        };
         /** @description The order's payment at the gateway. */
         PaymentResponse: {
             /** Format: int64 */
@@ -8462,15 +8653,29 @@ export interface components {
             gatewayOrderId?: string;
             gatewayPaymentId?: string;
             gatewayRefundId?: string;
+            /**
+             * @description the gateway's own word for the payment the last time OMS heard it — <code>
+             *          CREATED</code>, <code>AUTHORIZED</code>, <code>CAPTURED</code>, <code>REFUNDED</code> or <code>FAILED</code>; null
+             *          when OMS has not heard one. A reading, not OMS's decision: <code>status</code> is
+             * @enum {string|null}
+             */
+            gatewayStatus?: "CREATED" | "AUTHORIZED" | "CAPTURED" | "REFUNDED" | "FAILED" | null;
+            /**
+             * Format: date-time
+             * @description when OMS last heard from the gateway about it
+             */
+            gatewayStatusAt?: string | null;
             /** Format: uuid */
             id?: string;
+            /** @description why the gateway refused OMS's capture, as a sentence */
+            lastCaptureError?: string | null;
             /** @description why the last gateway attempt failed, as a sentence */
             lastRefundError?: string | null;
             /** @enum {string} */
             method?: "UPI" | "CARD" | "NETBANKING" | "WALLET" | "OTHER";
             /**
              * Format: int32
-             * @description gateway attempts in the current round; an admin's retry starts a new one
+             * @description how many refund attempts the order's <code>refunds</code> list holds
              */
             refundAttempts?: number;
             /** Format: date-time */
@@ -8483,9 +8688,8 @@ export interface components {
             refundMethod?: "GATEWAY" | "MANUAL" | null;
             /**
              * Format: date-time
-             * @description when the sweep tries the refund again. Null on a <code>
-             *          REFUND_PENDING</code> payment that has attempts means the sweep has stopped: retry it, or mark it
-             *          refunded
+             * @description deprecated, always null: nothing retries a refund on a timer since
+             *          refunds became admin-initiated. Removed in a later release
              */
             refundNextAttemptAt?: string | null;
             refundReason?: string;
@@ -8494,11 +8698,30 @@ export interface components {
             /** Format: date-time */
             refundRequestedAt?: string;
             /**
+             * Format: uuid
+             * @description the team member who decided, when an admin did
+             */
+            refundRequestedBy?: string | null;
+            /**
+             * @description who decided the money is owed back: <code>ADMIN</code>, <code>
+             *          CONSUMER</code> (their own cancel), <code>SYSTEM</code> or <code>GATEWAY</code> (a capture after the order
+             *          ended)
+             * @enum {string|null}
+             */
+            refundRequestedByKind?: "CONSUMER" | "ADMIN" | "SYSTEM" | "GATEWAY" | null;
+            /**
              * @description <code>CREATED</code>, <code>CAPTURED</code>, <code>FAILED</code>, <code>REFUND_PENDING</code> (owed
-             *          back, being refunded) or <code>REFUNDED</code>
+             *          back and waiting for an admin: refund it through the gateway, or mark it refunded), <code>
+             *          REFUND_INITIATED</code> (the gateway accepted the refund and is paying it back), <code>REFUNDED</code>
+             *          or <code>VOIDED</code> (owed back, but the gateway only ever authorised it: nothing was charged,
+             *          nothing refunded)
              * @enum {string}
              */
-            status?: "CREATED" | "CAPTURED" | "FAILED" | "REFUND_PENDING" | "REFUNDED";
+            status?: "CREATED" | "CAPTURED" | "FAILED" | "REFUND_PENDING" | "REFUND_INITIATED" | "REFUNDED" | "VOIDED";
+            /** Format: date-time */
+            voidedAt?: string | null;
+            /** @description why the payment was voided, as a sentence */
+            voidReason?: string | null;
         };
         /** @description The catalog grouped for the role editor, which renders straight from this. */
         PermissionDomainResponse: {
@@ -10813,7 +11036,7 @@ export interface operations {
                     "application/json": components["schemas"]["ErrorResponse"];
                 };
             };
-            /** @description `BUSINESS_RULE_VIOLATION` — The request was well-formed and the entities exist, but a domain rule forbids it — publishing a product with no price, archiving a brand products still reference, deleting media a tier badge uses ("This media is still used — tier badge on Sprout of ladder version Launch. Replace or remove it first."), issuing more stock than a location holds, restoring a category under an archived parent ("Restore the parent category first.") or a product under an archived brand ("Restore the brand first."). Distinct from 400: nothing about the request is malformed. */
+            /** @description `BUSINESS_RULE_VIOLATION` — The request was well-formed and the entities exist, but a domain rule forbids it — publishing a product with no price, archiving a brand products still reference, deleting media a tier badge uses ("This media is still used — tier badge on Sprout of ladder version Launch. Replace or remove it first."), issuing more stock than a location holds, restoring a category under an archived parent ("Restore the parent category first.") or a product under an archived brand ("Restore the brand first."), refunding through the gateway a payment that was never captured ("The payment was never captured, so there is nothing to refund.") or one whose gateway refund is under way ("A refund through the payment gateway is already in progress for this order. Refresh it to see where it stands."), refreshing a refund that is not under way ("This order has no refund in progress at the payment gateway to refresh."). Distinct from 400: nothing about the request is malformed. */
             422: {
                 headers: {
                     [name: string]: unknown;
@@ -10911,7 +11134,7 @@ export interface operations {
                     "application/json": components["schemas"]["ErrorResponse"];
                 };
             };
-            /** @description `BUSINESS_RULE_VIOLATION` — The request was well-formed and the entities exist, but a domain rule forbids it — publishing a product with no price, archiving a brand products still reference, deleting media a tier badge uses ("This media is still used — tier badge on Sprout of ladder version Launch. Replace or remove it first."), issuing more stock than a location holds, restoring a category under an archived parent ("Restore the parent category first.") or a product under an archived brand ("Restore the brand first."). Distinct from 400: nothing about the request is malformed. */
+            /** @description `BUSINESS_RULE_VIOLATION` — The request was well-formed and the entities exist, but a domain rule forbids it — publishing a product with no price, archiving a brand products still reference, deleting media a tier badge uses ("This media is still used — tier badge on Sprout of ladder version Launch. Replace or remove it first."), issuing more stock than a location holds, restoring a category under an archived parent ("Restore the parent category first.") or a product under an archived brand ("Restore the brand first."), refunding through the gateway a payment that was never captured ("The payment was never captured, so there is nothing to refund.") or one whose gateway refund is under way ("A refund through the payment gateway is already in progress for this order. Refresh it to see where it stands."), refreshing a refund that is not under way ("This order has no refund in progress at the payment gateway to refresh."). Distinct from 400: nothing about the request is malformed. */
             422: {
                 headers: {
                     [name: string]: unknown;
@@ -10996,7 +11219,7 @@ export interface operations {
                     "application/json": components["schemas"]["ErrorResponse"];
                 };
             };
-            /** @description `BUSINESS_RULE_VIOLATION` — The request was well-formed and the entities exist, but a domain rule forbids it — publishing a product with no price, archiving a brand products still reference, deleting media a tier badge uses ("This media is still used — tier badge on Sprout of ladder version Launch. Replace or remove it first."), issuing more stock than a location holds, restoring a category under an archived parent ("Restore the parent category first.") or a product under an archived brand ("Restore the brand first."). Distinct from 400: nothing about the request is malformed. */
+            /** @description `BUSINESS_RULE_VIOLATION` — The request was well-formed and the entities exist, but a domain rule forbids it — publishing a product with no price, archiving a brand products still reference, deleting media a tier badge uses ("This media is still used — tier badge on Sprout of ladder version Launch. Replace or remove it first."), issuing more stock than a location holds, restoring a category under an archived parent ("Restore the parent category first.") or a product under an archived brand ("Restore the brand first."), refunding through the gateway a payment that was never captured ("The payment was never captured, so there is nothing to refund.") or one whose gateway refund is under way ("A refund through the payment gateway is already in progress for this order. Refresh it to see where it stands."), refreshing a refund that is not under way ("This order has no refund in progress at the payment gateway to refresh."). Distinct from 400: nothing about the request is malformed. */
             422: {
                 headers: {
                     [name: string]: unknown;
@@ -11081,7 +11304,7 @@ export interface operations {
                     "application/json": components["schemas"]["ErrorResponse"];
                 };
             };
-            /** @description `BUSINESS_RULE_VIOLATION` — The request was well-formed and the entities exist, but a domain rule forbids it — publishing a product with no price, archiving a brand products still reference, deleting media a tier badge uses ("This media is still used — tier badge on Sprout of ladder version Launch. Replace or remove it first."), issuing more stock than a location holds, restoring a category under an archived parent ("Restore the parent category first.") or a product under an archived brand ("Restore the brand first."). Distinct from 400: nothing about the request is malformed. */
+            /** @description `BUSINESS_RULE_VIOLATION` — The request was well-formed and the entities exist, but a domain rule forbids it — publishing a product with no price, archiving a brand products still reference, deleting media a tier badge uses ("This media is still used — tier badge on Sprout of ladder version Launch. Replace or remove it first."), issuing more stock than a location holds, restoring a category under an archived parent ("Restore the parent category first.") or a product under an archived brand ("Restore the brand first."), refunding through the gateway a payment that was never captured ("The payment was never captured, so there is nothing to refund.") or one whose gateway refund is under way ("A refund through the payment gateway is already in progress for this order. Refresh it to see where it stands."), refreshing a refund that is not under way ("This order has no refund in progress at the payment gateway to refresh."). Distinct from 400: nothing about the request is malformed. */
             422: {
                 headers: {
                     [name: string]: unknown;
@@ -11168,7 +11391,7 @@ export interface operations {
                     "application/json": components["schemas"]["ErrorResponse"];
                 };
             };
-            /** @description `BUSINESS_RULE_VIOLATION` — The request was well-formed and the entities exist, but a domain rule forbids it — publishing a product with no price, archiving a brand products still reference, deleting media a tier badge uses ("This media is still used — tier badge on Sprout of ladder version Launch. Replace or remove it first."), issuing more stock than a location holds, restoring a category under an archived parent ("Restore the parent category first.") or a product under an archived brand ("Restore the brand first."). Distinct from 400: nothing about the request is malformed. */
+            /** @description `BUSINESS_RULE_VIOLATION` — The request was well-formed and the entities exist, but a domain rule forbids it — publishing a product with no price, archiving a brand products still reference, deleting media a tier badge uses ("This media is still used — tier badge on Sprout of ladder version Launch. Replace or remove it first."), issuing more stock than a location holds, restoring a category under an archived parent ("Restore the parent category first.") or a product under an archived brand ("Restore the brand first."), refunding through the gateway a payment that was never captured ("The payment was never captured, so there is nothing to refund.") or one whose gateway refund is under way ("A refund through the payment gateway is already in progress for this order. Refresh it to see where it stands."), refreshing a refund that is not under way ("This order has no refund in progress at the payment gateway to refresh."). Distinct from 400: nothing about the request is malformed. */
             422: {
                 headers: {
                     [name: string]: unknown;
@@ -11317,7 +11540,7 @@ export interface operations {
                     "application/json": components["schemas"]["ErrorResponse"];
                 };
             };
-            /** @description `BUSINESS_RULE_VIOLATION` — The request was well-formed and the entities exist, but a domain rule forbids it — publishing a product with no price, archiving a brand products still reference, deleting media a tier badge uses ("This media is still used — tier badge on Sprout of ladder version Launch. Replace or remove it first."), issuing more stock than a location holds, restoring a category under an archived parent ("Restore the parent category first.") or a product under an archived brand ("Restore the brand first."). Distinct from 400: nothing about the request is malformed. */
+            /** @description `BUSINESS_RULE_VIOLATION` — The request was well-formed and the entities exist, but a domain rule forbids it — publishing a product with no price, archiving a brand products still reference, deleting media a tier badge uses ("This media is still used — tier badge on Sprout of ladder version Launch. Replace or remove it first."), issuing more stock than a location holds, restoring a category under an archived parent ("Restore the parent category first.") or a product under an archived brand ("Restore the brand first."), refunding through the gateway a payment that was never captured ("The payment was never captured, so there is nothing to refund.") or one whose gateway refund is under way ("A refund through the payment gateway is already in progress for this order. Refresh it to see where it stands."), refreshing a refund that is not under way ("This order has no refund in progress at the payment gateway to refresh."). Distinct from 400: nothing about the request is malformed. */
             422: {
                 headers: {
                     [name: string]: unknown;
@@ -11482,7 +11705,7 @@ export interface operations {
                     "application/json": components["schemas"]["ErrorResponse"];
                 };
             };
-            /** @description `BUSINESS_RULE_VIOLATION` — The request was well-formed and the entities exist, but a domain rule forbids it — publishing a product with no price, archiving a brand products still reference, deleting media a tier badge uses ("This media is still used — tier badge on Sprout of ladder version Launch. Replace or remove it first."), issuing more stock than a location holds, restoring a category under an archived parent ("Restore the parent category first.") or a product under an archived brand ("Restore the brand first."). Distinct from 400: nothing about the request is malformed. */
+            /** @description `BUSINESS_RULE_VIOLATION` — The request was well-formed and the entities exist, but a domain rule forbids it — publishing a product with no price, archiving a brand products still reference, deleting media a tier badge uses ("This media is still used — tier badge on Sprout of ladder version Launch. Replace or remove it first."), issuing more stock than a location holds, restoring a category under an archived parent ("Restore the parent category first.") or a product under an archived brand ("Restore the brand first."), refunding through the gateway a payment that was never captured ("The payment was never captured, so there is nothing to refund.") or one whose gateway refund is under way ("A refund through the payment gateway is already in progress for this order. Refresh it to see where it stands."), refreshing a refund that is not under way ("This order has no refund in progress at the payment gateway to refresh."). Distinct from 400: nothing about the request is malformed. */
             422: {
                 headers: {
                     [name: string]: unknown;
@@ -11581,7 +11804,7 @@ export interface operations {
                     "application/json": components["schemas"]["ErrorResponse"];
                 };
             };
-            /** @description `BUSINESS_RULE_VIOLATION` — The request was well-formed and the entities exist, but a domain rule forbids it — publishing a product with no price, archiving a brand products still reference, deleting media a tier badge uses ("This media is still used — tier badge on Sprout of ladder version Launch. Replace or remove it first."), issuing more stock than a location holds, restoring a category under an archived parent ("Restore the parent category first.") or a product under an archived brand ("Restore the brand first."). Distinct from 400: nothing about the request is malformed. */
+            /** @description `BUSINESS_RULE_VIOLATION` — The request was well-formed and the entities exist, but a domain rule forbids it — publishing a product with no price, archiving a brand products still reference, deleting media a tier badge uses ("This media is still used — tier badge on Sprout of ladder version Launch. Replace or remove it first."), issuing more stock than a location holds, restoring a category under an archived parent ("Restore the parent category first.") or a product under an archived brand ("Restore the brand first."), refunding through the gateway a payment that was never captured ("The payment was never captured, so there is nothing to refund.") or one whose gateway refund is under way ("A refund through the payment gateway is already in progress for this order. Refresh it to see where it stands."), refreshing a refund that is not under way ("This order has no refund in progress at the payment gateway to refresh."). Distinct from 400: nothing about the request is malformed. */
             422: {
                 headers: {
                     [name: string]: unknown;
@@ -11667,7 +11890,7 @@ export interface operations {
                     "application/json": components["schemas"]["ErrorResponse"];
                 };
             };
-            /** @description `BUSINESS_RULE_VIOLATION` — The request was well-formed and the entities exist, but a domain rule forbids it — publishing a product with no price, archiving a brand products still reference, deleting media a tier badge uses ("This media is still used — tier badge on Sprout of ladder version Launch. Replace or remove it first."), issuing more stock than a location holds, restoring a category under an archived parent ("Restore the parent category first.") or a product under an archived brand ("Restore the brand first."). Distinct from 400: nothing about the request is malformed. */
+            /** @description `BUSINESS_RULE_VIOLATION` — The request was well-formed and the entities exist, but a domain rule forbids it — publishing a product with no price, archiving a brand products still reference, deleting media a tier badge uses ("This media is still used — tier badge on Sprout of ladder version Launch. Replace or remove it first."), issuing more stock than a location holds, restoring a category under an archived parent ("Restore the parent category first.") or a product under an archived brand ("Restore the brand first."), refunding through the gateway a payment that was never captured ("The payment was never captured, so there is nothing to refund.") or one whose gateway refund is under way ("A refund through the payment gateway is already in progress for this order. Refresh it to see where it stands."), refreshing a refund that is not under way ("This order has no refund in progress at the payment gateway to refresh."). Distinct from 400: nothing about the request is malformed. */
             422: {
                 headers: {
                     [name: string]: unknown;
@@ -11753,7 +11976,7 @@ export interface operations {
                     "application/json": components["schemas"]["ErrorResponse"];
                 };
             };
-            /** @description `BUSINESS_RULE_VIOLATION` — The request was well-formed and the entities exist, but a domain rule forbids it — publishing a product with no price, archiving a brand products still reference, deleting media a tier badge uses ("This media is still used — tier badge on Sprout of ladder version Launch. Replace or remove it first."), issuing more stock than a location holds, restoring a category under an archived parent ("Restore the parent category first.") or a product under an archived brand ("Restore the brand first."). Distinct from 400: nothing about the request is malformed. */
+            /** @description `BUSINESS_RULE_VIOLATION` — The request was well-formed and the entities exist, but a domain rule forbids it — publishing a product with no price, archiving a brand products still reference, deleting media a tier badge uses ("This media is still used — tier badge on Sprout of ladder version Launch. Replace or remove it first."), issuing more stock than a location holds, restoring a category under an archived parent ("Restore the parent category first.") or a product under an archived brand ("Restore the brand first."), refunding through the gateway a payment that was never captured ("The payment was never captured, so there is nothing to refund.") or one whose gateway refund is under way ("A refund through the payment gateway is already in progress for this order. Refresh it to see where it stands."), refreshing a refund that is not under way ("This order has no refund in progress at the payment gateway to refresh."). Distinct from 400: nothing about the request is malformed. */
             422: {
                 headers: {
                     [name: string]: unknown;
@@ -11851,7 +12074,7 @@ export interface operations {
                     "application/json": components["schemas"]["ErrorResponse"];
                 };
             };
-            /** @description `BUSINESS_RULE_VIOLATION` — The request was well-formed and the entities exist, but a domain rule forbids it — publishing a product with no price, archiving a brand products still reference, deleting media a tier badge uses ("This media is still used — tier badge on Sprout of ladder version Launch. Replace or remove it first."), issuing more stock than a location holds, restoring a category under an archived parent ("Restore the parent category first.") or a product under an archived brand ("Restore the brand first."). Distinct from 400: nothing about the request is malformed. */
+            /** @description `BUSINESS_RULE_VIOLATION` — The request was well-formed and the entities exist, but a domain rule forbids it — publishing a product with no price, archiving a brand products still reference, deleting media a tier badge uses ("This media is still used — tier badge on Sprout of ladder version Launch. Replace or remove it first."), issuing more stock than a location holds, restoring a category under an archived parent ("Restore the parent category first.") or a product under an archived brand ("Restore the brand first."), refunding through the gateway a payment that was never captured ("The payment was never captured, so there is nothing to refund.") or one whose gateway refund is under way ("A refund through the payment gateway is already in progress for this order. Refresh it to see where it stands."), refreshing a refund that is not under way ("This order has no refund in progress at the payment gateway to refresh."). Distinct from 400: nothing about the request is malformed. */
             422: {
                 headers: {
                     [name: string]: unknown;
@@ -12016,7 +12239,7 @@ export interface operations {
                     "application/json": components["schemas"]["ErrorResponse"];
                 };
             };
-            /** @description `BUSINESS_RULE_VIOLATION` — The request was well-formed and the entities exist, but a domain rule forbids it — publishing a product with no price, archiving a brand products still reference, deleting media a tier badge uses ("This media is still used — tier badge on Sprout of ladder version Launch. Replace or remove it first."), issuing more stock than a location holds, restoring a category under an archived parent ("Restore the parent category first.") or a product under an archived brand ("Restore the brand first."). Distinct from 400: nothing about the request is malformed. */
+            /** @description `BUSINESS_RULE_VIOLATION` — The request was well-formed and the entities exist, but a domain rule forbids it — publishing a product with no price, archiving a brand products still reference, deleting media a tier badge uses ("This media is still used — tier badge on Sprout of ladder version Launch. Replace or remove it first."), issuing more stock than a location holds, restoring a category under an archived parent ("Restore the parent category first.") or a product under an archived brand ("Restore the brand first."), refunding through the gateway a payment that was never captured ("The payment was never captured, so there is nothing to refund.") or one whose gateway refund is under way ("A refund through the payment gateway is already in progress for this order. Refresh it to see where it stands."), refreshing a refund that is not under way ("This order has no refund in progress at the payment gateway to refresh."). Distinct from 400: nothing about the request is malformed. */
             422: {
                 headers: {
                     [name: string]: unknown;
@@ -12101,7 +12324,7 @@ export interface operations {
                     "application/json": components["schemas"]["ErrorResponse"];
                 };
             };
-            /** @description `BUSINESS_RULE_VIOLATION` — The request was well-formed and the entities exist, but a domain rule forbids it — publishing a product with no price, archiving a brand products still reference, deleting media a tier badge uses ("This media is still used — tier badge on Sprout of ladder version Launch. Replace or remove it first."), issuing more stock than a location holds, restoring a category under an archived parent ("Restore the parent category first.") or a product under an archived brand ("Restore the brand first."). Distinct from 400: nothing about the request is malformed. */
+            /** @description `BUSINESS_RULE_VIOLATION` — The request was well-formed and the entities exist, but a domain rule forbids it — publishing a product with no price, archiving a brand products still reference, deleting media a tier badge uses ("This media is still used — tier badge on Sprout of ladder version Launch. Replace or remove it first."), issuing more stock than a location holds, restoring a category under an archived parent ("Restore the parent category first.") or a product under an archived brand ("Restore the brand first."), refunding through the gateway a payment that was never captured ("The payment was never captured, so there is nothing to refund.") or one whose gateway refund is under way ("A refund through the payment gateway is already in progress for this order. Refresh it to see where it stands."), refreshing a refund that is not under way ("This order has no refund in progress at the payment gateway to refresh."). Distinct from 400: nothing about the request is malformed. */
             422: {
                 headers: {
                     [name: string]: unknown;
@@ -12186,7 +12409,7 @@ export interface operations {
                     "application/json": components["schemas"]["ErrorResponse"];
                 };
             };
-            /** @description `BUSINESS_RULE_VIOLATION` — The request was well-formed and the entities exist, but a domain rule forbids it — publishing a product with no price, archiving a brand products still reference, deleting media a tier badge uses ("This media is still used — tier badge on Sprout of ladder version Launch. Replace or remove it first."), issuing more stock than a location holds, restoring a category under an archived parent ("Restore the parent category first.") or a product under an archived brand ("Restore the brand first."). Distinct from 400: nothing about the request is malformed. */
+            /** @description `BUSINESS_RULE_VIOLATION` — The request was well-formed and the entities exist, but a domain rule forbids it — publishing a product with no price, archiving a brand products still reference, deleting media a tier badge uses ("This media is still used — tier badge on Sprout of ladder version Launch. Replace or remove it first."), issuing more stock than a location holds, restoring a category under an archived parent ("Restore the parent category first.") or a product under an archived brand ("Restore the brand first."), refunding through the gateway a payment that was never captured ("The payment was never captured, so there is nothing to refund.") or one whose gateway refund is under way ("A refund through the payment gateway is already in progress for this order. Refresh it to see where it stands."), refreshing a refund that is not under way ("This order has no refund in progress at the payment gateway to refresh."). Distinct from 400: nothing about the request is malformed. */
             422: {
                 headers: {
                     [name: string]: unknown;
@@ -12273,7 +12496,7 @@ export interface operations {
                     "application/json": components["schemas"]["ErrorResponse"];
                 };
             };
-            /** @description `BUSINESS_RULE_VIOLATION` — The request was well-formed and the entities exist, but a domain rule forbids it — publishing a product with no price, archiving a brand products still reference, deleting media a tier badge uses ("This media is still used — tier badge on Sprout of ladder version Launch. Replace or remove it first."), issuing more stock than a location holds, restoring a category under an archived parent ("Restore the parent category first.") or a product under an archived brand ("Restore the brand first."). Distinct from 400: nothing about the request is malformed. */
+            /** @description `BUSINESS_RULE_VIOLATION` — The request was well-formed and the entities exist, but a domain rule forbids it — publishing a product with no price, archiving a brand products still reference, deleting media a tier badge uses ("This media is still used — tier badge on Sprout of ladder version Launch. Replace or remove it first."), issuing more stock than a location holds, restoring a category under an archived parent ("Restore the parent category first.") or a product under an archived brand ("Restore the brand first."), refunding through the gateway a payment that was never captured ("The payment was never captured, so there is nothing to refund.") or one whose gateway refund is under way ("A refund through the payment gateway is already in progress for this order. Refresh it to see where it stands."), refreshing a refund that is not under way ("This order has no refund in progress at the payment gateway to refresh."). Distinct from 400: nothing about the request is malformed. */
             422: {
                 headers: {
                     [name: string]: unknown;
@@ -12296,7 +12519,13 @@ export interface operations {
     auditList: {
         parameters: {
             query: {
-                action?: "catalog.attribute.created" | "catalog.attribute.deactivated" | "catalog.attribute.reactivated" | "catalog.attribute.reordered" | "catalog.attribute.updated" | "catalog.attribute_group.created" | "catalog.attribute_group.deactivated" | "catalog.attribute_group.reactivated" | "catalog.attribute_group.reordered" | "catalog.attribute_group.updated" | "catalog.attribute_value.created" | "catalog.attribute_value.deactivated" | "catalog.attribute_value.reactivated" | "catalog.attribute_value.reordered" | "catalog.attribute_value.updated" | "catalog.brand.activated" | "catalog.brand.archived" | "catalog.brand.created" | "catalog.brand.published" | "catalog.brand.reordered" | "catalog.brand.restored" | "catalog.brand.unpublished" | "catalog.brand.updated" | "catalog.category.activated" | "catalog.category.archived" | "catalog.category.created" | "catalog.category.moved" | "catalog.category.published" | "catalog.category.reordered" | "catalog.category.restored" | "catalog.category.unpublished" | "catalog.category.updated" | "catalog.media.confirmed" | "catalog.media.created" | "catalog.media.deleted" | "catalog.media.failed" | "catalog.product.approved" | "catalog.product.archived" | "catalog.product.categories_changed" | "catalog.product.content_changed" | "catalog.product.created" | "catalog.product.customer_allowed" | "catalog.product.customer_disallowed" | "catalog.product.image_added" | "catalog.product.image_removed" | "catalog.product.image_updated" | "catalog.product.images_reordered" | "catalog.product.merchandising_changed" | "catalog.product.option_added" | "catalog.product.option_removed" | "catalog.product.options_reordered" | "catalog.product.published" | "catalog.product.rejected" | "catalog.product.restored" | "catalog.product.spec_cleared" | "catalog.product.spec_set" | "catalog.product.submitted" | "catalog.product.unpublished" | "catalog.product.updated" | "catalog.product.visibility_changed" | "catalog.tag.created" | "catalog.tag.deleted" | "catalog.tag.updated" | "catalog.variant.created" | "catalog.variant.default_changed" | "catalog.variant.discontinued" | "catalog.variant.image_added" | "catalog.variant.image_removed" | "catalog.variant.image_updated" | "catalog.variant.images_reordered" | "catalog.variant.merchandising_changed" | "catalog.variant.reinstated" | "catalog.variant.reordered" | "catalog.variant.spec_cleared" | "catalog.variant.spec_set" | "catalog.variant.updated" | "catalog.variant.visibility_changed" | "earn.rules_version.created" | "earn.rules_version.published" | "earn.rules_version.updated" | "earn.rules_version.withdrawn" | "identity.user.claimed" | "identity.user.created" | "identity.user.profile_applied" | "identity.user.reinstated" | "identity.user.role_granted" | "identity.user.role_revoked" | "identity.user.suspended" | "identity.user.updated" | "inventory.availability.reconciled" | "inventory.batch.created" | "inventory.movement.recorded" | "inventory.projection.rebuilt" | "inventory.stock.transferred" | "inventory.warehouse.created" | "inventory.warehouse.deactivated" | "inventory.warehouse.reactivated" | "inventory.warehouse.updated" | "invite.claim.processed" | "invite.claim.rejected" | "invite.intake.processed" | "invite.intake.rejected" | "invite.invite.added" | "invite.invite.expired" | "invite.invite.invalidated" | "invite.invite.issued" | "invite.invite.visited" | "invite.referral.attributed" | "invite.referral.blocked" | "membership.cycle_run.completed" | "membership.version.created" | "membership.version.published" | "membership.version.updated" | "membership.version.withdrawn" | "orders.intake.price_honoured" | "orders.order.cancelled" | "orders.order.confirmation_failed" | "orders.order.confirmed" | "orders.order.delivered" | "orders.order.expired" | "orders.order.late_capture" | "orders.order.out_for_delivery" | "orders.order.packed" | "orders.order.payment_failed" | "orders.order.placed" | "orders.order.price_honoured" | "orders.order.refund_needs_attention" | "orders.order.refund_requested" | "orders.order.refund_retried" | "orders.order.refunded" | "orders.order.refunded_manually" | "orders.order.shipped" | "orders.settings.published" | "pricing.bits_option.cleared" | "pricing.bits_option.set" | "pricing.price.cleared" | "pricing.price.set" | "pricing.version.created" | "pricing.version.published" | "pricing.version.updated" | "pricing.version.withdrawn" | "procurement.goods_receipt.posted" | "procurement.purchase_order.approved" | "procurement.purchase_order.cancelled" | "procurement.purchase_order.created" | "procurement.purchase_order.updated" | "procurement.supplier.created" | "procurement.supplier.deactivated" | "procurement.supplier.reactivated" | "procurement.supplier.updated" | "team.member.created" | "team.member.forced_logout" | "team.member.invite.accepted" | "team.member.invite.resent" | "team.member.password.changed" | "team.member.password_reset.completed" | "team.member.password_reset.requested" | "team.member.password_reset.triggered" | "team.member.profile.updated" | "team.member.roles.assigned" | "team.member.status.changed" | "team.member.updated" | "team.role.created" | "team.role.deleted" | "team.role.updated";
+                /**
+                 * @description Historical actions are still offered, because older rows carry them; this build no longer writes them:
+                 *     - `orders.order.refund_needs_attention` — Historical (retired in 0.14): the automatic refund sweep gave up after its attempts. Nothing retries a refund by itself any more; an owed refund waits for an admin.
+                 *     - `orders.order.refund_retried` — Historical (retired in 0.14): an admin restarted the automatic refund attempts. The press is now orders.order.refund_initiated.
+                 *     - `orders.order.refunded` — Historical (retired in 0.14): a refund settled at the gateway. Now orders.order.refund_processed.
+                 */
+                action?: "catalog.attribute.created" | "catalog.attribute.deactivated" | "catalog.attribute.reactivated" | "catalog.attribute.reordered" | "catalog.attribute.updated" | "catalog.attribute_group.created" | "catalog.attribute_group.deactivated" | "catalog.attribute_group.reactivated" | "catalog.attribute_group.reordered" | "catalog.attribute_group.updated" | "catalog.attribute_value.created" | "catalog.attribute_value.deactivated" | "catalog.attribute_value.reactivated" | "catalog.attribute_value.reordered" | "catalog.attribute_value.updated" | "catalog.brand.activated" | "catalog.brand.archived" | "catalog.brand.created" | "catalog.brand.published" | "catalog.brand.reordered" | "catalog.brand.restored" | "catalog.brand.unpublished" | "catalog.brand.updated" | "catalog.category.activated" | "catalog.category.archived" | "catalog.category.created" | "catalog.category.moved" | "catalog.category.published" | "catalog.category.reordered" | "catalog.category.restored" | "catalog.category.unpublished" | "catalog.category.updated" | "catalog.media.confirmed" | "catalog.media.created" | "catalog.media.deleted" | "catalog.media.failed" | "catalog.product.approved" | "catalog.product.archived" | "catalog.product.categories_changed" | "catalog.product.content_changed" | "catalog.product.created" | "catalog.product.customer_allowed" | "catalog.product.customer_disallowed" | "catalog.product.image_added" | "catalog.product.image_removed" | "catalog.product.image_updated" | "catalog.product.images_reordered" | "catalog.product.merchandising_changed" | "catalog.product.option_added" | "catalog.product.option_removed" | "catalog.product.options_reordered" | "catalog.product.published" | "catalog.product.rejected" | "catalog.product.restored" | "catalog.product.spec_cleared" | "catalog.product.spec_set" | "catalog.product.submitted" | "catalog.product.unpublished" | "catalog.product.updated" | "catalog.product.visibility_changed" | "catalog.tag.created" | "catalog.tag.deleted" | "catalog.tag.updated" | "catalog.variant.created" | "catalog.variant.default_changed" | "catalog.variant.discontinued" | "catalog.variant.image_added" | "catalog.variant.image_removed" | "catalog.variant.image_updated" | "catalog.variant.images_reordered" | "catalog.variant.merchandising_changed" | "catalog.variant.reinstated" | "catalog.variant.reordered" | "catalog.variant.spec_cleared" | "catalog.variant.spec_set" | "catalog.variant.updated" | "catalog.variant.visibility_changed" | "earn.rules_version.created" | "earn.rules_version.published" | "earn.rules_version.updated" | "earn.rules_version.withdrawn" | "identity.user.claimed" | "identity.user.created" | "identity.user.profile_applied" | "identity.user.reinstated" | "identity.user.role_granted" | "identity.user.role_revoked" | "identity.user.suspended" | "identity.user.updated" | "inventory.availability.reconciled" | "inventory.batch.created" | "inventory.movement.recorded" | "inventory.projection.rebuilt" | "inventory.stock.transferred" | "inventory.warehouse.created" | "inventory.warehouse.deactivated" | "inventory.warehouse.reactivated" | "inventory.warehouse.updated" | "invite.claim.processed" | "invite.claim.rejected" | "invite.intake.processed" | "invite.intake.rejected" | "invite.invite.added" | "invite.invite.expired" | "invite.invite.invalidated" | "invite.invite.issued" | "invite.invite.visited" | "invite.referral.attributed" | "invite.referral.blocked" | "membership.cycle_run.completed" | "membership.version.created" | "membership.version.published" | "membership.version.updated" | "membership.version.withdrawn" | "orders.intake.price_honoured" | "orders.order.cancelled" | "orders.order.capture_refused" | "orders.order.capture_repaired" | "orders.order.confirmation_failed" | "orders.order.confirmed" | "orders.order.delivered" | "orders.order.expired" | "orders.order.late_capture" | "orders.order.note_added" | "orders.order.out_for_delivery" | "orders.order.packed" | "orders.order.payment_failed" | "orders.order.payment_voided" | "orders.order.placed" | "orders.order.price_honoured" | "orders.order.refund_failed" | "orders.order.refund_initiated" | "orders.order.refund_processed" | "orders.order.refund_requested" | "orders.order.refunded_manually" | "orders.order.shipped" | "orders.settings.published" | "pricing.bits_option.cleared" | "pricing.bits_option.set" | "pricing.price.cleared" | "pricing.price.set" | "pricing.version.created" | "pricing.version.published" | "pricing.version.updated" | "pricing.version.withdrawn" | "procurement.goods_receipt.posted" | "procurement.purchase_order.approved" | "procurement.purchase_order.cancelled" | "procurement.purchase_order.created" | "procurement.purchase_order.updated" | "procurement.supplier.created" | "procurement.supplier.deactivated" | "procurement.supplier.reactivated" | "procurement.supplier.updated" | "team.member.created" | "team.member.forced_logout" | "team.member.invite.accepted" | "team.member.invite.resent" | "team.member.password.changed" | "team.member.password_reset.completed" | "team.member.password_reset.requested" | "team.member.password_reset.triggered" | "team.member.profile.updated" | "team.member.roles.assigned" | "team.member.status.changed" | "team.member.updated" | "team.role.created" | "team.role.deleted" | "team.role.updated" | "orders.order.refund_needs_attention" | "orders.order.refund_retried" | "orders.order.refunded";
                 actorId?: string;
                 entityId?: string;
                 entityType?: "attribute" | "attribute_group" | "attribute_value" | "batch" | "brand" | "category" | "claim_intake" | "earn_rules_version" | "goods_receipt" | "invite" | "invite_intake" | "media" | "membership_cycle_run" | "membership_version" | "order" | "order_intake" | "order_settings_version" | "pricing_version" | "product" | "purchase_order" | "referral" | "role" | "stock_availability" | "stock_level" | "stock_movement" | "stock_transfer" | "supplier" | "tag" | "team_member" | "user" | "variant" | "warehouse";
@@ -12404,7 +12633,7 @@ export interface operations {
                     "application/json": components["schemas"]["ErrorResponse"];
                 };
             };
-            /** @description `BUSINESS_RULE_VIOLATION` — The request was well-formed and the entities exist, but a domain rule forbids it — publishing a product with no price, archiving a brand products still reference, deleting media a tier badge uses ("This media is still used — tier badge on Sprout of ladder version Launch. Replace or remove it first."), issuing more stock than a location holds, restoring a category under an archived parent ("Restore the parent category first.") or a product under an archived brand ("Restore the brand first."). Distinct from 400: nothing about the request is malformed. */
+            /** @description `BUSINESS_RULE_VIOLATION` — The request was well-formed and the entities exist, but a domain rule forbids it — publishing a product with no price, archiving a brand products still reference, deleting media a tier badge uses ("This media is still used — tier badge on Sprout of ladder version Launch. Replace or remove it first."), issuing more stock than a location holds, restoring a category under an archived parent ("Restore the parent category first.") or a product under an archived brand ("Restore the brand first."), refunding through the gateway a payment that was never captured ("The payment was never captured, so there is nothing to refund.") or one whose gateway refund is under way ("A refund through the payment gateway is already in progress for this order. Refresh it to see where it stands."), refreshing a refund that is not under way ("This order has no refund in progress at the payment gateway to refresh."). Distinct from 400: nothing about the request is malformed. */
             422: {
                 headers: {
                     [name: string]: unknown;
@@ -12471,7 +12700,7 @@ export interface operations {
                     "application/json": components["schemas"]["ErrorResponse"];
                 };
             };
-            /** @description `BUSINESS_RULE_VIOLATION` — The request was well-formed and the entities exist, but a domain rule forbids it — publishing a product with no price, archiving a brand products still reference, deleting media a tier badge uses ("This media is still used — tier badge on Sprout of ladder version Launch. Replace or remove it first."), issuing more stock than a location holds, restoring a category under an archived parent ("Restore the parent category first.") or a product under an archived brand ("Restore the brand first."). Distinct from 400: nothing about the request is malformed. */
+            /** @description `BUSINESS_RULE_VIOLATION` — The request was well-formed and the entities exist, but a domain rule forbids it — publishing a product with no price, archiving a brand products still reference, deleting media a tier badge uses ("This media is still used — tier badge on Sprout of ladder version Launch. Replace or remove it first."), issuing more stock than a location holds, restoring a category under an archived parent ("Restore the parent category first.") or a product under an archived brand ("Restore the brand first."), refunding through the gateway a payment that was never captured ("The payment was never captured, so there is nothing to refund.") or one whose gateway refund is under way ("A refund through the payment gateway is already in progress for this order. Refresh it to see where it stands."), refreshing a refund that is not under way ("This order has no refund in progress at the payment gateway to refresh."). Distinct from 400: nothing about the request is malformed. */
             422: {
                 headers: {
                     [name: string]: unknown;
@@ -12540,7 +12769,7 @@ export interface operations {
                     "application/json": components["schemas"]["ErrorResponse"];
                 };
             };
-            /** @description `BUSINESS_RULE_VIOLATION` — The request was well-formed and the entities exist, but a domain rule forbids it — publishing a product with no price, archiving a brand products still reference, deleting media a tier badge uses ("This media is still used — tier badge on Sprout of ladder version Launch. Replace or remove it first."), issuing more stock than a location holds, restoring a category under an archived parent ("Restore the parent category first.") or a product under an archived brand ("Restore the brand first."). Distinct from 400: nothing about the request is malformed. */
+            /** @description `BUSINESS_RULE_VIOLATION` — The request was well-formed and the entities exist, but a domain rule forbids it — publishing a product with no price, archiving a brand products still reference, deleting media a tier badge uses ("This media is still used — tier badge on Sprout of ladder version Launch. Replace or remove it first."), issuing more stock than a location holds, restoring a category under an archived parent ("Restore the parent category first.") or a product under an archived brand ("Restore the brand first."), refunding through the gateway a payment that was never captured ("The payment was never captured, so there is nothing to refund.") or one whose gateway refund is under way ("A refund through the payment gateway is already in progress for this order. Refresh it to see where it stands."), refreshing a refund that is not under way ("This order has no refund in progress at the payment gateway to refresh."). Distinct from 400: nothing about the request is malformed. */
             422: {
                 headers: {
                     [name: string]: unknown;
@@ -12612,7 +12841,7 @@ export interface operations {
                     "application/json": components["schemas"]["ErrorResponse"];
                 };
             };
-            /** @description `BUSINESS_RULE_VIOLATION` — The request was well-formed and the entities exist, but a domain rule forbids it — publishing a product with no price, archiving a brand products still reference, deleting media a tier badge uses ("This media is still used — tier badge on Sprout of ladder version Launch. Replace or remove it first."), issuing more stock than a location holds, restoring a category under an archived parent ("Restore the parent category first.") or a product under an archived brand ("Restore the brand first."). Distinct from 400: nothing about the request is malformed. */
+            /** @description `BUSINESS_RULE_VIOLATION` — The request was well-formed and the entities exist, but a domain rule forbids it — publishing a product with no price, archiving a brand products still reference, deleting media a tier badge uses ("This media is still used — tier badge on Sprout of ladder version Launch. Replace or remove it first."), issuing more stock than a location holds, restoring a category under an archived parent ("Restore the parent category first.") or a product under an archived brand ("Restore the brand first."), refunding through the gateway a payment that was never captured ("The payment was never captured, so there is nothing to refund.") or one whose gateway refund is under way ("A refund through the payment gateway is already in progress for this order. Refresh it to see where it stands."), refreshing a refund that is not under way ("This order has no refund in progress at the payment gateway to refresh."). Distinct from 400: nothing about the request is malformed. */
             422: {
                 headers: {
                     [name: string]: unknown;
@@ -12681,7 +12910,7 @@ export interface operations {
                     "application/json": components["schemas"]["ErrorResponse"];
                 };
             };
-            /** @description `BUSINESS_RULE_VIOLATION` — The request was well-formed and the entities exist, but a domain rule forbids it — publishing a product with no price, archiving a brand products still reference, deleting media a tier badge uses ("This media is still used — tier badge on Sprout of ladder version Launch. Replace or remove it first."), issuing more stock than a location holds, restoring a category under an archived parent ("Restore the parent category first.") or a product under an archived brand ("Restore the brand first."). Distinct from 400: nothing about the request is malformed. */
+            /** @description `BUSINESS_RULE_VIOLATION` — The request was well-formed and the entities exist, but a domain rule forbids it — publishing a product with no price, archiving a brand products still reference, deleting media a tier badge uses ("This media is still used — tier badge on Sprout of ladder version Launch. Replace or remove it first."), issuing more stock than a location holds, restoring a category under an archived parent ("Restore the parent category first.") or a product under an archived brand ("Restore the brand first."), refunding through the gateway a payment that was never captured ("The payment was never captured, so there is nothing to refund.") or one whose gateway refund is under way ("A refund through the payment gateway is already in progress for this order. Refresh it to see where it stands."), refreshing a refund that is not under way ("This order has no refund in progress at the payment gateway to refresh."). Distinct from 400: nothing about the request is malformed. */
             422: {
                 headers: {
                     [name: string]: unknown;
@@ -12832,7 +13061,7 @@ export interface operations {
                     "application/json": components["schemas"]["ErrorResponse"];
                 };
             };
-            /** @description `BUSINESS_RULE_VIOLATION` — The request was well-formed and the entities exist, but a domain rule forbids it — publishing a product with no price, archiving a brand products still reference, deleting media a tier badge uses ("This media is still used — tier badge on Sprout of ladder version Launch. Replace or remove it first."), issuing more stock than a location holds, restoring a category under an archived parent ("Restore the parent category first.") or a product under an archived brand ("Restore the brand first."). Distinct from 400: nothing about the request is malformed. */
+            /** @description `BUSINESS_RULE_VIOLATION` — The request was well-formed and the entities exist, but a domain rule forbids it — publishing a product with no price, archiving a brand products still reference, deleting media a tier badge uses ("This media is still used — tier badge on Sprout of ladder version Launch. Replace or remove it first."), issuing more stock than a location holds, restoring a category under an archived parent ("Restore the parent category first.") or a product under an archived brand ("Restore the brand first."), refunding through the gateway a payment that was never captured ("The payment was never captured, so there is nothing to refund.") or one whose gateway refund is under way ("A refund through the payment gateway is already in progress for this order. Refresh it to see where it stands."), refreshing a refund that is not under way ("This order has no refund in progress at the payment gateway to refresh."). Distinct from 400: nothing about the request is malformed. */
             422: {
                 headers: {
                     [name: string]: unknown;
@@ -13053,7 +13282,7 @@ export interface operations {
                     "application/json": components["schemas"]["ErrorResponse"];
                 };
             };
-            /** @description `BUSINESS_RULE_VIOLATION` — The request was well-formed and the entities exist, but a domain rule forbids it — publishing a product with no price, archiving a brand products still reference, deleting media a tier badge uses ("This media is still used — tier badge on Sprout of ladder version Launch. Replace or remove it first."), issuing more stock than a location holds, restoring a category under an archived parent ("Restore the parent category first.") or a product under an archived brand ("Restore the brand first."). Distinct from 400: nothing about the request is malformed. */
+            /** @description `BUSINESS_RULE_VIOLATION` — The request was well-formed and the entities exist, but a domain rule forbids it — publishing a product with no price, archiving a brand products still reference, deleting media a tier badge uses ("This media is still used — tier badge on Sprout of ladder version Launch. Replace or remove it first."), issuing more stock than a location holds, restoring a category under an archived parent ("Restore the parent category first.") or a product under an archived brand ("Restore the brand first."), refunding through the gateway a payment that was never captured ("The payment was never captured, so there is nothing to refund.") or one whose gateway refund is under way ("A refund through the payment gateway is already in progress for this order. Refresh it to see where it stands."), refreshing a refund that is not under way ("This order has no refund in progress at the payment gateway to refresh."). Distinct from 400: nothing about the request is malformed. */
             422: {
                 headers: {
                     [name: string]: unknown;
@@ -13218,7 +13447,7 @@ export interface operations {
                     "application/json": components["schemas"]["ErrorResponse"];
                 };
             };
-            /** @description `BUSINESS_RULE_VIOLATION` — The request was well-formed and the entities exist, but a domain rule forbids it — publishing a product with no price, archiving a brand products still reference, deleting media a tier badge uses ("This media is still used — tier badge on Sprout of ladder version Launch. Replace or remove it first."), issuing more stock than a location holds, restoring a category under an archived parent ("Restore the parent category first.") or a product under an archived brand ("Restore the brand first."). Distinct from 400: nothing about the request is malformed. */
+            /** @description `BUSINESS_RULE_VIOLATION` — The request was well-formed and the entities exist, but a domain rule forbids it — publishing a product with no price, archiving a brand products still reference, deleting media a tier badge uses ("This media is still used — tier badge on Sprout of ladder version Launch. Replace or remove it first."), issuing more stock than a location holds, restoring a category under an archived parent ("Restore the parent category first.") or a product under an archived brand ("Restore the brand first."), refunding through the gateway a payment that was never captured ("The payment was never captured, so there is nothing to refund.") or one whose gateway refund is under way ("A refund through the payment gateway is already in progress for this order. Refresh it to see where it stands."), refreshing a refund that is not under way ("This order has no refund in progress at the payment gateway to refresh."). Distinct from 400: nothing about the request is malformed. */
             422: {
                 headers: {
                     [name: string]: unknown;
@@ -13303,7 +13532,7 @@ export interface operations {
                     "application/json": components["schemas"]["ErrorResponse"];
                 };
             };
-            /** @description `BUSINESS_RULE_VIOLATION` — The request was well-formed and the entities exist, but a domain rule forbids it — publishing a product with no price, archiving a brand products still reference, deleting media a tier badge uses ("This media is still used — tier badge on Sprout of ladder version Launch. Replace or remove it first."), issuing more stock than a location holds, restoring a category under an archived parent ("Restore the parent category first.") or a product under an archived brand ("Restore the brand first."). Distinct from 400: nothing about the request is malformed. */
+            /** @description `BUSINESS_RULE_VIOLATION` — The request was well-formed and the entities exist, but a domain rule forbids it — publishing a product with no price, archiving a brand products still reference, deleting media a tier badge uses ("This media is still used — tier badge on Sprout of ladder version Launch. Replace or remove it first."), issuing more stock than a location holds, restoring a category under an archived parent ("Restore the parent category first.") or a product under an archived brand ("Restore the brand first."), refunding through the gateway a payment that was never captured ("The payment was never captured, so there is nothing to refund.") or one whose gateway refund is under way ("A refund through the payment gateway is already in progress for this order. Refresh it to see where it stands."), refreshing a refund that is not under way ("This order has no refund in progress at the payment gateway to refresh."). Distinct from 400: nothing about the request is malformed. */
             422: {
                 headers: {
                     [name: string]: unknown;
@@ -13388,7 +13617,7 @@ export interface operations {
                     "application/json": components["schemas"]["ErrorResponse"];
                 };
             };
-            /** @description `BUSINESS_RULE_VIOLATION` — The request was well-formed and the entities exist, but a domain rule forbids it — publishing a product with no price, archiving a brand products still reference, deleting media a tier badge uses ("This media is still used — tier badge on Sprout of ladder version Launch. Replace or remove it first."), issuing more stock than a location holds, restoring a category under an archived parent ("Restore the parent category first.") or a product under an archived brand ("Restore the brand first."). Distinct from 400: nothing about the request is malformed. */
+            /** @description `BUSINESS_RULE_VIOLATION` — The request was well-formed and the entities exist, but a domain rule forbids it — publishing a product with no price, archiving a brand products still reference, deleting media a tier badge uses ("This media is still used — tier badge on Sprout of ladder version Launch. Replace or remove it first."), issuing more stock than a location holds, restoring a category under an archived parent ("Restore the parent category first.") or a product under an archived brand ("Restore the brand first."), refunding through the gateway a payment that was never captured ("The payment was never captured, so there is nothing to refund.") or one whose gateway refund is under way ("A refund through the payment gateway is already in progress for this order. Refresh it to see where it stands."), refreshing a refund that is not under way ("This order has no refund in progress at the payment gateway to refresh."). Distinct from 400: nothing about the request is malformed. */
             422: {
                 headers: {
                     [name: string]: unknown;
@@ -13473,7 +13702,7 @@ export interface operations {
                     "application/json": components["schemas"]["ErrorResponse"];
                 };
             };
-            /** @description `BUSINESS_RULE_VIOLATION` — The request was well-formed and the entities exist, but a domain rule forbids it — publishing a product with no price, archiving a brand products still reference, deleting media a tier badge uses ("This media is still used — tier badge on Sprout of ladder version Launch. Replace or remove it first."), issuing more stock than a location holds, restoring a category under an archived parent ("Restore the parent category first.") or a product under an archived brand ("Restore the brand first."). Distinct from 400: nothing about the request is malformed. */
+            /** @description `BUSINESS_RULE_VIOLATION` — The request was well-formed and the entities exist, but a domain rule forbids it — publishing a product with no price, archiving a brand products still reference, deleting media a tier badge uses ("This media is still used — tier badge on Sprout of ladder version Launch. Replace or remove it first."), issuing more stock than a location holds, restoring a category under an archived parent ("Restore the parent category first.") or a product under an archived brand ("Restore the brand first."), refunding through the gateway a payment that was never captured ("The payment was never captured, so there is nothing to refund.") or one whose gateway refund is under way ("A refund through the payment gateway is already in progress for this order. Refresh it to see where it stands."), refreshing a refund that is not under way ("This order has no refund in progress at the payment gateway to refresh."). Distinct from 400: nothing about the request is malformed. */
             422: {
                 headers: {
                     [name: string]: unknown;
@@ -13571,7 +13800,7 @@ export interface operations {
                     "application/json": components["schemas"]["ErrorResponse"];
                 };
             };
-            /** @description `BUSINESS_RULE_VIOLATION` — The request was well-formed and the entities exist, but a domain rule forbids it — publishing a product with no price, archiving a brand products still reference, deleting media a tier badge uses ("This media is still used — tier badge on Sprout of ladder version Launch. Replace or remove it first."), issuing more stock than a location holds, restoring a category under an archived parent ("Restore the parent category first.") or a product under an archived brand ("Restore the brand first."). Distinct from 400: nothing about the request is malformed. */
+            /** @description `BUSINESS_RULE_VIOLATION` — The request was well-formed and the entities exist, but a domain rule forbids it — publishing a product with no price, archiving a brand products still reference, deleting media a tier badge uses ("This media is still used — tier badge on Sprout of ladder version Launch. Replace or remove it first."), issuing more stock than a location holds, restoring a category under an archived parent ("Restore the parent category first.") or a product under an archived brand ("Restore the brand first."), refunding through the gateway a payment that was never captured ("The payment was never captured, so there is nothing to refund.") or one whose gateway refund is under way ("A refund through the payment gateway is already in progress for this order. Refresh it to see where it stands."), refreshing a refund that is not under way ("This order has no refund in progress at the payment gateway to refresh."). Distinct from 400: nothing about the request is malformed. */
             422: {
                 headers: {
                     [name: string]: unknown;
@@ -13656,7 +13885,7 @@ export interface operations {
                     "application/json": components["schemas"]["ErrorResponse"];
                 };
             };
-            /** @description `BUSINESS_RULE_VIOLATION` — The request was well-formed and the entities exist, but a domain rule forbids it — publishing a product with no price, archiving a brand products still reference, deleting media a tier badge uses ("This media is still used — tier badge on Sprout of ladder version Launch. Replace or remove it first."), issuing more stock than a location holds, restoring a category under an archived parent ("Restore the parent category first.") or a product under an archived brand ("Restore the brand first."). Distinct from 400: nothing about the request is malformed. */
+            /** @description `BUSINESS_RULE_VIOLATION` — The request was well-formed and the entities exist, but a domain rule forbids it — publishing a product with no price, archiving a brand products still reference, deleting media a tier badge uses ("This media is still used — tier badge on Sprout of ladder version Launch. Replace or remove it first."), issuing more stock than a location holds, restoring a category under an archived parent ("Restore the parent category first.") or a product under an archived brand ("Restore the brand first."), refunding through the gateway a payment that was never captured ("The payment was never captured, so there is nothing to refund.") or one whose gateway refund is under way ("A refund through the payment gateway is already in progress for this order. Refresh it to see where it stands."), refreshing a refund that is not under way ("This order has no refund in progress at the payment gateway to refresh."). Distinct from 400: nothing about the request is malformed. */
             422: {
                 headers: {
                     [name: string]: unknown;
@@ -13743,7 +13972,7 @@ export interface operations {
                     "application/json": components["schemas"]["ErrorResponse"];
                 };
             };
-            /** @description `BUSINESS_RULE_VIOLATION` — The request was well-formed and the entities exist, but a domain rule forbids it — publishing a product with no price, archiving a brand products still reference, deleting media a tier badge uses ("This media is still used — tier badge on Sprout of ladder version Launch. Replace or remove it first."), issuing more stock than a location holds, restoring a category under an archived parent ("Restore the parent category first.") or a product under an archived brand ("Restore the brand first."). Distinct from 400: nothing about the request is malformed. */
+            /** @description `BUSINESS_RULE_VIOLATION` — The request was well-formed and the entities exist, but a domain rule forbids it — publishing a product with no price, archiving a brand products still reference, deleting media a tier badge uses ("This media is still used — tier badge on Sprout of ladder version Launch. Replace or remove it first."), issuing more stock than a location holds, restoring a category under an archived parent ("Restore the parent category first.") or a product under an archived brand ("Restore the brand first."), refunding through the gateway a payment that was never captured ("The payment was never captured, so there is nothing to refund.") or one whose gateway refund is under way ("A refund through the payment gateway is already in progress for this order. Refresh it to see where it stands."), refreshing a refund that is not under way ("This order has no refund in progress at the payment gateway to refresh."). Distinct from 400: nothing about the request is malformed. */
             422: {
                 headers: {
                     [name: string]: unknown;
@@ -13892,7 +14121,7 @@ export interface operations {
                     "application/json": components["schemas"]["ErrorResponse"];
                 };
             };
-            /** @description `BUSINESS_RULE_VIOLATION` — The request was well-formed and the entities exist, but a domain rule forbids it — publishing a product with no price, archiving a brand products still reference, deleting media a tier badge uses ("This media is still used — tier badge on Sprout of ladder version Launch. Replace or remove it first."), issuing more stock than a location holds, restoring a category under an archived parent ("Restore the parent category first.") or a product under an archived brand ("Restore the brand first."). Distinct from 400: nothing about the request is malformed. */
+            /** @description `BUSINESS_RULE_VIOLATION` — The request was well-formed and the entities exist, but a domain rule forbids it — publishing a product with no price, archiving a brand products still reference, deleting media a tier badge uses ("This media is still used — tier badge on Sprout of ladder version Launch. Replace or remove it first."), issuing more stock than a location holds, restoring a category under an archived parent ("Restore the parent category first.") or a product under an archived brand ("Restore the brand first."), refunding through the gateway a payment that was never captured ("The payment was never captured, so there is nothing to refund.") or one whose gateway refund is under way ("A refund through the payment gateway is already in progress for this order. Refresh it to see where it stands."), refreshing a refund that is not under way ("This order has no refund in progress at the payment gateway to refresh."). Distinct from 400: nothing about the request is malformed. */
             422: {
                 headers: {
                     [name: string]: unknown;
@@ -14057,7 +14286,7 @@ export interface operations {
                     "application/json": components["schemas"]["ErrorResponse"];
                 };
             };
-            /** @description `BUSINESS_RULE_VIOLATION` — The request was well-formed and the entities exist, but a domain rule forbids it — publishing a product with no price, archiving a brand products still reference, deleting media a tier badge uses ("This media is still used — tier badge on Sprout of ladder version Launch. Replace or remove it first."), issuing more stock than a location holds, restoring a category under an archived parent ("Restore the parent category first.") or a product under an archived brand ("Restore the brand first."). Distinct from 400: nothing about the request is malformed. */
+            /** @description `BUSINESS_RULE_VIOLATION` — The request was well-formed and the entities exist, but a domain rule forbids it — publishing a product with no price, archiving a brand products still reference, deleting media a tier badge uses ("This media is still used — tier badge on Sprout of ladder version Launch. Replace or remove it first."), issuing more stock than a location holds, restoring a category under an archived parent ("Restore the parent category first.") or a product under an archived brand ("Restore the brand first."), refunding through the gateway a payment that was never captured ("The payment was never captured, so there is nothing to refund.") or one whose gateway refund is under way ("A refund through the payment gateway is already in progress for this order. Refresh it to see where it stands."), refreshing a refund that is not under way ("This order has no refund in progress at the payment gateway to refresh."). Distinct from 400: nothing about the request is malformed. */
             422: {
                 headers: {
                     [name: string]: unknown;
@@ -14142,7 +14371,7 @@ export interface operations {
                     "application/json": components["schemas"]["ErrorResponse"];
                 };
             };
-            /** @description `BUSINESS_RULE_VIOLATION` — The request was well-formed and the entities exist, but a domain rule forbids it — publishing a product with no price, archiving a brand products still reference, deleting media a tier badge uses ("This media is still used — tier badge on Sprout of ladder version Launch. Replace or remove it first."), issuing more stock than a location holds, restoring a category under an archived parent ("Restore the parent category first.") or a product under an archived brand ("Restore the brand first."). Distinct from 400: nothing about the request is malformed. */
+            /** @description `BUSINESS_RULE_VIOLATION` — The request was well-formed and the entities exist, but a domain rule forbids it — publishing a product with no price, archiving a brand products still reference, deleting media a tier badge uses ("This media is still used — tier badge on Sprout of ladder version Launch. Replace or remove it first."), issuing more stock than a location holds, restoring a category under an archived parent ("Restore the parent category first.") or a product under an archived brand ("Restore the brand first."), refunding through the gateway a payment that was never captured ("The payment was never captured, so there is nothing to refund.") or one whose gateway refund is under way ("A refund through the payment gateway is already in progress for this order. Refresh it to see where it stands."), refreshing a refund that is not under way ("This order has no refund in progress at the payment gateway to refresh."). Distinct from 400: nothing about the request is malformed. */
             422: {
                 headers: {
                     [name: string]: unknown;
@@ -14227,7 +14456,7 @@ export interface operations {
                     "application/json": components["schemas"]["ErrorResponse"];
                 };
             };
-            /** @description `BUSINESS_RULE_VIOLATION` — The request was well-formed and the entities exist, but a domain rule forbids it — publishing a product with no price, archiving a brand products still reference, deleting media a tier badge uses ("This media is still used — tier badge on Sprout of ladder version Launch. Replace or remove it first."), issuing more stock than a location holds, restoring a category under an archived parent ("Restore the parent category first.") or a product under an archived brand ("Restore the brand first."). Distinct from 400: nothing about the request is malformed. */
+            /** @description `BUSINESS_RULE_VIOLATION` — The request was well-formed and the entities exist, but a domain rule forbids it — publishing a product with no price, archiving a brand products still reference, deleting media a tier badge uses ("This media is still used — tier badge on Sprout of ladder version Launch. Replace or remove it first."), issuing more stock than a location holds, restoring a category under an archived parent ("Restore the parent category first.") or a product under an archived brand ("Restore the brand first."), refunding through the gateway a payment that was never captured ("The payment was never captured, so there is nothing to refund.") or one whose gateway refund is under way ("A refund through the payment gateway is already in progress for this order. Refresh it to see where it stands."), refreshing a refund that is not under way ("This order has no refund in progress at the payment gateway to refresh."). Distinct from 400: nothing about the request is malformed. */
             422: {
                 headers: {
                     [name: string]: unknown;
@@ -14325,7 +14554,7 @@ export interface operations {
                     "application/json": components["schemas"]["ErrorResponse"];
                 };
             };
-            /** @description `BUSINESS_RULE_VIOLATION` — The request was well-formed and the entities exist, but a domain rule forbids it — publishing a product with no price, archiving a brand products still reference, deleting media a tier badge uses ("This media is still used — tier badge on Sprout of ladder version Launch. Replace or remove it first."), issuing more stock than a location holds, restoring a category under an archived parent ("Restore the parent category first.") or a product under an archived brand ("Restore the brand first."). Distinct from 400: nothing about the request is malformed. */
+            /** @description `BUSINESS_RULE_VIOLATION` — The request was well-formed and the entities exist, but a domain rule forbids it — publishing a product with no price, archiving a brand products still reference, deleting media a tier badge uses ("This media is still used — tier badge on Sprout of ladder version Launch. Replace or remove it first."), issuing more stock than a location holds, restoring a category under an archived parent ("Restore the parent category first.") or a product under an archived brand ("Restore the brand first."), refunding through the gateway a payment that was never captured ("The payment was never captured, so there is nothing to refund.") or one whose gateway refund is under way ("A refund through the payment gateway is already in progress for this order. Refresh it to see where it stands."), refreshing a refund that is not under way ("This order has no refund in progress at the payment gateway to refresh."). Distinct from 400: nothing about the request is malformed. */
             422: {
                 headers: {
                     [name: string]: unknown;
@@ -14410,7 +14639,7 @@ export interface operations {
                     "application/json": components["schemas"]["ErrorResponse"];
                 };
             };
-            /** @description `BUSINESS_RULE_VIOLATION` — The request was well-formed and the entities exist, but a domain rule forbids it — publishing a product with no price, archiving a brand products still reference, deleting media a tier badge uses ("This media is still used — tier badge on Sprout of ladder version Launch. Replace or remove it first."), issuing more stock than a location holds, restoring a category under an archived parent ("Restore the parent category first.") or a product under an archived brand ("Restore the brand first."). Distinct from 400: nothing about the request is malformed. */
+            /** @description `BUSINESS_RULE_VIOLATION` — The request was well-formed and the entities exist, but a domain rule forbids it — publishing a product with no price, archiving a brand products still reference, deleting media a tier badge uses ("This media is still used — tier badge on Sprout of ladder version Launch. Replace or remove it first."), issuing more stock than a location holds, restoring a category under an archived parent ("Restore the parent category first.") or a product under an archived brand ("Restore the brand first."), refunding through the gateway a payment that was never captured ("The payment was never captured, so there is nothing to refund.") or one whose gateway refund is under way ("A refund through the payment gateway is already in progress for this order. Refresh it to see where it stands."), refreshing a refund that is not under way ("This order has no refund in progress at the payment gateway to refresh."). Distinct from 400: nothing about the request is malformed. */
             422: {
                 headers: {
                     [name: string]: unknown;
@@ -14508,7 +14737,7 @@ export interface operations {
                     "application/json": components["schemas"]["ErrorResponse"];
                 };
             };
-            /** @description `BUSINESS_RULE_VIOLATION` — The request was well-formed and the entities exist, but a domain rule forbids it — publishing a product with no price, archiving a brand products still reference, deleting media a tier badge uses ("This media is still used — tier badge on Sprout of ladder version Launch. Replace or remove it first."), issuing more stock than a location holds, restoring a category under an archived parent ("Restore the parent category first.") or a product under an archived brand ("Restore the brand first."). Distinct from 400: nothing about the request is malformed. */
+            /** @description `BUSINESS_RULE_VIOLATION` — The request was well-formed and the entities exist, but a domain rule forbids it — publishing a product with no price, archiving a brand products still reference, deleting media a tier badge uses ("This media is still used — tier badge on Sprout of ladder version Launch. Replace or remove it first."), issuing more stock than a location holds, restoring a category under an archived parent ("Restore the parent category first.") or a product under an archived brand ("Restore the brand first."), refunding through the gateway a payment that was never captured ("The payment was never captured, so there is nothing to refund.") or one whose gateway refund is under way ("A refund through the payment gateway is already in progress for this order. Refresh it to see where it stands."), refreshing a refund that is not under way ("This order has no refund in progress at the payment gateway to refresh."). Distinct from 400: nothing about the request is malformed. */
             422: {
                 headers: {
                     [name: string]: unknown;
@@ -14593,7 +14822,7 @@ export interface operations {
                     "application/json": components["schemas"]["ErrorResponse"];
                 };
             };
-            /** @description `BUSINESS_RULE_VIOLATION` — The request was well-formed and the entities exist, but a domain rule forbids it — publishing a product with no price, archiving a brand products still reference, deleting media a tier badge uses ("This media is still used — tier badge on Sprout of ladder version Launch. Replace or remove it first."), issuing more stock than a location holds, restoring a category under an archived parent ("Restore the parent category first.") or a product under an archived brand ("Restore the brand first."). Distinct from 400: nothing about the request is malformed. */
+            /** @description `BUSINESS_RULE_VIOLATION` — The request was well-formed and the entities exist, but a domain rule forbids it — publishing a product with no price, archiving a brand products still reference, deleting media a tier badge uses ("This media is still used — tier badge on Sprout of ladder version Launch. Replace or remove it first."), issuing more stock than a location holds, restoring a category under an archived parent ("Restore the parent category first.") or a product under an archived brand ("Restore the brand first."), refunding through the gateway a payment that was never captured ("The payment was never captured, so there is nothing to refund.") or one whose gateway refund is under way ("A refund through the payment gateway is already in progress for this order. Refresh it to see where it stands."), refreshing a refund that is not under way ("This order has no refund in progress at the payment gateway to refresh."). Distinct from 400: nothing about the request is malformed. */
             422: {
                 headers: {
                     [name: string]: unknown;
@@ -14680,7 +14909,7 @@ export interface operations {
                     "application/json": components["schemas"]["ErrorResponse"];
                 };
             };
-            /** @description `BUSINESS_RULE_VIOLATION` — The request was well-formed and the entities exist, but a domain rule forbids it — publishing a product with no price, archiving a brand products still reference, deleting media a tier badge uses ("This media is still used — tier badge on Sprout of ladder version Launch. Replace or remove it first."), issuing more stock than a location holds, restoring a category under an archived parent ("Restore the parent category first.") or a product under an archived brand ("Restore the brand first."). Distinct from 400: nothing about the request is malformed. */
+            /** @description `BUSINESS_RULE_VIOLATION` — The request was well-formed and the entities exist, but a domain rule forbids it — publishing a product with no price, archiving a brand products still reference, deleting media a tier badge uses ("This media is still used — tier badge on Sprout of ladder version Launch. Replace or remove it first."), issuing more stock than a location holds, restoring a category under an archived parent ("Restore the parent category first.") or a product under an archived brand ("Restore the brand first."), refunding through the gateway a payment that was never captured ("The payment was never captured, so there is nothing to refund.") or one whose gateway refund is under way ("A refund through the payment gateway is already in progress for this order. Refresh it to see where it stands."), refreshing a refund that is not under way ("This order has no refund in progress at the payment gateway to refresh."). Distinct from 400: nothing about the request is malformed. */
             422: {
                 headers: {
                     [name: string]: unknown;
@@ -14882,7 +15111,7 @@ export interface operations {
                     "application/json": components["schemas"]["ErrorResponse"];
                 };
             };
-            /** @description `BUSINESS_RULE_VIOLATION` — The request was well-formed and the entities exist, but a domain rule forbids it — publishing a product with no price, archiving a brand products still reference, deleting media a tier badge uses ("This media is still used — tier badge on Sprout of ladder version Launch. Replace or remove it first."), issuing more stock than a location holds, restoring a category under an archived parent ("Restore the parent category first.") or a product under an archived brand ("Restore the brand first."). Distinct from 400: nothing about the request is malformed. */
+            /** @description `BUSINESS_RULE_VIOLATION` — The request was well-formed and the entities exist, but a domain rule forbids it — publishing a product with no price, archiving a brand products still reference, deleting media a tier badge uses ("This media is still used — tier badge on Sprout of ladder version Launch. Replace or remove it first."), issuing more stock than a location holds, restoring a category under an archived parent ("Restore the parent category first.") or a product under an archived brand ("Restore the brand first."), refunding through the gateway a payment that was never captured ("The payment was never captured, so there is nothing to refund.") or one whose gateway refund is under way ("A refund through the payment gateway is already in progress for this order. Refresh it to see where it stands."), refreshing a refund that is not under way ("This order has no refund in progress at the payment gateway to refresh."). Distinct from 400: nothing about the request is malformed. */
             422: {
                 headers: {
                     [name: string]: unknown;
@@ -15047,7 +15276,7 @@ export interface operations {
                     "application/json": components["schemas"]["ErrorResponse"];
                 };
             };
-            /** @description `BUSINESS_RULE_VIOLATION` — The request was well-formed and the entities exist, but a domain rule forbids it — publishing a product with no price, archiving a brand products still reference, deleting media a tier badge uses ("This media is still used — tier badge on Sprout of ladder version Launch. Replace or remove it first."), issuing more stock than a location holds, restoring a category under an archived parent ("Restore the parent category first.") or a product under an archived brand ("Restore the brand first."). Distinct from 400: nothing about the request is malformed. */
+            /** @description `BUSINESS_RULE_VIOLATION` — The request was well-formed and the entities exist, but a domain rule forbids it — publishing a product with no price, archiving a brand products still reference, deleting media a tier badge uses ("This media is still used — tier badge on Sprout of ladder version Launch. Replace or remove it first."), issuing more stock than a location holds, restoring a category under an archived parent ("Restore the parent category first.") or a product under an archived brand ("Restore the brand first."), refunding through the gateway a payment that was never captured ("The payment was never captured, so there is nothing to refund.") or one whose gateway refund is under way ("A refund through the payment gateway is already in progress for this order. Refresh it to see where it stands."), refreshing a refund that is not under way ("This order has no refund in progress at the payment gateway to refresh."). Distinct from 400: nothing about the request is malformed. */
             422: {
                 headers: {
                     [name: string]: unknown;
@@ -15145,7 +15374,7 @@ export interface operations {
                     "application/json": components["schemas"]["ErrorResponse"];
                 };
             };
-            /** @description `BUSINESS_RULE_VIOLATION` — The request was well-formed and the entities exist, but a domain rule forbids it — publishing a product with no price, archiving a brand products still reference, deleting media a tier badge uses ("This media is still used — tier badge on Sprout of ladder version Launch. Replace or remove it first."), issuing more stock than a location holds, restoring a category under an archived parent ("Restore the parent category first.") or a product under an archived brand ("Restore the brand first."). Distinct from 400: nothing about the request is malformed. */
+            /** @description `BUSINESS_RULE_VIOLATION` — The request was well-formed and the entities exist, but a domain rule forbids it — publishing a product with no price, archiving a brand products still reference, deleting media a tier badge uses ("This media is still used — tier badge on Sprout of ladder version Launch. Replace or remove it first."), issuing more stock than a location holds, restoring a category under an archived parent ("Restore the parent category first.") or a product under an archived brand ("Restore the brand first."), refunding through the gateway a payment that was never captured ("The payment was never captured, so there is nothing to refund.") or one whose gateway refund is under way ("A refund through the payment gateway is already in progress for this order. Refresh it to see where it stands."), refreshing a refund that is not under way ("This order has no refund in progress at the payment gateway to refresh."). Distinct from 400: nothing about the request is malformed. */
             422: {
                 headers: {
                     [name: string]: unknown;
@@ -15243,7 +15472,7 @@ export interface operations {
                     "application/json": components["schemas"]["ErrorResponse"];
                 };
             };
-            /** @description `BUSINESS_RULE_VIOLATION` — The request was well-formed and the entities exist, but a domain rule forbids it — publishing a product with no price, archiving a brand products still reference, deleting media a tier badge uses ("This media is still used — tier badge on Sprout of ladder version Launch. Replace or remove it first."), issuing more stock than a location holds, restoring a category under an archived parent ("Restore the parent category first.") or a product under an archived brand ("Restore the brand first."). Distinct from 400: nothing about the request is malformed. */
+            /** @description `BUSINESS_RULE_VIOLATION` — The request was well-formed and the entities exist, but a domain rule forbids it — publishing a product with no price, archiving a brand products still reference, deleting media a tier badge uses ("This media is still used — tier badge on Sprout of ladder version Launch. Replace or remove it first."), issuing more stock than a location holds, restoring a category under an archived parent ("Restore the parent category first.") or a product under an archived brand ("Restore the brand first."), refunding through the gateway a payment that was never captured ("The payment was never captured, so there is nothing to refund.") or one whose gateway refund is under way ("A refund through the payment gateway is already in progress for this order. Refresh it to see where it stands."), refreshing a refund that is not under way ("This order has no refund in progress at the payment gateway to refresh."). Distinct from 400: nothing about the request is malformed. */
             422: {
                 headers: {
                     [name: string]: unknown;
@@ -15453,7 +15682,7 @@ export interface operations {
                     "application/json": components["schemas"]["ErrorResponse"];
                 };
             };
-            /** @description `BUSINESS_RULE_VIOLATION` — The request was well-formed and the entities exist, but a domain rule forbids it — publishing a product with no price, archiving a brand products still reference, deleting media a tier badge uses ("This media is still used — tier badge on Sprout of ladder version Launch. Replace or remove it first."), issuing more stock than a location holds, restoring a category under an archived parent ("Restore the parent category first.") or a product under an archived brand ("Restore the brand first."). Distinct from 400: nothing about the request is malformed. */
+            /** @description `BUSINESS_RULE_VIOLATION` — The request was well-formed and the entities exist, but a domain rule forbids it — publishing a product with no price, archiving a brand products still reference, deleting media a tier badge uses ("This media is still used — tier badge on Sprout of ladder version Launch. Replace or remove it first."), issuing more stock than a location holds, restoring a category under an archived parent ("Restore the parent category first.") or a product under an archived brand ("Restore the brand first."), refunding through the gateway a payment that was never captured ("The payment was never captured, so there is nothing to refund.") or one whose gateway refund is under way ("A refund through the payment gateway is already in progress for this order. Refresh it to see where it stands."), refreshing a refund that is not under way ("This order has no refund in progress at the payment gateway to refresh."). Distinct from 400: nothing about the request is malformed. */
             422: {
                 headers: {
                     [name: string]: unknown;
@@ -15667,7 +15896,7 @@ export interface operations {
                     "application/json": components["schemas"]["ErrorResponse"];
                 };
             };
-            /** @description `BUSINESS_RULE_VIOLATION` — The request was well-formed and the entities exist, but a domain rule forbids it — publishing a product with no price, archiving a brand products still reference, deleting media a tier badge uses ("This media is still used — tier badge on Sprout of ladder version Launch. Replace or remove it first."), issuing more stock than a location holds, restoring a category under an archived parent ("Restore the parent category first.") or a product under an archived brand ("Restore the brand first."). Distinct from 400: nothing about the request is malformed. */
+            /** @description `BUSINESS_RULE_VIOLATION` — The request was well-formed and the entities exist, but a domain rule forbids it — publishing a product with no price, archiving a brand products still reference, deleting media a tier badge uses ("This media is still used — tier badge on Sprout of ladder version Launch. Replace or remove it first."), issuing more stock than a location holds, restoring a category under an archived parent ("Restore the parent category first.") or a product under an archived brand ("Restore the brand first."), refunding through the gateway a payment that was never captured ("The payment was never captured, so there is nothing to refund.") or one whose gateway refund is under way ("A refund through the payment gateway is already in progress for this order. Refresh it to see where it stands."), refreshing a refund that is not under way ("This order has no refund in progress at the payment gateway to refresh."). Distinct from 400: nothing about the request is malformed. */
             422: {
                 headers: {
                     [name: string]: unknown;
@@ -15832,7 +16061,7 @@ export interface operations {
                     "application/json": components["schemas"]["ErrorResponse"];
                 };
             };
-            /** @description `BUSINESS_RULE_VIOLATION` — The request was well-formed and the entities exist, but a domain rule forbids it — publishing a product with no price, archiving a brand products still reference, deleting media a tier badge uses ("This media is still used — tier badge on Sprout of ladder version Launch. Replace or remove it first."), issuing more stock than a location holds, restoring a category under an archived parent ("Restore the parent category first.") or a product under an archived brand ("Restore the brand first."). Distinct from 400: nothing about the request is malformed. */
+            /** @description `BUSINESS_RULE_VIOLATION` — The request was well-formed and the entities exist, but a domain rule forbids it — publishing a product with no price, archiving a brand products still reference, deleting media a tier badge uses ("This media is still used — tier badge on Sprout of ladder version Launch. Replace or remove it first."), issuing more stock than a location holds, restoring a category under an archived parent ("Restore the parent category first.") or a product under an archived brand ("Restore the brand first."), refunding through the gateway a payment that was never captured ("The payment was never captured, so there is nothing to refund.") or one whose gateway refund is under way ("A refund through the payment gateway is already in progress for this order. Refresh it to see where it stands."), refreshing a refund that is not under way ("This order has no refund in progress at the payment gateway to refresh."). Distinct from 400: nothing about the request is malformed. */
             422: {
                 headers: {
                     [name: string]: unknown;
@@ -15965,7 +16194,7 @@ export interface operations {
                     "application/json": components["schemas"]["ErrorResponse"];
                 };
             };
-            /** @description `BUSINESS_RULE_VIOLATION` — The request was well-formed and the entities exist, but a domain rule forbids it — publishing a product with no price, archiving a brand products still reference, deleting media a tier badge uses ("This media is still used — tier badge on Sprout of ladder version Launch. Replace or remove it first."), issuing more stock than a location holds, restoring a category under an archived parent ("Restore the parent category first.") or a product under an archived brand ("Restore the brand first."). Distinct from 400: nothing about the request is malformed. */
+            /** @description `BUSINESS_RULE_VIOLATION` — The request was well-formed and the entities exist, but a domain rule forbids it — publishing a product with no price, archiving a brand products still reference, deleting media a tier badge uses ("This media is still used — tier badge on Sprout of ladder version Launch. Replace or remove it first."), issuing more stock than a location holds, restoring a category under an archived parent ("Restore the parent category first.") or a product under an archived brand ("Restore the brand first."), refunding through the gateway a payment that was never captured ("The payment was never captured, so there is nothing to refund.") or one whose gateway refund is under way ("A refund through the payment gateway is already in progress for this order. Refresh it to see where it stands."), refreshing a refund that is not under way ("This order has no refund in progress at the payment gateway to refresh."). Distinct from 400: nothing about the request is malformed. */
             422: {
                 headers: {
                     [name: string]: unknown;
@@ -16374,7 +16603,7 @@ export interface operations {
                     "application/json": components["schemas"]["ErrorResponse"];
                 };
             };
-            /** @description `BUSINESS_RULE_VIOLATION` — The request was well-formed and the entities exist, but a domain rule forbids it — publishing a product with no price, archiving a brand products still reference, deleting media a tier badge uses ("This media is still used — tier badge on Sprout of ladder version Launch. Replace or remove it first."), issuing more stock than a location holds, restoring a category under an archived parent ("Restore the parent category first.") or a product under an archived brand ("Restore the brand first."). Distinct from 400: nothing about the request is malformed. */
+            /** @description `BUSINESS_RULE_VIOLATION` — The request was well-formed and the entities exist, but a domain rule forbids it — publishing a product with no price, archiving a brand products still reference, deleting media a tier badge uses ("This media is still used — tier badge on Sprout of ladder version Launch. Replace or remove it first."), issuing more stock than a location holds, restoring a category under an archived parent ("Restore the parent category first.") or a product under an archived brand ("Restore the brand first."), refunding through the gateway a payment that was never captured ("The payment was never captured, so there is nothing to refund.") or one whose gateway refund is under way ("A refund through the payment gateway is already in progress for this order. Refresh it to see where it stands."), refreshing a refund that is not under way ("This order has no refund in progress at the payment gateway to refresh."). Distinct from 400: nothing about the request is malformed. */
             422: {
                 headers: {
                     [name: string]: unknown;
@@ -16459,7 +16688,7 @@ export interface operations {
                     "application/json": components["schemas"]["ErrorResponse"];
                 };
             };
-            /** @description `BUSINESS_RULE_VIOLATION` — The request was well-formed and the entities exist, but a domain rule forbids it — publishing a product with no price, archiving a brand products still reference, deleting media a tier badge uses ("This media is still used — tier badge on Sprout of ladder version Launch. Replace or remove it first."), issuing more stock than a location holds, restoring a category under an archived parent ("Restore the parent category first.") or a product under an archived brand ("Restore the brand first."). Distinct from 400: nothing about the request is malformed. */
+            /** @description `BUSINESS_RULE_VIOLATION` — The request was well-formed and the entities exist, but a domain rule forbids it — publishing a product with no price, archiving a brand products still reference, deleting media a tier badge uses ("This media is still used — tier badge on Sprout of ladder version Launch. Replace or remove it first."), issuing more stock than a location holds, restoring a category under an archived parent ("Restore the parent category first.") or a product under an archived brand ("Restore the brand first."), refunding through the gateway a payment that was never captured ("The payment was never captured, so there is nothing to refund.") or one whose gateway refund is under way ("A refund through the payment gateway is already in progress for this order. Refresh it to see where it stands."), refreshing a refund that is not under way ("This order has no refund in progress at the payment gateway to refresh."). Distinct from 400: nothing about the request is malformed. */
             422: {
                 headers: {
                     [name: string]: unknown;
@@ -16613,7 +16842,7 @@ export interface operations {
                     "application/json": components["schemas"]["ErrorResponse"];
                 };
             };
-            /** @description `BUSINESS_RULE_VIOLATION` — The request was well-formed and the entities exist, but a domain rule forbids it — publishing a product with no price, archiving a brand products still reference, deleting media a tier badge uses ("This media is still used — tier badge on Sprout of ladder version Launch. Replace or remove it first."), issuing more stock than a location holds, restoring a category under an archived parent ("Restore the parent category first.") or a product under an archived brand ("Restore the brand first."). Distinct from 400: nothing about the request is malformed. */
+            /** @description `BUSINESS_RULE_VIOLATION` — The request was well-formed and the entities exist, but a domain rule forbids it — publishing a product with no price, archiving a brand products still reference, deleting media a tier badge uses ("This media is still used — tier badge on Sprout of ladder version Launch. Replace or remove it first."), issuing more stock than a location holds, restoring a category under an archived parent ("Restore the parent category first.") or a product under an archived brand ("Restore the brand first."), refunding through the gateway a payment that was never captured ("The payment was never captured, so there is nothing to refund.") or one whose gateway refund is under way ("A refund through the payment gateway is already in progress for this order. Refresh it to see where it stands."), refreshing a refund that is not under way ("This order has no refund in progress at the payment gateway to refresh."). Distinct from 400: nothing about the request is malformed. */
             422: {
                 headers: {
                     [name: string]: unknown;
@@ -16687,7 +16916,7 @@ export interface operations {
                     "application/json": components["schemas"]["ErrorResponse"];
                 };
             };
-            /** @description `BUSINESS_RULE_VIOLATION` — The request was well-formed and the entities exist, but a domain rule forbids it — publishing a product with no price, archiving a brand products still reference, deleting media a tier badge uses ("This media is still used — tier badge on Sprout of ladder version Launch. Replace or remove it first."), issuing more stock than a location holds, restoring a category under an archived parent ("Restore the parent category first.") or a product under an archived brand ("Restore the brand first."). Distinct from 400: nothing about the request is malformed. */
+            /** @description `BUSINESS_RULE_VIOLATION` — The request was well-formed and the entities exist, but a domain rule forbids it — publishing a product with no price, archiving a brand products still reference, deleting media a tier badge uses ("This media is still used — tier badge on Sprout of ladder version Launch. Replace or remove it first."), issuing more stock than a location holds, restoring a category under an archived parent ("Restore the parent category first.") or a product under an archived brand ("Restore the brand first."), refunding through the gateway a payment that was never captured ("The payment was never captured, so there is nothing to refund.") or one whose gateway refund is under way ("A refund through the payment gateway is already in progress for this order. Refresh it to see where it stands."), refreshing a refund that is not under way ("This order has no refund in progress at the payment gateway to refresh."). Distinct from 400: nothing about the request is malformed. */
             422: {
                 headers: {
                     [name: string]: unknown;
@@ -17028,7 +17257,7 @@ export interface operations {
                     "application/json": components["schemas"]["ErrorResponse"];
                 };
             };
-            /** @description `BUSINESS_RULE_VIOLATION` — The request was well-formed and the entities exist, but a domain rule forbids it — publishing a product with no price, archiving a brand products still reference, deleting media a tier badge uses ("This media is still used — tier badge on Sprout of ladder version Launch. Replace or remove it first."), issuing more stock than a location holds, restoring a category under an archived parent ("Restore the parent category first.") or a product under an archived brand ("Restore the brand first."). Distinct from 400: nothing about the request is malformed. */
+            /** @description `BUSINESS_RULE_VIOLATION` — The request was well-formed and the entities exist, but a domain rule forbids it — publishing a product with no price, archiving a brand products still reference, deleting media a tier badge uses ("This media is still used — tier badge on Sprout of ladder version Launch. Replace or remove it first."), issuing more stock than a location holds, restoring a category under an archived parent ("Restore the parent category first.") or a product under an archived brand ("Restore the brand first."), refunding through the gateway a payment that was never captured ("The payment was never captured, so there is nothing to refund.") or one whose gateway refund is under way ("A refund through the payment gateway is already in progress for this order. Refresh it to see where it stands."), refreshing a refund that is not under way ("This order has no refund in progress at the payment gateway to refresh."). Distinct from 400: nothing about the request is malformed. */
             422: {
                 headers: {
                     [name: string]: unknown;
@@ -17193,7 +17422,7 @@ export interface operations {
                     "application/json": components["schemas"]["ErrorResponse"];
                 };
             };
-            /** @description `BUSINESS_RULE_VIOLATION` — The request was well-formed and the entities exist, but a domain rule forbids it — publishing a product with no price, archiving a brand products still reference, deleting media a tier badge uses ("This media is still used — tier badge on Sprout of ladder version Launch. Replace or remove it first."), issuing more stock than a location holds, restoring a category under an archived parent ("Restore the parent category first.") or a product under an archived brand ("Restore the brand first."). Distinct from 400: nothing about the request is malformed. */
+            /** @description `BUSINESS_RULE_VIOLATION` — The request was well-formed and the entities exist, but a domain rule forbids it — publishing a product with no price, archiving a brand products still reference, deleting media a tier badge uses ("This media is still used — tier badge on Sprout of ladder version Launch. Replace or remove it first."), issuing more stock than a location holds, restoring a category under an archived parent ("Restore the parent category first.") or a product under an archived brand ("Restore the brand first."), refunding through the gateway a payment that was never captured ("The payment was never captured, so there is nothing to refund.") or one whose gateway refund is under way ("A refund through the payment gateway is already in progress for this order. Refresh it to see where it stands."), refreshing a refund that is not under way ("This order has no refund in progress at the payment gateway to refresh."). Distinct from 400: nothing about the request is malformed. */
             422: {
                 headers: {
                     [name: string]: unknown;
@@ -17291,7 +17520,7 @@ export interface operations {
                     "application/json": components["schemas"]["ErrorResponse"];
                 };
             };
-            /** @description `BUSINESS_RULE_VIOLATION` — The request was well-formed and the entities exist, but a domain rule forbids it — publishing a product with no price, archiving a brand products still reference, deleting media a tier badge uses ("This media is still used — tier badge on Sprout of ladder version Launch. Replace or remove it first."), issuing more stock than a location holds, restoring a category under an archived parent ("Restore the parent category first.") or a product under an archived brand ("Restore the brand first."). Distinct from 400: nothing about the request is malformed. */
+            /** @description `BUSINESS_RULE_VIOLATION` — The request was well-formed and the entities exist, but a domain rule forbids it — publishing a product with no price, archiving a brand products still reference, deleting media a tier badge uses ("This media is still used — tier badge on Sprout of ladder version Launch. Replace or remove it first."), issuing more stock than a location holds, restoring a category under an archived parent ("Restore the parent category first.") or a product under an archived brand ("Restore the brand first."), refunding through the gateway a payment that was never captured ("The payment was never captured, so there is nothing to refund.") or one whose gateway refund is under way ("A refund through the payment gateway is already in progress for this order. Refresh it to see where it stands."), refreshing a refund that is not under way ("This order has no refund in progress at the payment gateway to refresh."). Distinct from 400: nothing about the request is malformed. */
             422: {
                 headers: {
                     [name: string]: unknown;
@@ -17389,7 +17618,7 @@ export interface operations {
                     "application/json": components["schemas"]["ErrorResponse"];
                 };
             };
-            /** @description `BUSINESS_RULE_VIOLATION` — The request was well-formed and the entities exist, but a domain rule forbids it — publishing a product with no price, archiving a brand products still reference, deleting media a tier badge uses ("This media is still used — tier badge on Sprout of ladder version Launch. Replace or remove it first."), issuing more stock than a location holds, restoring a category under an archived parent ("Restore the parent category first.") or a product under an archived brand ("Restore the brand first."). Distinct from 400: nothing about the request is malformed. */
+            /** @description `BUSINESS_RULE_VIOLATION` — The request was well-formed and the entities exist, but a domain rule forbids it — publishing a product with no price, archiving a brand products still reference, deleting media a tier badge uses ("This media is still used — tier badge on Sprout of ladder version Launch. Replace or remove it first."), issuing more stock than a location holds, restoring a category under an archived parent ("Restore the parent category first.") or a product under an archived brand ("Restore the brand first."), refunding through the gateway a payment that was never captured ("The payment was never captured, so there is nothing to refund.") or one whose gateway refund is under way ("A refund through the payment gateway is already in progress for this order. Refresh it to see where it stands."), refreshing a refund that is not under way ("This order has no refund in progress at the payment gateway to refresh."). Distinct from 400: nothing about the request is malformed. */
             422: {
                 headers: {
                     [name: string]: unknown;
@@ -17474,6 +17703,7 @@ export interface operations {
                 from?: string;
                 number?: string;
                 pageable: components["schemas"]["Pageable"];
+                refundState?: "NONE" | "OWED" | "INITIATED" | "REFUNDED" | "VOIDED";
                 status?: "PENDING_PAYMENT" | "CONFIRMED" | "PACKED" | "SHIPPED" | "OUT_FOR_DELIVERY" | "DELIVERED" | "PAYMENT_FAILED" | "EXPIRED" | "CANCELLED" | "REFUNDED";
                 to?: string;
             };
@@ -17677,7 +17907,7 @@ export interface operations {
                     "application/json": components["schemas"]["ErrorResponse"];
                 };
             };
-            /** @description `BUSINESS_RULE_VIOLATION` — The request was well-formed and the entities exist, but a domain rule forbids it — publishing a product with no price, archiving a brand products still reference, deleting media a tier badge uses ("This media is still used — tier badge on Sprout of ladder version Launch. Replace or remove it first."), issuing more stock than a location holds, restoring a category under an archived parent ("Restore the parent category first.") or a product under an archived brand ("Restore the brand first."). Distinct from 400: nothing about the request is malformed. */
+            /** @description `BUSINESS_RULE_VIOLATION` — The request was well-formed and the entities exist, but a domain rule forbids it — publishing a product with no price, archiving a brand products still reference, deleting media a tier badge uses ("This media is still used — tier badge on Sprout of ladder version Launch. Replace or remove it first."), issuing more stock than a location holds, restoring a category under an archived parent ("Restore the parent category first.") or a product under an archived brand ("Restore the brand first."), refunding through the gateway a payment that was never captured ("The payment was never captured, so there is nothing to refund.") or one whose gateway refund is under way ("A refund through the payment gateway is already in progress for this order. Refresh it to see where it stands."), refreshing a refund that is not under way ("This order has no refund in progress at the payment gateway to refresh."). Distinct from 400: nothing about the request is malformed. */
             422: {
                 headers: {
                     [name: string]: unknown;
@@ -17777,7 +18007,7 @@ export interface operations {
                     "application/json": components["schemas"]["ErrorResponse"];
                 };
             };
-            /** @description `BUSINESS_RULE_VIOLATION` — The request was well-formed and the entities exist, but a domain rule forbids it — publishing a product with no price, archiving a brand products still reference, deleting media a tier badge uses ("This media is still used — tier badge on Sprout of ladder version Launch. Replace or remove it first."), issuing more stock than a location holds, restoring a category under an archived parent ("Restore the parent category first.") or a product under an archived brand ("Restore the brand first."). Distinct from 400: nothing about the request is malformed. */
+            /** @description `BUSINESS_RULE_VIOLATION` — The request was well-formed and the entities exist, but a domain rule forbids it — publishing a product with no price, archiving a brand products still reference, deleting media a tier badge uses ("This media is still used — tier badge on Sprout of ladder version Launch. Replace or remove it first."), issuing more stock than a location holds, restoring a category under an archived parent ("Restore the parent category first.") or a product under an archived brand ("Restore the brand first."), refunding through the gateway a payment that was never captured ("The payment was never captured, so there is nothing to refund.") or one whose gateway refund is under way ("A refund through the payment gateway is already in progress for this order. Refresh it to see where it stands."), refreshing a refund that is not under way ("This order has no refund in progress at the payment gateway to refresh."). Distinct from 400: nothing about the request is malformed. */
             422: {
                 headers: {
                     [name: string]: unknown;
@@ -17846,6 +18076,106 @@ export interface operations {
             };
             /** @description `NOT_FOUND` — A referenced entity does not exist, or the URL matches no endpoint. Also returned for a known path called with an unsupported method, as 405. */
             404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description `INTERNAL_ERROR` — An unhandled failure. The message is deliberately generic; `traceId` identifies the server log line that explains it. */
+            500: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+        };
+    };
+    orderAddOrderNote: {
+        parameters: {
+            query?: never;
+            header: {
+                "Idempotency-Key": string;
+            };
+            path: {
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["AddOrderNoteRequest"];
+            };
+        };
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "*/*": components["schemas"]["OrderDetailResponse"];
+                };
+            };
+            /** @description `VALIDATION_FAILED` — The request body could not be read, a field failed validation, a required header was absent, or a domain validation rule rejected an input the caller can correct, such as a tier colour ("Must be a colour written as #RRGGBB.") or a tier badge that does not exist or is a video ("Media <id> is a video; this takes an image."). */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description `AUTHENTICATION_FAILED` — No valid credential. Either none was presented, or the session behind it is expired, revoked, or belongs to a member who can no longer sign in. This status means the session is dead and nothing else does — a wrong *current* password on change-password is a 400 with a `currentPassword` field error, not this. */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description `ACCESS_DENIED` — Authenticated, but lacking the permission the endpoint declares. The session is valid; do not sign the operator out. */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description `NOT_FOUND` — A referenced entity does not exist, or the URL matches no endpoint. Also returned for a known path called with an unsupported method, as 405. */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description `CONFLICT` — The request collided with current state for a reason other than a version mismatch: a duplicate natural key (a slug, a code, an email), or a database constraint the application did not catch first. */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description `UNSUPPORTED_MEDIA_TYPE` — The request body was sent with a `Content-Type` the endpoint does not read. Every endpoint that takes a body reads `application/json`. */
+            415: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description `BUSINESS_RULE_VIOLATION` — The request was well-formed and the entities exist, but a domain rule forbids it — publishing a product with no price, archiving a brand products still reference, deleting media a tier badge uses ("This media is still used — tier badge on Sprout of ladder version Launch. Replace or remove it first."), issuing more stock than a location holds, restoring a category under an archived parent ("Restore the parent category first.") or a product under an archived brand ("Restore the brand first."), refunding through the gateway a payment that was never captured ("The payment was never captured, so there is nothing to refund.") or one whose gateway refund is under way ("A refund through the payment gateway is already in progress for this order. Refresh it to see where it stands."), refreshing a refund that is not under way ("This order has no refund in progress at the payment gateway to refresh."). Distinct from 400: nothing about the request is malformed. */
+            422: {
                 headers: {
                     [name: string]: unknown;
                 };
@@ -17944,7 +18274,7 @@ export interface operations {
                     "application/json": components["schemas"]["ErrorResponse"];
                 };
             };
-            /** @description `BUSINESS_RULE_VIOLATION` — The request was well-formed and the entities exist, but a domain rule forbids it — publishing a product with no price, archiving a brand products still reference, deleting media a tier badge uses ("This media is still used — tier badge on Sprout of ladder version Launch. Replace or remove it first."), issuing more stock than a location holds, restoring a category under an archived parent ("Restore the parent category first.") or a product under an archived brand ("Restore the brand first."). Distinct from 400: nothing about the request is malformed. */
+            /** @description `BUSINESS_RULE_VIOLATION` — The request was well-formed and the entities exist, but a domain rule forbids it — publishing a product with no price, archiving a brand products still reference, deleting media a tier badge uses ("This media is still used — tier badge on Sprout of ladder version Launch. Replace or remove it first."), issuing more stock than a location holds, restoring a category under an archived parent ("Restore the parent category first.") or a product under an archived brand ("Restore the brand first."), refunding through the gateway a payment that was never captured ("The payment was never captured, so there is nothing to refund.") or one whose gateway refund is under way ("A refund through the payment gateway is already in progress for this order. Refresh it to see where it stands."), refreshing a refund that is not under way ("This order has no refund in progress at the payment gateway to refresh."). Distinct from 400: nothing about the request is malformed. */
             422: {
                 headers: {
                     [name: string]: unknown;
@@ -18044,7 +18374,7 @@ export interface operations {
                     "application/json": components["schemas"]["ErrorResponse"];
                 };
             };
-            /** @description `BUSINESS_RULE_VIOLATION` — The request was well-formed and the entities exist, but a domain rule forbids it — publishing a product with no price, archiving a brand products still reference, deleting media a tier badge uses ("This media is still used — tier badge on Sprout of ladder version Launch. Replace or remove it first."), issuing more stock than a location holds, restoring a category under an archived parent ("Restore the parent category first.") or a product under an archived brand ("Restore the brand first."). Distinct from 400: nothing about the request is malformed. */
+            /** @description `BUSINESS_RULE_VIOLATION` — The request was well-formed and the entities exist, but a domain rule forbids it — publishing a product with no price, archiving a brand products still reference, deleting media a tier badge uses ("This media is still used — tier badge on Sprout of ladder version Launch. Replace or remove it first."), issuing more stock than a location holds, restoring a category under an archived parent ("Restore the parent category first.") or a product under an archived brand ("Restore the brand first."), refunding through the gateway a payment that was never captured ("The payment was never captured, so there is nothing to refund.") or one whose gateway refund is under way ("A refund through the payment gateway is already in progress for this order. Refresh it to see where it stands."), refreshing a refund that is not under way ("This order has no refund in progress at the payment gateway to refresh."). Distinct from 400: nothing about the request is malformed. */
             422: {
                 headers: {
                     [name: string]: unknown;
@@ -18144,7 +18474,107 @@ export interface operations {
                     "application/json": components["schemas"]["ErrorResponse"];
                 };
             };
-            /** @description `BUSINESS_RULE_VIOLATION` — The request was well-formed and the entities exist, but a domain rule forbids it — publishing a product with no price, archiving a brand products still reference, deleting media a tier badge uses ("This media is still used — tier badge on Sprout of ladder version Launch. Replace or remove it first."), issuing more stock than a location holds, restoring a category under an archived parent ("Restore the parent category first.") or a product under an archived brand ("Restore the brand first."). Distinct from 400: nothing about the request is malformed. */
+            /** @description `BUSINESS_RULE_VIOLATION` — The request was well-formed and the entities exist, but a domain rule forbids it — publishing a product with no price, archiving a brand products still reference, deleting media a tier badge uses ("This media is still used — tier badge on Sprout of ladder version Launch. Replace or remove it first."), issuing more stock than a location holds, restoring a category under an archived parent ("Restore the parent category first.") or a product under an archived brand ("Restore the brand first."), refunding through the gateway a payment that was never captured ("The payment was never captured, so there is nothing to refund.") or one whose gateway refund is under way ("A refund through the payment gateway is already in progress for this order. Refresh it to see where it stands."), refreshing a refund that is not under way ("This order has no refund in progress at the payment gateway to refresh."). Distinct from 400: nothing about the request is malformed. */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description `INTERNAL_ERROR` — An unhandled failure. The message is deliberately generic; `traceId` identifies the server log line that explains it. */
+            500: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+        };
+    };
+    orderRefundOrderThroughGateway: {
+        parameters: {
+            query?: never;
+            header: {
+                "Idempotency-Key": string;
+            };
+            path: {
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["OrderStepRequest"];
+            };
+        };
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "*/*": components["schemas"]["OrderDetailResponse"];
+                };
+            };
+            /** @description `VALIDATION_FAILED` — The request body could not be read, a field failed validation, a required header was absent, or a domain validation rule rejected an input the caller can correct, such as a tier colour ("Must be a colour written as #RRGGBB.") or a tier badge that does not exist or is a video ("Media <id> is a video; this takes an image."). */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description `AUTHENTICATION_FAILED` — No valid credential. Either none was presented, or the session behind it is expired, revoked, or belongs to a member who can no longer sign in. This status means the session is dead and nothing else does — a wrong *current* password on change-password is a 400 with a `currentPassword` field error, not this. */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description `ACCESS_DENIED` — Authenticated, but lacking the permission the endpoint declares. The session is valid; do not sign the operator out. */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description `NOT_FOUND` — A referenced entity does not exist, or the URL matches no endpoint. Also returned for a known path called with an unsupported method, as 405. */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description `VERSION_CONFLICT` or `CONFLICT` — The `version` sent with an update is not the version stored — the record was changed by someone else since it was read. Nothing was written. Re-read the record, show the operator what changed, and submit again with the new `version`. */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description `UNSUPPORTED_MEDIA_TYPE` — The request body was sent with a `Content-Type` the endpoint does not read. Every endpoint that takes a body reads `application/json`. */
+            415: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description `BUSINESS_RULE_VIOLATION` — The request was well-formed and the entities exist, but a domain rule forbids it — publishing a product with no price, archiving a brand products still reference, deleting media a tier badge uses ("This media is still used — tier badge on Sprout of ladder version Launch. Replace or remove it first."), issuing more stock than a location holds, restoring a category under an archived parent ("Restore the parent category first.") or a product under an archived brand ("Restore the brand first."), refunding through the gateway a payment that was never captured ("The payment was never captured, so there is nothing to refund.") or one whose gateway refund is under way ("A refund through the payment gateway is already in progress for this order. Refresh it to see where it stands."), refreshing a refund that is not under way ("This order has no refund in progress at the payment gateway to refresh."). Distinct from 400: nothing about the request is malformed. */
             422: {
                 headers: {
                     [name: string]: unknown;
@@ -18244,7 +18674,107 @@ export interface operations {
                     "application/json": components["schemas"]["ErrorResponse"];
                 };
             };
-            /** @description `BUSINESS_RULE_VIOLATION` — The request was well-formed and the entities exist, but a domain rule forbids it — publishing a product with no price, archiving a brand products still reference, deleting media a tier badge uses ("This media is still used — tier badge on Sprout of ladder version Launch. Replace or remove it first."), issuing more stock than a location holds, restoring a category under an archived parent ("Restore the parent category first.") or a product under an archived brand ("Restore the brand first."). Distinct from 400: nothing about the request is malformed. */
+            /** @description `BUSINESS_RULE_VIOLATION` — The request was well-formed and the entities exist, but a domain rule forbids it — publishing a product with no price, archiving a brand products still reference, deleting media a tier badge uses ("This media is still used — tier badge on Sprout of ladder version Launch. Replace or remove it first."), issuing more stock than a location holds, restoring a category under an archived parent ("Restore the parent category first.") or a product under an archived brand ("Restore the brand first."), refunding through the gateway a payment that was never captured ("The payment was never captured, so there is nothing to refund.") or one whose gateway refund is under way ("A refund through the payment gateway is already in progress for this order. Refresh it to see where it stands."), refreshing a refund that is not under way ("This order has no refund in progress at the payment gateway to refresh."). Distinct from 400: nothing about the request is malformed. */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description `INTERNAL_ERROR` — An unhandled failure. The message is deliberately generic; `traceId` identifies the server log line that explains it. */
+            500: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+        };
+    };
+    orderRefreshOrderRefund: {
+        parameters: {
+            query?: never;
+            header: {
+                "Idempotency-Key": string;
+            };
+            path: {
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["OrderStepRequest"];
+            };
+        };
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "*/*": components["schemas"]["OrderDetailResponse"];
+                };
+            };
+            /** @description `VALIDATION_FAILED` — The request body could not be read, a field failed validation, a required header was absent, or a domain validation rule rejected an input the caller can correct, such as a tier colour ("Must be a colour written as #RRGGBB.") or a tier badge that does not exist or is a video ("Media <id> is a video; this takes an image."). */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description `AUTHENTICATION_FAILED` — No valid credential. Either none was presented, or the session behind it is expired, revoked, or belongs to a member who can no longer sign in. This status means the session is dead and nothing else does — a wrong *current* password on change-password is a 400 with a `currentPassword` field error, not this. */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description `ACCESS_DENIED` — Authenticated, but lacking the permission the endpoint declares. The session is valid; do not sign the operator out. */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description `NOT_FOUND` — A referenced entity does not exist, or the URL matches no endpoint. Also returned for a known path called with an unsupported method, as 405. */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description `VERSION_CONFLICT` or `CONFLICT` — The `version` sent with an update is not the version stored — the record was changed by someone else since it was read. Nothing was written. Re-read the record, show the operator what changed, and submit again with the new `version`. */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description `UNSUPPORTED_MEDIA_TYPE` — The request body was sent with a `Content-Type` the endpoint does not read. Every endpoint that takes a body reads `application/json`. */
+            415: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description `BUSINESS_RULE_VIOLATION` — The request was well-formed and the entities exist, but a domain rule forbids it — publishing a product with no price, archiving a brand products still reference, deleting media a tier badge uses ("This media is still used — tier badge on Sprout of ladder version Launch. Replace or remove it first."), issuing more stock than a location holds, restoring a category under an archived parent ("Restore the parent category first.") or a product under an archived brand ("Restore the brand first."), refunding through the gateway a payment that was never captured ("The payment was never captured, so there is nothing to refund.") or one whose gateway refund is under way ("A refund through the payment gateway is already in progress for this order. Refresh it to see where it stands."), refreshing a refund that is not under way ("This order has no refund in progress at the payment gateway to refresh."). Distinct from 400: nothing about the request is malformed. */
             422: {
                 headers: {
                     [name: string]: unknown;
@@ -18344,7 +18874,7 @@ export interface operations {
                     "application/json": components["schemas"]["ErrorResponse"];
                 };
             };
-            /** @description `BUSINESS_RULE_VIOLATION` — The request was well-formed and the entities exist, but a domain rule forbids it — publishing a product with no price, archiving a brand products still reference, deleting media a tier badge uses ("This media is still used — tier badge on Sprout of ladder version Launch. Replace or remove it first."), issuing more stock than a location holds, restoring a category under an archived parent ("Restore the parent category first.") or a product under an archived brand ("Restore the brand first."). Distinct from 400: nothing about the request is malformed. */
+            /** @description `BUSINESS_RULE_VIOLATION` — The request was well-formed and the entities exist, but a domain rule forbids it — publishing a product with no price, archiving a brand products still reference, deleting media a tier badge uses ("This media is still used — tier badge on Sprout of ladder version Launch. Replace or remove it first."), issuing more stock than a location holds, restoring a category under an archived parent ("Restore the parent category first.") or a product under an archived brand ("Restore the brand first."), refunding through the gateway a payment that was never captured ("The payment was never captured, so there is nothing to refund.") or one whose gateway refund is under way ("A refund through the payment gateway is already in progress for this order. Refresh it to see where it stands."), refreshing a refund that is not under way ("This order has no refund in progress at the payment gateway to refresh."). Distinct from 400: nothing about the request is malformed. */
             422: {
                 headers: {
                     [name: string]: unknown;
@@ -18444,7 +18974,7 @@ export interface operations {
                     "application/json": components["schemas"]["ErrorResponse"];
                 };
             };
-            /** @description `BUSINESS_RULE_VIOLATION` — The request was well-formed and the entities exist, but a domain rule forbids it — publishing a product with no price, archiving a brand products still reference, deleting media a tier badge uses ("This media is still used — tier badge on Sprout of ladder version Launch. Replace or remove it first."), issuing more stock than a location holds, restoring a category under an archived parent ("Restore the parent category first.") or a product under an archived brand ("Restore the brand first."). Distinct from 400: nothing about the request is malformed. */
+            /** @description `BUSINESS_RULE_VIOLATION` — The request was well-formed and the entities exist, but a domain rule forbids it — publishing a product with no price, archiving a brand products still reference, deleting media a tier badge uses ("This media is still used — tier badge on Sprout of ladder version Launch. Replace or remove it first."), issuing more stock than a location holds, restoring a category under an archived parent ("Restore the parent category first.") or a product under an archived brand ("Restore the brand first."), refunding through the gateway a payment that was never captured ("The payment was never captured, so there is nothing to refund.") or one whose gateway refund is under way ("A refund through the payment gateway is already in progress for this order. Refresh it to see where it stands."), refreshing a refund that is not under way ("This order has no refund in progress at the payment gateway to refresh."). Distinct from 400: nothing about the request is malformed. */
             422: {
                 headers: {
                     [name: string]: unknown;
@@ -18645,7 +19175,7 @@ export interface operations {
                     "application/json": components["schemas"]["ErrorResponse"];
                 };
             };
-            /** @description `BUSINESS_RULE_VIOLATION` — The request was well-formed and the entities exist, but a domain rule forbids it — publishing a product with no price, archiving a brand products still reference, deleting media a tier badge uses ("This media is still used — tier badge on Sprout of ladder version Launch. Replace or remove it first."), issuing more stock than a location holds, restoring a category under an archived parent ("Restore the parent category first.") or a product under an archived brand ("Restore the brand first."). Distinct from 400: nothing about the request is malformed. */
+            /** @description `BUSINESS_RULE_VIOLATION` — The request was well-formed and the entities exist, but a domain rule forbids it — publishing a product with no price, archiving a brand products still reference, deleting media a tier badge uses ("This media is still used — tier badge on Sprout of ladder version Launch. Replace or remove it first."), issuing more stock than a location holds, restoring a category under an archived parent ("Restore the parent category first.") or a product under an archived brand ("Restore the brand first."), refunding through the gateway a payment that was never captured ("The payment was never captured, so there is nothing to refund.") or one whose gateway refund is under way ("A refund through the payment gateway is already in progress for this order. Refresh it to see where it stands."), refreshing a refund that is not under way ("This order has no refund in progress at the payment gateway to refresh."). Distinct from 400: nothing about the request is malformed. */
             422: {
                 headers: {
                     [name: string]: unknown;
@@ -18976,7 +19506,7 @@ export interface operations {
                     "application/json": components["schemas"]["ErrorResponse"];
                 };
             };
-            /** @description `BUSINESS_RULE_VIOLATION` — The request was well-formed and the entities exist, but a domain rule forbids it — publishing a product with no price, archiving a brand products still reference, deleting media a tier badge uses ("This media is still used — tier badge on Sprout of ladder version Launch. Replace or remove it first."), issuing more stock than a location holds, restoring a category under an archived parent ("Restore the parent category first.") or a product under an archived brand ("Restore the brand first."). Distinct from 400: nothing about the request is malformed. */
+            /** @description `BUSINESS_RULE_VIOLATION` — The request was well-formed and the entities exist, but a domain rule forbids it — publishing a product with no price, archiving a brand products still reference, deleting media a tier badge uses ("This media is still used — tier badge on Sprout of ladder version Launch. Replace or remove it first."), issuing more stock than a location holds, restoring a category under an archived parent ("Restore the parent category first.") or a product under an archived brand ("Restore the brand first."), refunding through the gateway a payment that was never captured ("The payment was never captured, so there is nothing to refund.") or one whose gateway refund is under way ("A refund through the payment gateway is already in progress for this order. Refresh it to see where it stands."), refreshing a refund that is not under way ("This order has no refund in progress at the payment gateway to refresh."). Distinct from 400: nothing about the request is malformed. */
             422: {
                 headers: {
                     [name: string]: unknown;
@@ -19141,7 +19671,7 @@ export interface operations {
                     "application/json": components["schemas"]["ErrorResponse"];
                 };
             };
-            /** @description `BUSINESS_RULE_VIOLATION` — The request was well-formed and the entities exist, but a domain rule forbids it — publishing a product with no price, archiving a brand products still reference, deleting media a tier badge uses ("This media is still used — tier badge on Sprout of ladder version Launch. Replace or remove it first."), issuing more stock than a location holds, restoring a category under an archived parent ("Restore the parent category first.") or a product under an archived brand ("Restore the brand first."). Distinct from 400: nothing about the request is malformed. */
+            /** @description `BUSINESS_RULE_VIOLATION` — The request was well-formed and the entities exist, but a domain rule forbids it — publishing a product with no price, archiving a brand products still reference, deleting media a tier badge uses ("This media is still used — tier badge on Sprout of ladder version Launch. Replace or remove it first."), issuing more stock than a location holds, restoring a category under an archived parent ("Restore the parent category first.") or a product under an archived brand ("Restore the brand first."), refunding through the gateway a payment that was never captured ("The payment was never captured, so there is nothing to refund.") or one whose gateway refund is under way ("A refund through the payment gateway is already in progress for this order. Refresh it to see where it stands."), refreshing a refund that is not under way ("This order has no refund in progress at the payment gateway to refresh."). Distinct from 400: nothing about the request is malformed. */
             422: {
                 headers: {
                     [name: string]: unknown;
@@ -19308,7 +19838,7 @@ export interface operations {
                     "application/json": components["schemas"]["ErrorResponse"];
                 };
             };
-            /** @description `BUSINESS_RULE_VIOLATION` — The request was well-formed and the entities exist, but a domain rule forbids it — publishing a product with no price, archiving a brand products still reference, deleting media a tier badge uses ("This media is still used — tier badge on Sprout of ladder version Launch. Replace or remove it first."), issuing more stock than a location holds, restoring a category under an archived parent ("Restore the parent category first.") or a product under an archived brand ("Restore the brand first."). Distinct from 400: nothing about the request is malformed. */
+            /** @description `BUSINESS_RULE_VIOLATION` — The request was well-formed and the entities exist, but a domain rule forbids it — publishing a product with no price, archiving a brand products still reference, deleting media a tier badge uses ("This media is still used — tier badge on Sprout of ladder version Launch. Replace or remove it first."), issuing more stock than a location holds, restoring a category under an archived parent ("Restore the parent category first.") or a product under an archived brand ("Restore the brand first."), refunding through the gateway a payment that was never captured ("The payment was never captured, so there is nothing to refund.") or one whose gateway refund is under way ("A refund through the payment gateway is already in progress for this order. Refresh it to see where it stands."), refreshing a refund that is not under way ("This order has no refund in progress at the payment gateway to refresh."). Distinct from 400: nothing about the request is malformed. */
             422: {
                 headers: {
                     [name: string]: unknown;
@@ -19475,7 +20005,7 @@ export interface operations {
                     "application/json": components["schemas"]["ErrorResponse"];
                 };
             };
-            /** @description `BUSINESS_RULE_VIOLATION` — The request was well-formed and the entities exist, but a domain rule forbids it — publishing a product with no price, archiving a brand products still reference, deleting media a tier badge uses ("This media is still used — tier badge on Sprout of ladder version Launch. Replace or remove it first."), issuing more stock than a location holds, restoring a category under an archived parent ("Restore the parent category first.") or a product under an archived brand ("Restore the brand first."). Distinct from 400: nothing about the request is malformed. */
+            /** @description `BUSINESS_RULE_VIOLATION` — The request was well-formed and the entities exist, but a domain rule forbids it — publishing a product with no price, archiving a brand products still reference, deleting media a tier badge uses ("This media is still used — tier badge on Sprout of ladder version Launch. Replace or remove it first."), issuing more stock than a location holds, restoring a category under an archived parent ("Restore the parent category first.") or a product under an archived brand ("Restore the brand first."), refunding through the gateway a payment that was never captured ("The payment was never captured, so there is nothing to refund.") or one whose gateway refund is under way ("A refund through the payment gateway is already in progress for this order. Refresh it to see where it stands."), refreshing a refund that is not under way ("This order has no refund in progress at the payment gateway to refresh."). Distinct from 400: nothing about the request is malformed. */
             422: {
                 headers: {
                     [name: string]: unknown;
@@ -19574,7 +20104,7 @@ export interface operations {
                     "application/json": components["schemas"]["ErrorResponse"];
                 };
             };
-            /** @description `BUSINESS_RULE_VIOLATION` — The request was well-formed and the entities exist, but a domain rule forbids it — publishing a product with no price, archiving a brand products still reference, deleting media a tier badge uses ("This media is still used — tier badge on Sprout of ladder version Launch. Replace or remove it first."), issuing more stock than a location holds, restoring a category under an archived parent ("Restore the parent category first.") or a product under an archived brand ("Restore the brand first."). Distinct from 400: nothing about the request is malformed. */
+            /** @description `BUSINESS_RULE_VIOLATION` — The request was well-formed and the entities exist, but a domain rule forbids it — publishing a product with no price, archiving a brand products still reference, deleting media a tier badge uses ("This media is still used — tier badge on Sprout of ladder version Launch. Replace or remove it first."), issuing more stock than a location holds, restoring a category under an archived parent ("Restore the parent category first.") or a product under an archived brand ("Restore the brand first."), refunding through the gateway a payment that was never captured ("The payment was never captured, so there is nothing to refund.") or one whose gateway refund is under way ("A refund through the payment gateway is already in progress for this order. Refresh it to see where it stands."), refreshing a refund that is not under way ("This order has no refund in progress at the payment gateway to refresh."). Distinct from 400: nothing about the request is malformed. */
             422: {
                 headers: {
                     [name: string]: unknown;
@@ -19674,7 +20204,7 @@ export interface operations {
                     "application/json": components["schemas"]["ErrorResponse"];
                 };
             };
-            /** @description `BUSINESS_RULE_VIOLATION` — The request was well-formed and the entities exist, but a domain rule forbids it — publishing a product with no price, archiving a brand products still reference, deleting media a tier badge uses ("This media is still used — tier badge on Sprout of ladder version Launch. Replace or remove it first."), issuing more stock than a location holds, restoring a category under an archived parent ("Restore the parent category first.") or a product under an archived brand ("Restore the brand first."). Distinct from 400: nothing about the request is malformed. */
+            /** @description `BUSINESS_RULE_VIOLATION` — The request was well-formed and the entities exist, but a domain rule forbids it — publishing a product with no price, archiving a brand products still reference, deleting media a tier badge uses ("This media is still used — tier badge on Sprout of ladder version Launch. Replace or remove it first."), issuing more stock than a location holds, restoring a category under an archived parent ("Restore the parent category first.") or a product under an archived brand ("Restore the brand first."), refunding through the gateway a payment that was never captured ("The payment was never captured, so there is nothing to refund.") or one whose gateway refund is under way ("A refund through the payment gateway is already in progress for this order. Refresh it to see where it stands."), refreshing a refund that is not under way ("This order has no refund in progress at the payment gateway to refresh."). Distinct from 400: nothing about the request is malformed. */
             422: {
                 headers: {
                     [name: string]: unknown;
@@ -19763,7 +20293,7 @@ export interface operations {
                     "application/json": components["schemas"]["ErrorResponse"];
                 };
             };
-            /** @description `BUSINESS_RULE_VIOLATION` — The request was well-formed and the entities exist, but a domain rule forbids it — publishing a product with no price, archiving a brand products still reference, deleting media a tier badge uses ("This media is still used — tier badge on Sprout of ladder version Launch. Replace or remove it first."), issuing more stock than a location holds, restoring a category under an archived parent ("Restore the parent category first.") or a product under an archived brand ("Restore the brand first."). Distinct from 400: nothing about the request is malformed. */
+            /** @description `BUSINESS_RULE_VIOLATION` — The request was well-formed and the entities exist, but a domain rule forbids it — publishing a product with no price, archiving a brand products still reference, deleting media a tier badge uses ("This media is still used — tier badge on Sprout of ladder version Launch. Replace or remove it first."), issuing more stock than a location holds, restoring a category under an archived parent ("Restore the parent category first.") or a product under an archived brand ("Restore the brand first."), refunding through the gateway a payment that was never captured ("The payment was never captured, so there is nothing to refund.") or one whose gateway refund is under way ("A refund through the payment gateway is already in progress for this order. Refresh it to see where it stands."), refreshing a refund that is not under way ("This order has no refund in progress at the payment gateway to refresh."). Distinct from 400: nothing about the request is malformed. */
             422: {
                 headers: {
                     [name: string]: unknown;
@@ -19930,7 +20460,7 @@ export interface operations {
                     "application/json": components["schemas"]["ErrorResponse"];
                 };
             };
-            /** @description `BUSINESS_RULE_VIOLATION` — The request was well-formed and the entities exist, but a domain rule forbids it — publishing a product with no price, archiving a brand products still reference, deleting media a tier badge uses ("This media is still used — tier badge on Sprout of ladder version Launch. Replace or remove it first."), issuing more stock than a location holds, restoring a category under an archived parent ("Restore the parent category first.") or a product under an archived brand ("Restore the brand first."). Distinct from 400: nothing about the request is malformed. */
+            /** @description `BUSINESS_RULE_VIOLATION` — The request was well-formed and the entities exist, but a domain rule forbids it — publishing a product with no price, archiving a brand products still reference, deleting media a tier badge uses ("This media is still used — tier badge on Sprout of ladder version Launch. Replace or remove it first."), issuing more stock than a location holds, restoring a category under an archived parent ("Restore the parent category first.") or a product under an archived brand ("Restore the brand first."), refunding through the gateway a payment that was never captured ("The payment was never captured, so there is nothing to refund.") or one whose gateway refund is under way ("A refund through the payment gateway is already in progress for this order. Refresh it to see where it stands."), refreshing a refund that is not under way ("This order has no refund in progress at the payment gateway to refresh."). Distinct from 400: nothing about the request is malformed. */
             422: {
                 headers: {
                     [name: string]: unknown;
@@ -20030,7 +20560,7 @@ export interface operations {
                     "application/json": components["schemas"]["ErrorResponse"];
                 };
             };
-            /** @description `BUSINESS_RULE_VIOLATION` — The request was well-formed and the entities exist, but a domain rule forbids it — publishing a product with no price, archiving a brand products still reference, deleting media a tier badge uses ("This media is still used — tier badge on Sprout of ladder version Launch. Replace or remove it first."), issuing more stock than a location holds, restoring a category under an archived parent ("Restore the parent category first.") or a product under an archived brand ("Restore the brand first."). Distinct from 400: nothing about the request is malformed. */
+            /** @description `BUSINESS_RULE_VIOLATION` — The request was well-formed and the entities exist, but a domain rule forbids it — publishing a product with no price, archiving a brand products still reference, deleting media a tier badge uses ("This media is still used — tier badge on Sprout of ladder version Launch. Replace or remove it first."), issuing more stock than a location holds, restoring a category under an archived parent ("Restore the parent category first.") or a product under an archived brand ("Restore the brand first."), refunding through the gateway a payment that was never captured ("The payment was never captured, so there is nothing to refund.") or one whose gateway refund is under way ("A refund through the payment gateway is already in progress for this order. Refresh it to see where it stands."), refreshing a refund that is not under way ("This order has no refund in progress at the payment gateway to refresh."). Distinct from 400: nothing about the request is malformed. */
             422: {
                 headers: {
                     [name: string]: unknown;
@@ -20119,7 +20649,7 @@ export interface operations {
                     "application/json": components["schemas"]["ErrorResponse"];
                 };
             };
-            /** @description `BUSINESS_RULE_VIOLATION` — The request was well-formed and the entities exist, but a domain rule forbids it — publishing a product with no price, archiving a brand products still reference, deleting media a tier badge uses ("This media is still used — tier badge on Sprout of ladder version Launch. Replace or remove it first."), issuing more stock than a location holds, restoring a category under an archived parent ("Restore the parent category first.") or a product under an archived brand ("Restore the brand first."). Distinct from 400: nothing about the request is malformed. */
+            /** @description `BUSINESS_RULE_VIOLATION` — The request was well-formed and the entities exist, but a domain rule forbids it — publishing a product with no price, archiving a brand products still reference, deleting media a tier badge uses ("This media is still used — tier badge on Sprout of ladder version Launch. Replace or remove it first."), issuing more stock than a location holds, restoring a category under an archived parent ("Restore the parent category first.") or a product under an archived brand ("Restore the brand first."), refunding through the gateway a payment that was never captured ("The payment was never captured, so there is nothing to refund.") or one whose gateway refund is under way ("A refund through the payment gateway is already in progress for this order. Refresh it to see where it stands."), refreshing a refund that is not under way ("This order has no refund in progress at the payment gateway to refresh."). Distinct from 400: nothing about the request is malformed. */
             422: {
                 headers: {
                     [name: string]: unknown;
@@ -20217,7 +20747,7 @@ export interface operations {
                     "application/json": components["schemas"]["ErrorResponse"];
                 };
             };
-            /** @description `BUSINESS_RULE_VIOLATION` — The request was well-formed and the entities exist, but a domain rule forbids it — publishing a product with no price, archiving a brand products still reference, deleting media a tier badge uses ("This media is still used — tier badge on Sprout of ladder version Launch. Replace or remove it first."), issuing more stock than a location holds, restoring a category under an archived parent ("Restore the parent category first.") or a product under an archived brand ("Restore the brand first."). Distinct from 400: nothing about the request is malformed. */
+            /** @description `BUSINESS_RULE_VIOLATION` — The request was well-formed and the entities exist, but a domain rule forbids it — publishing a product with no price, archiving a brand products still reference, deleting media a tier badge uses ("This media is still used — tier badge on Sprout of ladder version Launch. Replace or remove it first."), issuing more stock than a location holds, restoring a category under an archived parent ("Restore the parent category first.") or a product under an archived brand ("Restore the brand first."), refunding through the gateway a payment that was never captured ("The payment was never captured, so there is nothing to refund.") or one whose gateway refund is under way ("A refund through the payment gateway is already in progress for this order. Refresh it to see where it stands."), refreshing a refund that is not under way ("This order has no refund in progress at the payment gateway to refresh."). Distinct from 400: nothing about the request is malformed. */
             422: {
                 headers: {
                     [name: string]: unknown;
@@ -20426,7 +20956,7 @@ export interface operations {
                     "application/json": components["schemas"]["ErrorResponse"];
                 };
             };
-            /** @description `BUSINESS_RULE_VIOLATION` — The request was well-formed and the entities exist, but a domain rule forbids it — publishing a product with no price, archiving a brand products still reference, deleting media a tier badge uses ("This media is still used — tier badge on Sprout of ladder version Launch. Replace or remove it first."), issuing more stock than a location holds, restoring a category under an archived parent ("Restore the parent category first.") or a product under an archived brand ("Restore the brand first."). Distinct from 400: nothing about the request is malformed. */
+            /** @description `BUSINESS_RULE_VIOLATION` — The request was well-formed and the entities exist, but a domain rule forbids it — publishing a product with no price, archiving a brand products still reference, deleting media a tier badge uses ("This media is still used — tier badge on Sprout of ladder version Launch. Replace or remove it first."), issuing more stock than a location holds, restoring a category under an archived parent ("Restore the parent category first.") or a product under an archived brand ("Restore the brand first."), refunding through the gateway a payment that was never captured ("The payment was never captured, so there is nothing to refund.") or one whose gateway refund is under way ("A refund through the payment gateway is already in progress for this order. Refresh it to see where it stands."), refreshing a refund that is not under way ("This order has no refund in progress at the payment gateway to refresh."). Distinct from 400: nothing about the request is malformed. */
             422: {
                 headers: {
                     [name: string]: unknown;
@@ -20591,7 +21121,7 @@ export interface operations {
                     "application/json": components["schemas"]["ErrorResponse"];
                 };
             };
-            /** @description `BUSINESS_RULE_VIOLATION` — The request was well-formed and the entities exist, but a domain rule forbids it — publishing a product with no price, archiving a brand products still reference, deleting media a tier badge uses ("This media is still used — tier badge on Sprout of ladder version Launch. Replace or remove it first."), issuing more stock than a location holds, restoring a category under an archived parent ("Restore the parent category first.") or a product under an archived brand ("Restore the brand first."). Distinct from 400: nothing about the request is malformed. */
+            /** @description `BUSINESS_RULE_VIOLATION` — The request was well-formed and the entities exist, but a domain rule forbids it — publishing a product with no price, archiving a brand products still reference, deleting media a tier badge uses ("This media is still used — tier badge on Sprout of ladder version Launch. Replace or remove it first."), issuing more stock than a location holds, restoring a category under an archived parent ("Restore the parent category first.") or a product under an archived brand ("Restore the brand first."), refunding through the gateway a payment that was never captured ("The payment was never captured, so there is nothing to refund.") or one whose gateway refund is under way ("A refund through the payment gateway is already in progress for this order. Refresh it to see where it stands."), refreshing a refund that is not under way ("This order has no refund in progress at the payment gateway to refresh."). Distinct from 400: nothing about the request is malformed. */
             422: {
                 headers: {
                     [name: string]: unknown;
@@ -20676,7 +21206,7 @@ export interface operations {
                     "application/json": components["schemas"]["ErrorResponse"];
                 };
             };
-            /** @description `BUSINESS_RULE_VIOLATION` — The request was well-formed and the entities exist, but a domain rule forbids it — publishing a product with no price, archiving a brand products still reference, deleting media a tier badge uses ("This media is still used — tier badge on Sprout of ladder version Launch. Replace or remove it first."), issuing more stock than a location holds, restoring a category under an archived parent ("Restore the parent category first.") or a product under an archived brand ("Restore the brand first."). Distinct from 400: nothing about the request is malformed. */
+            /** @description `BUSINESS_RULE_VIOLATION` — The request was well-formed and the entities exist, but a domain rule forbids it — publishing a product with no price, archiving a brand products still reference, deleting media a tier badge uses ("This media is still used — tier badge on Sprout of ladder version Launch. Replace or remove it first."), issuing more stock than a location holds, restoring a category under an archived parent ("Restore the parent category first.") or a product under an archived brand ("Restore the brand first."), refunding through the gateway a payment that was never captured ("The payment was never captured, so there is nothing to refund.") or one whose gateway refund is under way ("A refund through the payment gateway is already in progress for this order. Refresh it to see where it stands."), refreshing a refund that is not under way ("This order has no refund in progress at the payment gateway to refresh."). Distinct from 400: nothing about the request is malformed. */
             422: {
                 headers: {
                     [name: string]: unknown;
@@ -20761,7 +21291,7 @@ export interface operations {
                     "application/json": components["schemas"]["ErrorResponse"];
                 };
             };
-            /** @description `BUSINESS_RULE_VIOLATION` — The request was well-formed and the entities exist, but a domain rule forbids it — publishing a product with no price, archiving a brand products still reference, deleting media a tier badge uses ("This media is still used — tier badge on Sprout of ladder version Launch. Replace or remove it first."), issuing more stock than a location holds, restoring a category under an archived parent ("Restore the parent category first.") or a product under an archived brand ("Restore the brand first."). Distinct from 400: nothing about the request is malformed. */
+            /** @description `BUSINESS_RULE_VIOLATION` — The request was well-formed and the entities exist, but a domain rule forbids it — publishing a product with no price, archiving a brand products still reference, deleting media a tier badge uses ("This media is still used — tier badge on Sprout of ladder version Launch. Replace or remove it first."), issuing more stock than a location holds, restoring a category under an archived parent ("Restore the parent category first.") or a product under an archived brand ("Restore the brand first."), refunding through the gateway a payment that was never captured ("The payment was never captured, so there is nothing to refund.") or one whose gateway refund is under way ("A refund through the payment gateway is already in progress for this order. Refresh it to see where it stands."), refreshing a refund that is not under way ("This order has no refund in progress at the payment gateway to refresh."). Distinct from 400: nothing about the request is malformed. */
             422: {
                 headers: {
                     [name: string]: unknown;
@@ -20859,7 +21389,7 @@ export interface operations {
                     "application/json": components["schemas"]["ErrorResponse"];
                 };
             };
-            /** @description `BUSINESS_RULE_VIOLATION` — The request was well-formed and the entities exist, but a domain rule forbids it — publishing a product with no price, archiving a brand products still reference, deleting media a tier badge uses ("This media is still used — tier badge on Sprout of ladder version Launch. Replace or remove it first."), issuing more stock than a location holds, restoring a category under an archived parent ("Restore the parent category first.") or a product under an archived brand ("Restore the brand first."). Distinct from 400: nothing about the request is malformed. */
+            /** @description `BUSINESS_RULE_VIOLATION` — The request was well-formed and the entities exist, but a domain rule forbids it — publishing a product with no price, archiving a brand products still reference, deleting media a tier badge uses ("This media is still used — tier badge on Sprout of ladder version Launch. Replace or remove it first."), issuing more stock than a location holds, restoring a category under an archived parent ("Restore the parent category first.") or a product under an archived brand ("Restore the brand first."), refunding through the gateway a payment that was never captured ("The payment was never captured, so there is nothing to refund.") or one whose gateway refund is under way ("A refund through the payment gateway is already in progress for this order. Refresh it to see where it stands."), refreshing a refund that is not under way ("This order has no refund in progress at the payment gateway to refresh."). Distinct from 400: nothing about the request is malformed. */
             422: {
                 headers: {
                     [name: string]: unknown;
@@ -20944,7 +21474,7 @@ export interface operations {
                     "application/json": components["schemas"]["ErrorResponse"];
                 };
             };
-            /** @description `BUSINESS_RULE_VIOLATION` — The request was well-formed and the entities exist, but a domain rule forbids it — publishing a product with no price, archiving a brand products still reference, deleting media a tier badge uses ("This media is still used — tier badge on Sprout of ladder version Launch. Replace or remove it first."), issuing more stock than a location holds, restoring a category under an archived parent ("Restore the parent category first.") or a product under an archived brand ("Restore the brand first."). Distinct from 400: nothing about the request is malformed. */
+            /** @description `BUSINESS_RULE_VIOLATION` — The request was well-formed and the entities exist, but a domain rule forbids it — publishing a product with no price, archiving a brand products still reference, deleting media a tier badge uses ("This media is still used — tier badge on Sprout of ladder version Launch. Replace or remove it first."), issuing more stock than a location holds, restoring a category under an archived parent ("Restore the parent category first.") or a product under an archived brand ("Restore the brand first."), refunding through the gateway a payment that was never captured ("The payment was never captured, so there is nothing to refund.") or one whose gateway refund is under way ("A refund through the payment gateway is already in progress for this order. Refresh it to see where it stands."), refreshing a refund that is not under way ("This order has no refund in progress at the payment gateway to refresh."). Distinct from 400: nothing about the request is malformed. */
             422: {
                 headers: {
                     [name: string]: unknown;
@@ -21029,7 +21559,7 @@ export interface operations {
                     "application/json": components["schemas"]["ErrorResponse"];
                 };
             };
-            /** @description `BUSINESS_RULE_VIOLATION` — The request was well-formed and the entities exist, but a domain rule forbids it — publishing a product with no price, archiving a brand products still reference, deleting media a tier badge uses ("This media is still used — tier badge on Sprout of ladder version Launch. Replace or remove it first."), issuing more stock than a location holds, restoring a category under an archived parent ("Restore the parent category first.") or a product under an archived brand ("Restore the brand first."). Distinct from 400: nothing about the request is malformed. */
+            /** @description `BUSINESS_RULE_VIOLATION` — The request was well-formed and the entities exist, but a domain rule forbids it — publishing a product with no price, archiving a brand products still reference, deleting media a tier badge uses ("This media is still used — tier badge on Sprout of ladder version Launch. Replace or remove it first."), issuing more stock than a location holds, restoring a category under an archived parent ("Restore the parent category first.") or a product under an archived brand ("Restore the brand first."), refunding through the gateway a payment that was never captured ("The payment was never captured, so there is nothing to refund.") or one whose gateway refund is under way ("A refund through the payment gateway is already in progress for this order. Refresh it to see where it stands."), refreshing a refund that is not under way ("This order has no refund in progress at the payment gateway to refresh."). Distinct from 400: nothing about the request is malformed. */
             422: {
                 headers: {
                     [name: string]: unknown;
@@ -21127,7 +21657,7 @@ export interface operations {
                     "application/json": components["schemas"]["ErrorResponse"];
                 };
             };
-            /** @description `BUSINESS_RULE_VIOLATION` — The request was well-formed and the entities exist, but a domain rule forbids it — publishing a product with no price, archiving a brand products still reference, deleting media a tier badge uses ("This media is still used — tier badge on Sprout of ladder version Launch. Replace or remove it first."), issuing more stock than a location holds, restoring a category under an archived parent ("Restore the parent category first.") or a product under an archived brand ("Restore the brand first."). Distinct from 400: nothing about the request is malformed. */
+            /** @description `BUSINESS_RULE_VIOLATION` — The request was well-formed and the entities exist, but a domain rule forbids it — publishing a product with no price, archiving a brand products still reference, deleting media a tier badge uses ("This media is still used — tier badge on Sprout of ladder version Launch. Replace or remove it first."), issuing more stock than a location holds, restoring a category under an archived parent ("Restore the parent category first.") or a product under an archived brand ("Restore the brand first."), refunding through the gateway a payment that was never captured ("The payment was never captured, so there is nothing to refund.") or one whose gateway refund is under way ("A refund through the payment gateway is already in progress for this order. Refresh it to see where it stands."), refreshing a refund that is not under way ("This order has no refund in progress at the payment gateway to refresh."). Distinct from 400: nothing about the request is malformed. */
             422: {
                 headers: {
                     [name: string]: unknown;
@@ -21212,7 +21742,7 @@ export interface operations {
                     "application/json": components["schemas"]["ErrorResponse"];
                 };
             };
-            /** @description `BUSINESS_RULE_VIOLATION` — The request was well-formed and the entities exist, but a domain rule forbids it — publishing a product with no price, archiving a brand products still reference, deleting media a tier badge uses ("This media is still used — tier badge on Sprout of ladder version Launch. Replace or remove it first."), issuing more stock than a location holds, restoring a category under an archived parent ("Restore the parent category first.") or a product under an archived brand ("Restore the brand first."). Distinct from 400: nothing about the request is malformed. */
+            /** @description `BUSINESS_RULE_VIOLATION` — The request was well-formed and the entities exist, but a domain rule forbids it — publishing a product with no price, archiving a brand products still reference, deleting media a tier badge uses ("This media is still used — tier badge on Sprout of ladder version Launch. Replace or remove it first."), issuing more stock than a location holds, restoring a category under an archived parent ("Restore the parent category first.") or a product under an archived brand ("Restore the brand first."), refunding through the gateway a payment that was never captured ("The payment was never captured, so there is nothing to refund.") or one whose gateway refund is under way ("A refund through the payment gateway is already in progress for this order. Refresh it to see where it stands."), refreshing a refund that is not under way ("This order has no refund in progress at the payment gateway to refresh."). Distinct from 400: nothing about the request is malformed. */
             422: {
                 headers: {
                     [name: string]: unknown;
@@ -21297,7 +21827,7 @@ export interface operations {
                     "application/json": components["schemas"]["ErrorResponse"];
                 };
             };
-            /** @description `BUSINESS_RULE_VIOLATION` — The request was well-formed and the entities exist, but a domain rule forbids it — publishing a product with no price, archiving a brand products still reference, deleting media a tier badge uses ("This media is still used — tier badge on Sprout of ladder version Launch. Replace or remove it first."), issuing more stock than a location holds, restoring a category under an archived parent ("Restore the parent category first.") or a product under an archived brand ("Restore the brand first."). Distinct from 400: nothing about the request is malformed. */
+            /** @description `BUSINESS_RULE_VIOLATION` — The request was well-formed and the entities exist, but a domain rule forbids it — publishing a product with no price, archiving a brand products still reference, deleting media a tier badge uses ("This media is still used — tier badge on Sprout of ladder version Launch. Replace or remove it first."), issuing more stock than a location holds, restoring a category under an archived parent ("Restore the parent category first.") or a product under an archived brand ("Restore the brand first."), refunding through the gateway a payment that was never captured ("The payment was never captured, so there is nothing to refund.") or one whose gateway refund is under way ("A refund through the payment gateway is already in progress for this order. Refresh it to see where it stands."), refreshing a refund that is not under way ("This order has no refund in progress at the payment gateway to refresh."). Distinct from 400: nothing about the request is malformed. */
             422: {
                 headers: {
                     [name: string]: unknown;
@@ -21452,7 +21982,7 @@ export interface operations {
                     "application/json": components["schemas"]["ErrorResponse"];
                 };
             };
-            /** @description `BUSINESS_RULE_VIOLATION` — The request was well-formed and the entities exist, but a domain rule forbids it — publishing a product with no price, archiving a brand products still reference, deleting media a tier badge uses ("This media is still used — tier badge on Sprout of ladder version Launch. Replace or remove it first."), issuing more stock than a location holds, restoring a category under an archived parent ("Restore the parent category first.") or a product under an archived brand ("Restore the brand first."). Distinct from 400: nothing about the request is malformed. */
+            /** @description `BUSINESS_RULE_VIOLATION` — The request was well-formed and the entities exist, but a domain rule forbids it — publishing a product with no price, archiving a brand products still reference, deleting media a tier badge uses ("This media is still used — tier badge on Sprout of ladder version Launch. Replace or remove it first."), issuing more stock than a location holds, restoring a category under an archived parent ("Restore the parent category first.") or a product under an archived brand ("Restore the brand first."), refunding through the gateway a payment that was never captured ("The payment was never captured, so there is nothing to refund.") or one whose gateway refund is under way ("A refund through the payment gateway is already in progress for this order. Refresh it to see where it stands."), refreshing a refund that is not under way ("This order has no refund in progress at the payment gateway to refresh."). Distinct from 400: nothing about the request is malformed. */
             422: {
                 headers: {
                     [name: string]: unknown;
@@ -21536,7 +22066,7 @@ export interface operations {
                     "application/json": components["schemas"]["ErrorResponse"];
                 };
             };
-            /** @description `BUSINESS_RULE_VIOLATION` — The request was well-formed and the entities exist, but a domain rule forbids it — publishing a product with no price, archiving a brand products still reference, deleting media a tier badge uses ("This media is still used — tier badge on Sprout of ladder version Launch. Replace or remove it first."), issuing more stock than a location holds, restoring a category under an archived parent ("Restore the parent category first.") or a product under an archived brand ("Restore the brand first."). Distinct from 400: nothing about the request is malformed. */
+            /** @description `BUSINESS_RULE_VIOLATION` — The request was well-formed and the entities exist, but a domain rule forbids it — publishing a product with no price, archiving a brand products still reference, deleting media a tier badge uses ("This media is still used — tier badge on Sprout of ladder version Launch. Replace or remove it first."), issuing more stock than a location holds, restoring a category under an archived parent ("Restore the parent category first.") or a product under an archived brand ("Restore the brand first."), refunding through the gateway a payment that was never captured ("The payment was never captured, so there is nothing to refund.") or one whose gateway refund is under way ("A refund through the payment gateway is already in progress for this order. Refresh it to see where it stands."), refreshing a refund that is not under way ("This order has no refund in progress at the payment gateway to refresh."). Distinct from 400: nothing about the request is malformed. */
             422: {
                 headers: {
                     [name: string]: unknown;
@@ -21701,7 +22231,7 @@ export interface operations {
                     "application/json": components["schemas"]["ErrorResponse"];
                 };
             };
-            /** @description `BUSINESS_RULE_VIOLATION` — The request was well-formed and the entities exist, but a domain rule forbids it — publishing a product with no price, archiving a brand products still reference, deleting media a tier badge uses ("This media is still used — tier badge on Sprout of ladder version Launch. Replace or remove it first."), issuing more stock than a location holds, restoring a category under an archived parent ("Restore the parent category first.") or a product under an archived brand ("Restore the brand first."). Distinct from 400: nothing about the request is malformed. */
+            /** @description `BUSINESS_RULE_VIOLATION` — The request was well-formed and the entities exist, but a domain rule forbids it — publishing a product with no price, archiving a brand products still reference, deleting media a tier badge uses ("This media is still used — tier badge on Sprout of ladder version Launch. Replace or remove it first."), issuing more stock than a location holds, restoring a category under an archived parent ("Restore the parent category first.") or a product under an archived brand ("Restore the brand first."), refunding through the gateway a payment that was never captured ("The payment was never captured, so there is nothing to refund.") or one whose gateway refund is under way ("A refund through the payment gateway is already in progress for this order. Refresh it to see where it stands."), refreshing a refund that is not under way ("This order has no refund in progress at the payment gateway to refresh."). Distinct from 400: nothing about the request is malformed. */
             422: {
                 headers: {
                     [name: string]: unknown;
@@ -21800,7 +22330,7 @@ export interface operations {
                     "application/json": components["schemas"]["ErrorResponse"];
                 };
             };
-            /** @description `BUSINESS_RULE_VIOLATION` — The request was well-formed and the entities exist, but a domain rule forbids it — publishing a product with no price, archiving a brand products still reference, deleting media a tier badge uses ("This media is still used — tier badge on Sprout of ladder version Launch. Replace or remove it first."), issuing more stock than a location holds, restoring a category under an archived parent ("Restore the parent category first.") or a product under an archived brand ("Restore the brand first."). Distinct from 400: nothing about the request is malformed. */
+            /** @description `BUSINESS_RULE_VIOLATION` — The request was well-formed and the entities exist, but a domain rule forbids it — publishing a product with no price, archiving a brand products still reference, deleting media a tier badge uses ("This media is still used — tier badge on Sprout of ladder version Launch. Replace or remove it first."), issuing more stock than a location holds, restoring a category under an archived parent ("Restore the parent category first.") or a product under an archived brand ("Restore the brand first."), refunding through the gateway a payment that was never captured ("The payment was never captured, so there is nothing to refund.") or one whose gateway refund is under way ("A refund through the payment gateway is already in progress for this order. Refresh it to see where it stands."), refreshing a refund that is not under way ("This order has no refund in progress at the payment gateway to refresh."). Distinct from 400: nothing about the request is malformed. */
             422: {
                 headers: {
                     [name: string]: unknown;
@@ -21884,7 +22414,7 @@ export interface operations {
                     "application/json": components["schemas"]["ErrorResponse"];
                 };
             };
-            /** @description `BUSINESS_RULE_VIOLATION` — The request was well-formed and the entities exist, but a domain rule forbids it — publishing a product with no price, archiving a brand products still reference, deleting media a tier badge uses ("This media is still used — tier badge on Sprout of ladder version Launch. Replace or remove it first."), issuing more stock than a location holds, restoring a category under an archived parent ("Restore the parent category first.") or a product under an archived brand ("Restore the brand first."). Distinct from 400: nothing about the request is malformed. */
+            /** @description `BUSINESS_RULE_VIOLATION` — The request was well-formed and the entities exist, but a domain rule forbids it — publishing a product with no price, archiving a brand products still reference, deleting media a tier badge uses ("This media is still used — tier badge on Sprout of ladder version Launch. Replace or remove it first."), issuing more stock than a location holds, restoring a category under an archived parent ("Restore the parent category first.") or a product under an archived brand ("Restore the brand first."), refunding through the gateway a payment that was never captured ("The payment was never captured, so there is nothing to refund.") or one whose gateway refund is under way ("A refund through the payment gateway is already in progress for this order. Refresh it to see where it stands."), refreshing a refund that is not under way ("This order has no refund in progress at the payment gateway to refresh."). Distinct from 400: nothing about the request is malformed. */
             422: {
                 headers: {
                     [name: string]: unknown;
@@ -21983,7 +22513,7 @@ export interface operations {
                     "application/json": components["schemas"]["ErrorResponse"];
                 };
             };
-            /** @description `BUSINESS_RULE_VIOLATION` — The request was well-formed and the entities exist, but a domain rule forbids it — publishing a product with no price, archiving a brand products still reference, deleting media a tier badge uses ("This media is still used — tier badge on Sprout of ladder version Launch. Replace or remove it first."), issuing more stock than a location holds, restoring a category under an archived parent ("Restore the parent category first.") or a product under an archived brand ("Restore the brand first."). Distinct from 400: nothing about the request is malformed. */
+            /** @description `BUSINESS_RULE_VIOLATION` — The request was well-formed and the entities exist, but a domain rule forbids it — publishing a product with no price, archiving a brand products still reference, deleting media a tier badge uses ("This media is still used — tier badge on Sprout of ladder version Launch. Replace or remove it first."), issuing more stock than a location holds, restoring a category under an archived parent ("Restore the parent category first.") or a product under an archived brand ("Restore the brand first."), refunding through the gateway a payment that was never captured ("The payment was never captured, so there is nothing to refund.") or one whose gateway refund is under way ("A refund through the payment gateway is already in progress for this order. Refresh it to see where it stands."), refreshing a refund that is not under way ("This order has no refund in progress at the payment gateway to refresh."). Distinct from 400: nothing about the request is malformed. */
             422: {
                 headers: {
                     [name: string]: unknown;
@@ -22083,7 +22613,7 @@ export interface operations {
                     "application/json": components["schemas"]["ErrorResponse"];
                 };
             };
-            /** @description `BUSINESS_RULE_VIOLATION` — The request was well-formed and the entities exist, but a domain rule forbids it — publishing a product with no price, archiving a brand products still reference, deleting media a tier badge uses ("This media is still used — tier badge on Sprout of ladder version Launch. Replace or remove it first."), issuing more stock than a location holds, restoring a category under an archived parent ("Restore the parent category first.") or a product under an archived brand ("Restore the brand first."). Distinct from 400: nothing about the request is malformed. */
+            /** @description `BUSINESS_RULE_VIOLATION` — The request was well-formed and the entities exist, but a domain rule forbids it — publishing a product with no price, archiving a brand products still reference, deleting media a tier badge uses ("This media is still used — tier badge on Sprout of ladder version Launch. Replace or remove it first."), issuing more stock than a location holds, restoring a category under an archived parent ("Restore the parent category first.") or a product under an archived brand ("Restore the brand first."), refunding through the gateway a payment that was never captured ("The payment was never captured, so there is nothing to refund.") or one whose gateway refund is under way ("A refund through the payment gateway is already in progress for this order. Refresh it to see where it stands."), refreshing a refund that is not under way ("This order has no refund in progress at the payment gateway to refresh."). Distinct from 400: nothing about the request is malformed. */
             422: {
                 headers: {
                     [name: string]: unknown;
@@ -22168,7 +22698,7 @@ export interface operations {
                     "application/json": components["schemas"]["ErrorResponse"];
                 };
             };
-            /** @description `BUSINESS_RULE_VIOLATION` — The request was well-formed and the entities exist, but a domain rule forbids it — publishing a product with no price, archiving a brand products still reference, deleting media a tier badge uses ("This media is still used — tier badge on Sprout of ladder version Launch. Replace or remove it first."), issuing more stock than a location holds, restoring a category under an archived parent ("Restore the parent category first.") or a product under an archived brand ("Restore the brand first."). Distinct from 400: nothing about the request is malformed. */
+            /** @description `BUSINESS_RULE_VIOLATION` — The request was well-formed and the entities exist, but a domain rule forbids it — publishing a product with no price, archiving a brand products still reference, deleting media a tier badge uses ("This media is still used — tier badge on Sprout of ladder version Launch. Replace or remove it first."), issuing more stock than a location holds, restoring a category under an archived parent ("Restore the parent category first.") or a product under an archived brand ("Restore the brand first."), refunding through the gateway a payment that was never captured ("The payment was never captured, so there is nothing to refund.") or one whose gateway refund is under way ("A refund through the payment gateway is already in progress for this order. Refresh it to see where it stands."), refreshing a refund that is not under way ("This order has no refund in progress at the payment gateway to refresh."). Distinct from 400: nothing about the request is malformed. */
             422: {
                 headers: {
                     [name: string]: unknown;
@@ -22267,7 +22797,7 @@ export interface operations {
                     "application/json": components["schemas"]["ErrorResponse"];
                 };
             };
-            /** @description `BUSINESS_RULE_VIOLATION` — The request was well-formed and the entities exist, but a domain rule forbids it — publishing a product with no price, archiving a brand products still reference, deleting media a tier badge uses ("This media is still used — tier badge on Sprout of ladder version Launch. Replace or remove it first."), issuing more stock than a location holds, restoring a category under an archived parent ("Restore the parent category first.") or a product under an archived brand ("Restore the brand first."). Distinct from 400: nothing about the request is malformed. */
+            /** @description `BUSINESS_RULE_VIOLATION` — The request was well-formed and the entities exist, but a domain rule forbids it — publishing a product with no price, archiving a brand products still reference, deleting media a tier badge uses ("This media is still used — tier badge on Sprout of ladder version Launch. Replace or remove it first."), issuing more stock than a location holds, restoring a category under an archived parent ("Restore the parent category first.") or a product under an archived brand ("Restore the brand first."), refunding through the gateway a payment that was never captured ("The payment was never captured, so there is nothing to refund.") or one whose gateway refund is under way ("A refund through the payment gateway is already in progress for this order. Refresh it to see where it stands."), refreshing a refund that is not under way ("This order has no refund in progress at the payment gateway to refresh."). Distinct from 400: nothing about the request is malformed. */
             422: {
                 headers: {
                     [name: string]: unknown;
@@ -22365,7 +22895,7 @@ export interface operations {
                     "application/json": components["schemas"]["ErrorResponse"];
                 };
             };
-            /** @description `BUSINESS_RULE_VIOLATION` — The request was well-formed and the entities exist, but a domain rule forbids it — publishing a product with no price, archiving a brand products still reference, deleting media a tier badge uses ("This media is still used — tier badge on Sprout of ladder version Launch. Replace or remove it first."), issuing more stock than a location holds, restoring a category under an archived parent ("Restore the parent category first.") or a product under an archived brand ("Restore the brand first."). Distinct from 400: nothing about the request is malformed. */
+            /** @description `BUSINESS_RULE_VIOLATION` — The request was well-formed and the entities exist, but a domain rule forbids it — publishing a product with no price, archiving a brand products still reference, deleting media a tier badge uses ("This media is still used — tier badge on Sprout of ladder version Launch. Replace or remove it first."), issuing more stock than a location holds, restoring a category under an archived parent ("Restore the parent category first.") or a product under an archived brand ("Restore the brand first."), refunding through the gateway a payment that was never captured ("The payment was never captured, so there is nothing to refund.") or one whose gateway refund is under way ("A refund through the payment gateway is already in progress for this order. Refresh it to see where it stands."), refreshing a refund that is not under way ("This order has no refund in progress at the payment gateway to refresh."). Distinct from 400: nothing about the request is malformed. */
             422: {
                 headers: {
                     [name: string]: unknown;
@@ -22463,7 +22993,7 @@ export interface operations {
                     "application/json": components["schemas"]["ErrorResponse"];
                 };
             };
-            /** @description `BUSINESS_RULE_VIOLATION` — The request was well-formed and the entities exist, but a domain rule forbids it — publishing a product with no price, archiving a brand products still reference, deleting media a tier badge uses ("This media is still used — tier badge on Sprout of ladder version Launch. Replace or remove it first."), issuing more stock than a location holds, restoring a category under an archived parent ("Restore the parent category first.") or a product under an archived brand ("Restore the brand first."). Distinct from 400: nothing about the request is malformed. */
+            /** @description `BUSINESS_RULE_VIOLATION` — The request was well-formed and the entities exist, but a domain rule forbids it — publishing a product with no price, archiving a brand products still reference, deleting media a tier badge uses ("This media is still used — tier badge on Sprout of ladder version Launch. Replace or remove it first."), issuing more stock than a location holds, restoring a category under an archived parent ("Restore the parent category first.") or a product under an archived brand ("Restore the brand first."), refunding through the gateway a payment that was never captured ("The payment was never captured, so there is nothing to refund.") or one whose gateway refund is under way ("A refund through the payment gateway is already in progress for this order. Refresh it to see where it stands."), refreshing a refund that is not under way ("This order has no refund in progress at the payment gateway to refresh."). Distinct from 400: nothing about the request is malformed. */
             422: {
                 headers: {
                     [name: string]: unknown;
@@ -22628,7 +23158,7 @@ export interface operations {
                     "application/json": components["schemas"]["ErrorResponse"];
                 };
             };
-            /** @description `BUSINESS_RULE_VIOLATION` — The request was well-formed and the entities exist, but a domain rule forbids it — publishing a product with no price, archiving a brand products still reference, deleting media a tier badge uses ("This media is still used — tier badge on Sprout of ladder version Launch. Replace or remove it first."), issuing more stock than a location holds, restoring a category under an archived parent ("Restore the parent category first.") or a product under an archived brand ("Restore the brand first."). Distinct from 400: nothing about the request is malformed. */
+            /** @description `BUSINESS_RULE_VIOLATION` — The request was well-formed and the entities exist, but a domain rule forbids it — publishing a product with no price, archiving a brand products still reference, deleting media a tier badge uses ("This media is still used — tier badge on Sprout of ladder version Launch. Replace or remove it first."), issuing more stock than a location holds, restoring a category under an archived parent ("Restore the parent category first.") or a product under an archived brand ("Restore the brand first."), refunding through the gateway a payment that was never captured ("The payment was never captured, so there is nothing to refund.") or one whose gateway refund is under way ("A refund through the payment gateway is already in progress for this order. Refresh it to see where it stands."), refreshing a refund that is not under way ("This order has no refund in progress at the payment gateway to refresh."). Distinct from 400: nothing about the request is malformed. */
             422: {
                 headers: {
                     [name: string]: unknown;
@@ -22727,7 +23257,7 @@ export interface operations {
                     "application/json": components["schemas"]["ErrorResponse"];
                 };
             };
-            /** @description `BUSINESS_RULE_VIOLATION` — The request was well-formed and the entities exist, but a domain rule forbids it — publishing a product with no price, archiving a brand products still reference, deleting media a tier badge uses ("This media is still used — tier badge on Sprout of ladder version Launch. Replace or remove it first."), issuing more stock than a location holds, restoring a category under an archived parent ("Restore the parent category first.") or a product under an archived brand ("Restore the brand first."). Distinct from 400: nothing about the request is malformed. */
+            /** @description `BUSINESS_RULE_VIOLATION` — The request was well-formed and the entities exist, but a domain rule forbids it — publishing a product with no price, archiving a brand products still reference, deleting media a tier badge uses ("This media is still used — tier badge on Sprout of ladder version Launch. Replace or remove it first."), issuing more stock than a location holds, restoring a category under an archived parent ("Restore the parent category first.") or a product under an archived brand ("Restore the brand first."), refunding through the gateway a payment that was never captured ("The payment was never captured, so there is nothing to refund.") or one whose gateway refund is under way ("A refund through the payment gateway is already in progress for this order. Refresh it to see where it stands."), refreshing a refund that is not under way ("This order has no refund in progress at the payment gateway to refresh."). Distinct from 400: nothing about the request is malformed. */
             422: {
                 headers: {
                     [name: string]: unknown;
@@ -22811,7 +23341,7 @@ export interface operations {
                     "application/json": components["schemas"]["ErrorResponse"];
                 };
             };
-            /** @description `BUSINESS_RULE_VIOLATION` — The request was well-formed and the entities exist, but a domain rule forbids it — publishing a product with no price, archiving a brand products still reference, deleting media a tier badge uses ("This media is still used — tier badge on Sprout of ladder version Launch. Replace or remove it first."), issuing more stock than a location holds, restoring a category under an archived parent ("Restore the parent category first.") or a product under an archived brand ("Restore the brand first."). Distinct from 400: nothing about the request is malformed. */
+            /** @description `BUSINESS_RULE_VIOLATION` — The request was well-formed and the entities exist, but a domain rule forbids it — publishing a product with no price, archiving a brand products still reference, deleting media a tier badge uses ("This media is still used — tier badge on Sprout of ladder version Launch. Replace or remove it first."), issuing more stock than a location holds, restoring a category under an archived parent ("Restore the parent category first.") or a product under an archived brand ("Restore the brand first."), refunding through the gateway a payment that was never captured ("The payment was never captured, so there is nothing to refund.") or one whose gateway refund is under way ("A refund through the payment gateway is already in progress for this order. Refresh it to see where it stands."), refreshing a refund that is not under way ("This order has no refund in progress at the payment gateway to refresh."). Distinct from 400: nothing about the request is malformed. */
             422: {
                 headers: {
                     [name: string]: unknown;
@@ -22909,7 +23439,7 @@ export interface operations {
                     "application/json": components["schemas"]["ErrorResponse"];
                 };
             };
-            /** @description `BUSINESS_RULE_VIOLATION` — The request was well-formed and the entities exist, but a domain rule forbids it — publishing a product with no price, archiving a brand products still reference, deleting media a tier badge uses ("This media is still used — tier badge on Sprout of ladder version Launch. Replace or remove it first."), issuing more stock than a location holds, restoring a category under an archived parent ("Restore the parent category first.") or a product under an archived brand ("Restore the brand first."). Distinct from 400: nothing about the request is malformed. */
+            /** @description `BUSINESS_RULE_VIOLATION` — The request was well-formed and the entities exist, but a domain rule forbids it — publishing a product with no price, archiving a brand products still reference, deleting media a tier badge uses ("This media is still used — tier badge on Sprout of ladder version Launch. Replace or remove it first."), issuing more stock than a location holds, restoring a category under an archived parent ("Restore the parent category first.") or a product under an archived brand ("Restore the brand first."), refunding through the gateway a payment that was never captured ("The payment was never captured, so there is nothing to refund.") or one whose gateway refund is under way ("A refund through the payment gateway is already in progress for this order. Refresh it to see where it stands."), refreshing a refund that is not under way ("This order has no refund in progress at the payment gateway to refresh."). Distinct from 400: nothing about the request is malformed. */
             422: {
                 headers: {
                     [name: string]: unknown;
@@ -23074,7 +23604,7 @@ export interface operations {
                     "application/json": components["schemas"]["ErrorResponse"];
                 };
             };
-            /** @description `BUSINESS_RULE_VIOLATION` — The request was well-formed and the entities exist, but a domain rule forbids it — publishing a product with no price, archiving a brand products still reference, deleting media a tier badge uses ("This media is still used — tier badge on Sprout of ladder version Launch. Replace or remove it first."), issuing more stock than a location holds, restoring a category under an archived parent ("Restore the parent category first.") or a product under an archived brand ("Restore the brand first."). Distinct from 400: nothing about the request is malformed. */
+            /** @description `BUSINESS_RULE_VIOLATION` — The request was well-formed and the entities exist, but a domain rule forbids it — publishing a product with no price, archiving a brand products still reference, deleting media a tier badge uses ("This media is still used — tier badge on Sprout of ladder version Launch. Replace or remove it first."), issuing more stock than a location holds, restoring a category under an archived parent ("Restore the parent category first.") or a product under an archived brand ("Restore the brand first."), refunding through the gateway a payment that was never captured ("The payment was never captured, so there is nothing to refund.") or one whose gateway refund is under way ("A refund through the payment gateway is already in progress for this order. Refresh it to see where it stands."), refreshing a refund that is not under way ("This order has no refund in progress at the payment gateway to refresh."). Distinct from 400: nothing about the request is malformed. */
             422: {
                 headers: {
                     [name: string]: unknown;
@@ -23239,7 +23769,7 @@ export interface operations {
                     "application/json": components["schemas"]["ErrorResponse"];
                 };
             };
-            /** @description `BUSINESS_RULE_VIOLATION` — The request was well-formed and the entities exist, but a domain rule forbids it — publishing a product with no price, archiving a brand products still reference, deleting media a tier badge uses ("This media is still used — tier badge on Sprout of ladder version Launch. Replace or remove it first."), issuing more stock than a location holds, restoring a category under an archived parent ("Restore the parent category first.") or a product under an archived brand ("Restore the brand first."). Distinct from 400: nothing about the request is malformed. */
+            /** @description `BUSINESS_RULE_VIOLATION` — The request was well-formed and the entities exist, but a domain rule forbids it — publishing a product with no price, archiving a brand products still reference, deleting media a tier badge uses ("This media is still used — tier badge on Sprout of ladder version Launch. Replace or remove it first."), issuing more stock than a location holds, restoring a category under an archived parent ("Restore the parent category first.") or a product under an archived brand ("Restore the brand first."), refunding through the gateway a payment that was never captured ("The payment was never captured, so there is nothing to refund.") or one whose gateway refund is under way ("A refund through the payment gateway is already in progress for this order. Refresh it to see where it stands."), refreshing a refund that is not under way ("This order has no refund in progress at the payment gateway to refresh."). Distinct from 400: nothing about the request is malformed. */
             422: {
                 headers: {
                     [name: string]: unknown;
@@ -23325,7 +23855,7 @@ export interface operations {
                     "application/json": components["schemas"]["ErrorResponse"];
                 };
             };
-            /** @description `BUSINESS_RULE_VIOLATION` — The request was well-formed and the entities exist, but a domain rule forbids it — publishing a product with no price, archiving a brand products still reference, deleting media a tier badge uses ("This media is still used — tier badge on Sprout of ladder version Launch. Replace or remove it first."), issuing more stock than a location holds, restoring a category under an archived parent ("Restore the parent category first.") or a product under an archived brand ("Restore the brand first."). Distinct from 400: nothing about the request is malformed. */
+            /** @description `BUSINESS_RULE_VIOLATION` — The request was well-formed and the entities exist, but a domain rule forbids it — publishing a product with no price, archiving a brand products still reference, deleting media a tier badge uses ("This media is still used — tier badge on Sprout of ladder version Launch. Replace or remove it first."), issuing more stock than a location holds, restoring a category under an archived parent ("Restore the parent category first.") or a product under an archived brand ("Restore the brand first."), refunding through the gateway a payment that was never captured ("The payment was never captured, so there is nothing to refund.") or one whose gateway refund is under way ("A refund through the payment gateway is already in progress for this order. Refresh it to see where it stands."), refreshing a refund that is not under way ("This order has no refund in progress at the payment gateway to refresh."). Distinct from 400: nothing about the request is malformed. */
             422: {
                 headers: {
                     [name: string]: unknown;
@@ -23423,7 +23953,7 @@ export interface operations {
                     "application/json": components["schemas"]["ErrorResponse"];
                 };
             };
-            /** @description `BUSINESS_RULE_VIOLATION` — The request was well-formed and the entities exist, but a domain rule forbids it — publishing a product with no price, archiving a brand products still reference, deleting media a tier badge uses ("This media is still used — tier badge on Sprout of ladder version Launch. Replace or remove it first."), issuing more stock than a location holds, restoring a category under an archived parent ("Restore the parent category first.") or a product under an archived brand ("Restore the brand first."). Distinct from 400: nothing about the request is malformed. */
+            /** @description `BUSINESS_RULE_VIOLATION` — The request was well-formed and the entities exist, but a domain rule forbids it — publishing a product with no price, archiving a brand products still reference, deleting media a tier badge uses ("This media is still used — tier badge on Sprout of ladder version Launch. Replace or remove it first."), issuing more stock than a location holds, restoring a category under an archived parent ("Restore the parent category first.") or a product under an archived brand ("Restore the brand first."), refunding through the gateway a payment that was never captured ("The payment was never captured, so there is nothing to refund.") or one whose gateway refund is under way ("A refund through the payment gateway is already in progress for this order. Refresh it to see where it stands."), refreshing a refund that is not under way ("This order has no refund in progress at the payment gateway to refresh."). Distinct from 400: nothing about the request is malformed. */
             422: {
                 headers: {
                     [name: string]: unknown;
@@ -23588,7 +24118,7 @@ export interface operations {
                     "application/json": components["schemas"]["ErrorResponse"];
                 };
             };
-            /** @description `BUSINESS_RULE_VIOLATION` — The request was well-formed and the entities exist, but a domain rule forbids it — publishing a product with no price, archiving a brand products still reference, deleting media a tier badge uses ("This media is still used — tier badge on Sprout of ladder version Launch. Replace or remove it first."), issuing more stock than a location holds, restoring a category under an archived parent ("Restore the parent category first.") or a product under an archived brand ("Restore the brand first."). Distinct from 400: nothing about the request is malformed. */
+            /** @description `BUSINESS_RULE_VIOLATION` — The request was well-formed and the entities exist, but a domain rule forbids it — publishing a product with no price, archiving a brand products still reference, deleting media a tier badge uses ("This media is still used — tier badge on Sprout of ladder version Launch. Replace or remove it first."), issuing more stock than a location holds, restoring a category under an archived parent ("Restore the parent category first.") or a product under an archived brand ("Restore the brand first."), refunding through the gateway a payment that was never captured ("The payment was never captured, so there is nothing to refund.") or one whose gateway refund is under way ("A refund through the payment gateway is already in progress for this order. Refresh it to see where it stands."), refreshing a refund that is not under way ("This order has no refund in progress at the payment gateway to refresh."). Distinct from 400: nothing about the request is malformed. */
             422: {
                 headers: {
                     [name: string]: unknown;
@@ -23672,7 +24202,7 @@ export interface operations {
                     "application/json": components["schemas"]["ErrorResponse"];
                 };
             };
-            /** @description `BUSINESS_RULE_VIOLATION` — The request was well-formed and the entities exist, but a domain rule forbids it — publishing a product with no price, archiving a brand products still reference, deleting media a tier badge uses ("This media is still used — tier badge on Sprout of ladder version Launch. Replace or remove it first."), issuing more stock than a location holds, restoring a category under an archived parent ("Restore the parent category first.") or a product under an archived brand ("Restore the brand first."). Distinct from 400: nothing about the request is malformed. */
+            /** @description `BUSINESS_RULE_VIOLATION` — The request was well-formed and the entities exist, but a domain rule forbids it — publishing a product with no price, archiving a brand products still reference, deleting media a tier badge uses ("This media is still used — tier badge on Sprout of ladder version Launch. Replace or remove it first."), issuing more stock than a location holds, restoring a category under an archived parent ("Restore the parent category first.") or a product under an archived brand ("Restore the brand first."), refunding through the gateway a payment that was never captured ("The payment was never captured, so there is nothing to refund.") or one whose gateway refund is under way ("A refund through the payment gateway is already in progress for this order. Refresh it to see where it stands."), refreshing a refund that is not under way ("This order has no refund in progress at the payment gateway to refresh."). Distinct from 400: nothing about the request is malformed. */
             422: {
                 headers: {
                     [name: string]: unknown;
@@ -23837,7 +24367,7 @@ export interface operations {
                     "application/json": components["schemas"]["ErrorResponse"];
                 };
             };
-            /** @description `BUSINESS_RULE_VIOLATION` — The request was well-formed and the entities exist, but a domain rule forbids it — publishing a product with no price, archiving a brand products still reference, deleting media a tier badge uses ("This media is still used — tier badge on Sprout of ladder version Launch. Replace or remove it first."), issuing more stock than a location holds, restoring a category under an archived parent ("Restore the parent category first.") or a product under an archived brand ("Restore the brand first."). Distinct from 400: nothing about the request is malformed. */
+            /** @description `BUSINESS_RULE_VIOLATION` — The request was well-formed and the entities exist, but a domain rule forbids it — publishing a product with no price, archiving a brand products still reference, deleting media a tier badge uses ("This media is still used — tier badge on Sprout of ladder version Launch. Replace or remove it first."), issuing more stock than a location holds, restoring a category under an archived parent ("Restore the parent category first.") or a product under an archived brand ("Restore the brand first."), refunding through the gateway a payment that was never captured ("The payment was never captured, so there is nothing to refund.") or one whose gateway refund is under way ("A refund through the payment gateway is already in progress for this order. Refresh it to see where it stands."), refreshing a refund that is not under way ("This order has no refund in progress at the payment gateway to refresh."). Distinct from 400: nothing about the request is malformed. */
             422: {
                 headers: {
                     [name: string]: unknown;
@@ -23936,7 +24466,7 @@ export interface operations {
                     "application/json": components["schemas"]["ErrorResponse"];
                 };
             };
-            /** @description `BUSINESS_RULE_VIOLATION` — The request was well-formed and the entities exist, but a domain rule forbids it — publishing a product with no price, archiving a brand products still reference, deleting media a tier badge uses ("This media is still used — tier badge on Sprout of ladder version Launch. Replace or remove it first."), issuing more stock than a location holds, restoring a category under an archived parent ("Restore the parent category first.") or a product under an archived brand ("Restore the brand first."). Distinct from 400: nothing about the request is malformed. */
+            /** @description `BUSINESS_RULE_VIOLATION` — The request was well-formed and the entities exist, but a domain rule forbids it — publishing a product with no price, archiving a brand products still reference, deleting media a tier badge uses ("This media is still used — tier badge on Sprout of ladder version Launch. Replace or remove it first."), issuing more stock than a location holds, restoring a category under an archived parent ("Restore the parent category first.") or a product under an archived brand ("Restore the brand first."), refunding through the gateway a payment that was never captured ("The payment was never captured, so there is nothing to refund.") or one whose gateway refund is under way ("A refund through the payment gateway is already in progress for this order. Refresh it to see where it stands."), refreshing a refund that is not under way ("This order has no refund in progress at the payment gateway to refresh."). Distinct from 400: nothing about the request is malformed. */
             422: {
                 headers: {
                     [name: string]: unknown;
@@ -24022,7 +24552,7 @@ export interface operations {
                     "application/json": components["schemas"]["ErrorResponse"];
                 };
             };
-            /** @description `BUSINESS_RULE_VIOLATION` — The request was well-formed and the entities exist, but a domain rule forbids it — publishing a product with no price, archiving a brand products still reference, deleting media a tier badge uses ("This media is still used — tier badge on Sprout of ladder version Launch. Replace or remove it first."), issuing more stock than a location holds, restoring a category under an archived parent ("Restore the parent category first.") or a product under an archived brand ("Restore the brand first."). Distinct from 400: nothing about the request is malformed. */
+            /** @description `BUSINESS_RULE_VIOLATION` — The request was well-formed and the entities exist, but a domain rule forbids it — publishing a product with no price, archiving a brand products still reference, deleting media a tier badge uses ("This media is still used — tier badge on Sprout of ladder version Launch. Replace or remove it first."), issuing more stock than a location holds, restoring a category under an archived parent ("Restore the parent category first.") or a product under an archived brand ("Restore the brand first."), refunding through the gateway a payment that was never captured ("The payment was never captured, so there is nothing to refund.") or one whose gateway refund is under way ("A refund through the payment gateway is already in progress for this order. Refresh it to see where it stands."), refreshing a refund that is not under way ("This order has no refund in progress at the payment gateway to refresh."). Distinct from 400: nothing about the request is malformed. */
             422: {
                 headers: {
                     [name: string]: unknown;
@@ -24108,7 +24638,7 @@ export interface operations {
                     "application/json": components["schemas"]["ErrorResponse"];
                 };
             };
-            /** @description `BUSINESS_RULE_VIOLATION` — The request was well-formed and the entities exist, but a domain rule forbids it — publishing a product with no price, archiving a brand products still reference, deleting media a tier badge uses ("This media is still used — tier badge on Sprout of ladder version Launch. Replace or remove it first."), issuing more stock than a location holds, restoring a category under an archived parent ("Restore the parent category first.") or a product under an archived brand ("Restore the brand first."). Distinct from 400: nothing about the request is malformed. */
+            /** @description `BUSINESS_RULE_VIOLATION` — The request was well-formed and the entities exist, but a domain rule forbids it — publishing a product with no price, archiving a brand products still reference, deleting media a tier badge uses ("This media is still used — tier badge on Sprout of ladder version Launch. Replace or remove it first."), issuing more stock than a location holds, restoring a category under an archived parent ("Restore the parent category first.") or a product under an archived brand ("Restore the brand first."), refunding through the gateway a payment that was never captured ("The payment was never captured, so there is nothing to refund.") or one whose gateway refund is under way ("A refund through the payment gateway is already in progress for this order. Refresh it to see where it stands."), refreshing a refund that is not under way ("This order has no refund in progress at the payment gateway to refresh."). Distinct from 400: nothing about the request is malformed. */
             422: {
                 headers: {
                     [name: string]: unknown;
@@ -24275,7 +24805,7 @@ export interface operations {
                     "application/json": components["schemas"]["ErrorResponse"];
                 };
             };
-            /** @description `BUSINESS_RULE_VIOLATION` — The request was well-formed and the entities exist, but a domain rule forbids it — publishing a product with no price, archiving a brand products still reference, deleting media a tier badge uses ("This media is still used — tier badge on Sprout of ladder version Launch. Replace or remove it first."), issuing more stock than a location holds, restoring a category under an archived parent ("Restore the parent category first.") or a product under an archived brand ("Restore the brand first."). Distinct from 400: nothing about the request is malformed. */
+            /** @description `BUSINESS_RULE_VIOLATION` — The request was well-formed and the entities exist, but a domain rule forbids it — publishing a product with no price, archiving a brand products still reference, deleting media a tier badge uses ("This media is still used — tier badge on Sprout of ladder version Launch. Replace or remove it first."), issuing more stock than a location holds, restoring a category under an archived parent ("Restore the parent category first.") or a product under an archived brand ("Restore the brand first."), refunding through the gateway a payment that was never captured ("The payment was never captured, so there is nothing to refund.") or one whose gateway refund is under way ("A refund through the payment gateway is already in progress for this order. Refresh it to see where it stands."), refreshing a refund that is not under way ("This order has no refund in progress at the payment gateway to refresh."). Distinct from 400: nothing about the request is malformed. */
             422: {
                 headers: {
                     [name: string]: unknown;
@@ -24375,7 +24905,7 @@ export interface operations {
                     "application/json": components["schemas"]["ErrorResponse"];
                 };
             };
-            /** @description `BUSINESS_RULE_VIOLATION` — The request was well-formed and the entities exist, but a domain rule forbids it — publishing a product with no price, archiving a brand products still reference, deleting media a tier badge uses ("This media is still used — tier badge on Sprout of ladder version Launch. Replace or remove it first."), issuing more stock than a location holds, restoring a category under an archived parent ("Restore the parent category first.") or a product under an archived brand ("Restore the brand first."). Distinct from 400: nothing about the request is malformed. */
+            /** @description `BUSINESS_RULE_VIOLATION` — The request was well-formed and the entities exist, but a domain rule forbids it — publishing a product with no price, archiving a brand products still reference, deleting media a tier badge uses ("This media is still used — tier badge on Sprout of ladder version Launch. Replace or remove it first."), issuing more stock than a location holds, restoring a category under an archived parent ("Restore the parent category first.") or a product under an archived brand ("Restore the brand first."), refunding through the gateway a payment that was never captured ("The payment was never captured, so there is nothing to refund.") or one whose gateway refund is under way ("A refund through the payment gateway is already in progress for this order. Refresh it to see where it stands."), refreshing a refund that is not under way ("This order has no refund in progress at the payment gateway to refresh."). Distinct from 400: nothing about the request is malformed. */
             422: {
                 headers: {
                     [name: string]: unknown;
@@ -24460,7 +24990,7 @@ export interface operations {
                     "application/json": components["schemas"]["ErrorResponse"];
                 };
             };
-            /** @description `BUSINESS_RULE_VIOLATION` — The request was well-formed and the entities exist, but a domain rule forbids it — publishing a product with no price, archiving a brand products still reference, deleting media a tier badge uses ("This media is still used — tier badge on Sprout of ladder version Launch. Replace or remove it first."), issuing more stock than a location holds, restoring a category under an archived parent ("Restore the parent category first.") or a product under an archived brand ("Restore the brand first."). Distinct from 400: nothing about the request is malformed. */
+            /** @description `BUSINESS_RULE_VIOLATION` — The request was well-formed and the entities exist, but a domain rule forbids it — publishing a product with no price, archiving a brand products still reference, deleting media a tier badge uses ("This media is still used — tier badge on Sprout of ladder version Launch. Replace or remove it first."), issuing more stock than a location holds, restoring a category under an archived parent ("Restore the parent category first.") or a product under an archived brand ("Restore the brand first."), refunding through the gateway a payment that was never captured ("The payment was never captured, so there is nothing to refund.") or one whose gateway refund is under way ("A refund through the payment gateway is already in progress for this order. Refresh it to see where it stands."), refreshing a refund that is not under way ("This order has no refund in progress at the payment gateway to refresh."). Distinct from 400: nothing about the request is malformed. */
             422: {
                 headers: {
                     [name: string]: unknown;
@@ -24559,7 +25089,7 @@ export interface operations {
                     "application/json": components["schemas"]["ErrorResponse"];
                 };
             };
-            /** @description `BUSINESS_RULE_VIOLATION` — The request was well-formed and the entities exist, but a domain rule forbids it — publishing a product with no price, archiving a brand products still reference, deleting media a tier badge uses ("This media is still used — tier badge on Sprout of ladder version Launch. Replace or remove it first."), issuing more stock than a location holds, restoring a category under an archived parent ("Restore the parent category first.") or a product under an archived brand ("Restore the brand first."). Distinct from 400: nothing about the request is malformed. */
+            /** @description `BUSINESS_RULE_VIOLATION` — The request was well-formed and the entities exist, but a domain rule forbids it — publishing a product with no price, archiving a brand products still reference, deleting media a tier badge uses ("This media is still used — tier badge on Sprout of ladder version Launch. Replace or remove it first."), issuing more stock than a location holds, restoring a category under an archived parent ("Restore the parent category first.") or a product under an archived brand ("Restore the brand first."), refunding through the gateway a payment that was never captured ("The payment was never captured, so there is nothing to refund.") or one whose gateway refund is under way ("A refund through the payment gateway is already in progress for this order. Refresh it to see where it stands."), refreshing a refund that is not under way ("This order has no refund in progress at the payment gateway to refresh."). Distinct from 400: nothing about the request is malformed. */
             422: {
                 headers: {
                     [name: string]: unknown;
@@ -24726,7 +25256,7 @@ export interface operations {
                     "application/json": components["schemas"]["ErrorResponse"];
                 };
             };
-            /** @description `BUSINESS_RULE_VIOLATION` — The request was well-formed and the entities exist, but a domain rule forbids it — publishing a product with no price, archiving a brand products still reference, deleting media a tier badge uses ("This media is still used — tier badge on Sprout of ladder version Launch. Replace or remove it first."), issuing more stock than a location holds, restoring a category under an archived parent ("Restore the parent category first.") or a product under an archived brand ("Restore the brand first."). Distinct from 400: nothing about the request is malformed. */
+            /** @description `BUSINESS_RULE_VIOLATION` — The request was well-formed and the entities exist, but a domain rule forbids it — publishing a product with no price, archiving a brand products still reference, deleting media a tier badge uses ("This media is still used — tier badge on Sprout of ladder version Launch. Replace or remove it first."), issuing more stock than a location holds, restoring a category under an archived parent ("Restore the parent category first.") or a product under an archived brand ("Restore the brand first."), refunding through the gateway a payment that was never captured ("The payment was never captured, so there is nothing to refund.") or one whose gateway refund is under way ("A refund through the payment gateway is already in progress for this order. Refresh it to see where it stands."), refreshing a refund that is not under way ("This order has no refund in progress at the payment gateway to refresh."). Distinct from 400: nothing about the request is malformed. */
             422: {
                 headers: {
                     [name: string]: unknown;
@@ -24812,7 +25342,7 @@ export interface operations {
                     "application/json": components["schemas"]["ErrorResponse"];
                 };
             };
-            /** @description `BUSINESS_RULE_VIOLATION` — The request was well-formed and the entities exist, but a domain rule forbids it — publishing a product with no price, archiving a brand products still reference, deleting media a tier badge uses ("This media is still used — tier badge on Sprout of ladder version Launch. Replace or remove it first."), issuing more stock than a location holds, restoring a category under an archived parent ("Restore the parent category first.") or a product under an archived brand ("Restore the brand first."). Distinct from 400: nothing about the request is malformed. */
+            /** @description `BUSINESS_RULE_VIOLATION` — The request was well-formed and the entities exist, but a domain rule forbids it — publishing a product with no price, archiving a brand products still reference, deleting media a tier badge uses ("This media is still used — tier badge on Sprout of ladder version Launch. Replace or remove it first."), issuing more stock than a location holds, restoring a category under an archived parent ("Restore the parent category first.") or a product under an archived brand ("Restore the brand first."), refunding through the gateway a payment that was never captured ("The payment was never captured, so there is nothing to refund.") or one whose gateway refund is under way ("A refund through the payment gateway is already in progress for this order. Refresh it to see where it stands."), refreshing a refund that is not under way ("This order has no refund in progress at the payment gateway to refresh."). Distinct from 400: nothing about the request is malformed. */
             422: {
                 headers: {
                     [name: string]: unknown;
@@ -24979,7 +25509,7 @@ export interface operations {
                     "application/json": components["schemas"]["ErrorResponse"];
                 };
             };
-            /** @description `BUSINESS_RULE_VIOLATION` — The request was well-formed and the entities exist, but a domain rule forbids it — publishing a product with no price, archiving a brand products still reference, deleting media a tier badge uses ("This media is still used — tier badge on Sprout of ladder version Launch. Replace or remove it first."), issuing more stock than a location holds, restoring a category under an archived parent ("Restore the parent category first.") or a product under an archived brand ("Restore the brand first."). Distinct from 400: nothing about the request is malformed. */
+            /** @description `BUSINESS_RULE_VIOLATION` — The request was well-formed and the entities exist, but a domain rule forbids it — publishing a product with no price, archiving a brand products still reference, deleting media a tier badge uses ("This media is still used — tier badge on Sprout of ladder version Launch. Replace or remove it first."), issuing more stock than a location holds, restoring a category under an archived parent ("Restore the parent category first.") or a product under an archived brand ("Restore the brand first."), refunding through the gateway a payment that was never captured ("The payment was never captured, so there is nothing to refund.") or one whose gateway refund is under way ("A refund through the payment gateway is already in progress for this order. Refresh it to see where it stands."), refreshing a refund that is not under way ("This order has no refund in progress at the payment gateway to refresh."). Distinct from 400: nothing about the request is malformed. */
             422: {
                 headers: {
                     [name: string]: unknown;
@@ -25064,7 +25594,7 @@ export interface operations {
                     "application/json": components["schemas"]["ErrorResponse"];
                 };
             };
-            /** @description `BUSINESS_RULE_VIOLATION` — The request was well-formed and the entities exist, but a domain rule forbids it — publishing a product with no price, archiving a brand products still reference, deleting media a tier badge uses ("This media is still used — tier badge on Sprout of ladder version Launch. Replace or remove it first."), issuing more stock than a location holds, restoring a category under an archived parent ("Restore the parent category first.") or a product under an archived brand ("Restore the brand first."). Distinct from 400: nothing about the request is malformed. */
+            /** @description `BUSINESS_RULE_VIOLATION` — The request was well-formed and the entities exist, but a domain rule forbids it — publishing a product with no price, archiving a brand products still reference, deleting media a tier badge uses ("This media is still used — tier badge on Sprout of ladder version Launch. Replace or remove it first."), issuing more stock than a location holds, restoring a category under an archived parent ("Restore the parent category first.") or a product under an archived brand ("Restore the brand first."), refunding through the gateway a payment that was never captured ("The payment was never captured, so there is nothing to refund.") or one whose gateway refund is under way ("A refund through the payment gateway is already in progress for this order. Refresh it to see where it stands."), refreshing a refund that is not under way ("This order has no refund in progress at the payment gateway to refresh."). Distinct from 400: nothing about the request is malformed. */
             422: {
                 headers: {
                     [name: string]: unknown;
@@ -25162,7 +25692,7 @@ export interface operations {
                     "application/json": components["schemas"]["ErrorResponse"];
                 };
             };
-            /** @description `BUSINESS_RULE_VIOLATION` — The request was well-formed and the entities exist, but a domain rule forbids it — publishing a product with no price, archiving a brand products still reference, deleting media a tier badge uses ("This media is still used — tier badge on Sprout of ladder version Launch. Replace or remove it first."), issuing more stock than a location holds, restoring a category under an archived parent ("Restore the parent category first.") or a product under an archived brand ("Restore the brand first."). Distinct from 400: nothing about the request is malformed. */
+            /** @description `BUSINESS_RULE_VIOLATION` — The request was well-formed and the entities exist, but a domain rule forbids it — publishing a product with no price, archiving a brand products still reference, deleting media a tier badge uses ("This media is still used — tier badge on Sprout of ladder version Launch. Replace or remove it first."), issuing more stock than a location holds, restoring a category under an archived parent ("Restore the parent category first.") or a product under an archived brand ("Restore the brand first."), refunding through the gateway a payment that was never captured ("The payment was never captured, so there is nothing to refund.") or one whose gateway refund is under way ("A refund through the payment gateway is already in progress for this order. Refresh it to see where it stands."), refreshing a refund that is not under way ("This order has no refund in progress at the payment gateway to refresh."). Distinct from 400: nothing about the request is malformed. */
             422: {
                 headers: {
                     [name: string]: unknown;
@@ -25572,7 +26102,7 @@ export interface operations {
                     "application/json": components["schemas"]["ErrorResponse"];
                 };
             };
-            /** @description `BUSINESS_RULE_VIOLATION` — The request was well-formed and the entities exist, but a domain rule forbids it — publishing a product with no price, archiving a brand products still reference, deleting media a tier badge uses ("This media is still used — tier badge on Sprout of ladder version Launch. Replace or remove it first."), issuing more stock than a location holds, restoring a category under an archived parent ("Restore the parent category first.") or a product under an archived brand ("Restore the brand first."). Distinct from 400: nothing about the request is malformed. */
+            /** @description `BUSINESS_RULE_VIOLATION` — The request was well-formed and the entities exist, but a domain rule forbids it — publishing a product with no price, archiving a brand products still reference, deleting media a tier badge uses ("This media is still used — tier badge on Sprout of ladder version Launch. Replace or remove it first."), issuing more stock than a location holds, restoring a category under an archived parent ("Restore the parent category first.") or a product under an archived brand ("Restore the brand first."), refunding through the gateway a payment that was never captured ("The payment was never captured, so there is nothing to refund.") or one whose gateway refund is under way ("A refund through the payment gateway is already in progress for this order. Refresh it to see where it stands."), refreshing a refund that is not under way ("This order has no refund in progress at the payment gateway to refresh."). Distinct from 400: nothing about the request is malformed. */
             422: {
                 headers: {
                     [name: string]: unknown;
@@ -25659,7 +26189,7 @@ export interface operations {
                     "application/json": components["schemas"]["ErrorResponse"];
                 };
             };
-            /** @description `BUSINESS_RULE_VIOLATION` — The request was well-formed and the entities exist, but a domain rule forbids it — publishing a product with no price, archiving a brand products still reference, deleting media a tier badge uses ("This media is still used — tier badge on Sprout of ladder version Launch. Replace or remove it first."), issuing more stock than a location holds, restoring a category under an archived parent ("Restore the parent category first.") or a product under an archived brand ("Restore the brand first."). Distinct from 400: nothing about the request is malformed. */
+            /** @description `BUSINESS_RULE_VIOLATION` — The request was well-formed and the entities exist, but a domain rule forbids it — publishing a product with no price, archiving a brand products still reference, deleting media a tier badge uses ("This media is still used — tier badge on Sprout of ladder version Launch. Replace or remove it first."), issuing more stock than a location holds, restoring a category under an archived parent ("Restore the parent category first.") or a product under an archived brand ("Restore the brand first."), refunding through the gateway a payment that was never captured ("The payment was never captured, so there is nothing to refund.") or one whose gateway refund is under way ("A refund through the payment gateway is already in progress for this order. Refresh it to see where it stands."), refreshing a refund that is not under way ("This order has no refund in progress at the payment gateway to refresh."). Distinct from 400: nothing about the request is malformed. */
             422: {
                 headers: {
                     [name: string]: unknown;
@@ -25810,7 +26340,7 @@ export interface operations {
                     "application/json": components["schemas"]["ErrorResponse"];
                 };
             };
-            /** @description `BUSINESS_RULE_VIOLATION` — The request was well-formed and the entities exist, but a domain rule forbids it — publishing a product with no price, archiving a brand products still reference, deleting media a tier badge uses ("This media is still used — tier badge on Sprout of ladder version Launch. Replace or remove it first."), issuing more stock than a location holds, restoring a category under an archived parent ("Restore the parent category first.") or a product under an archived brand ("Restore the brand first."). Distinct from 400: nothing about the request is malformed. */
+            /** @description `BUSINESS_RULE_VIOLATION` — The request was well-formed and the entities exist, but a domain rule forbids it — publishing a product with no price, archiving a brand products still reference, deleting media a tier badge uses ("This media is still used — tier badge on Sprout of ladder version Launch. Replace or remove it first."), issuing more stock than a location holds, restoring a category under an archived parent ("Restore the parent category first.") or a product under an archived brand ("Restore the brand first."), refunding through the gateway a payment that was never captured ("The payment was never captured, so there is nothing to refund.") or one whose gateway refund is under way ("A refund through the payment gateway is already in progress for this order. Refresh it to see where it stands."), refreshing a refund that is not under way ("This order has no refund in progress at the payment gateway to refresh."). Distinct from 400: nothing about the request is malformed. */
             422: {
                 headers: {
                     [name: string]: unknown;
@@ -25975,7 +26505,7 @@ export interface operations {
                     "application/json": components["schemas"]["ErrorResponse"];
                 };
             };
-            /** @description `BUSINESS_RULE_VIOLATION` — The request was well-formed and the entities exist, but a domain rule forbids it — publishing a product with no price, archiving a brand products still reference, deleting media a tier badge uses ("This media is still used — tier badge on Sprout of ladder version Launch. Replace or remove it first."), issuing more stock than a location holds, restoring a category under an archived parent ("Restore the parent category first.") or a product under an archived brand ("Restore the brand first."). Distinct from 400: nothing about the request is malformed. */
+            /** @description `BUSINESS_RULE_VIOLATION` — The request was well-formed and the entities exist, but a domain rule forbids it — publishing a product with no price, archiving a brand products still reference, deleting media a tier badge uses ("This media is still used — tier badge on Sprout of ladder version Launch. Replace or remove it first."), issuing more stock than a location holds, restoring a category under an archived parent ("Restore the parent category first.") or a product under an archived brand ("Restore the brand first."), refunding through the gateway a payment that was never captured ("The payment was never captured, so there is nothing to refund.") or one whose gateway refund is under way ("A refund through the payment gateway is already in progress for this order. Refresh it to see where it stands."), refreshing a refund that is not under way ("This order has no refund in progress at the payment gateway to refresh."). Distinct from 400: nothing about the request is malformed. */
             422: {
                 headers: {
                     [name: string]: unknown;
@@ -26060,7 +26590,7 @@ export interface operations {
                     "application/json": components["schemas"]["ErrorResponse"];
                 };
             };
-            /** @description `BUSINESS_RULE_VIOLATION` — The request was well-formed and the entities exist, but a domain rule forbids it — publishing a product with no price, archiving a brand products still reference, deleting media a tier badge uses ("This media is still used — tier badge on Sprout of ladder version Launch. Replace or remove it first."), issuing more stock than a location holds, restoring a category under an archived parent ("Restore the parent category first.") or a product under an archived brand ("Restore the brand first."). Distinct from 400: nothing about the request is malformed. */
+            /** @description `BUSINESS_RULE_VIOLATION` — The request was well-formed and the entities exist, but a domain rule forbids it — publishing a product with no price, archiving a brand products still reference, deleting media a tier badge uses ("This media is still used — tier badge on Sprout of ladder version Launch. Replace or remove it first."), issuing more stock than a location holds, restoring a category under an archived parent ("Restore the parent category first.") or a product under an archived brand ("Restore the brand first."), refunding through the gateway a payment that was never captured ("The payment was never captured, so there is nothing to refund.") or one whose gateway refund is under way ("A refund through the payment gateway is already in progress for this order. Refresh it to see where it stands."), refreshing a refund that is not under way ("This order has no refund in progress at the payment gateway to refresh."). Distinct from 400: nothing about the request is malformed. */
             422: {
                 headers: {
                     [name: string]: unknown;
@@ -26158,7 +26688,7 @@ export interface operations {
                     "application/json": components["schemas"]["ErrorResponse"];
                 };
             };
-            /** @description `BUSINESS_RULE_VIOLATION` — The request was well-formed and the entities exist, but a domain rule forbids it — publishing a product with no price, archiving a brand products still reference, deleting media a tier badge uses ("This media is still used — tier badge on Sprout of ladder version Launch. Replace or remove it first."), issuing more stock than a location holds, restoring a category under an archived parent ("Restore the parent category first.") or a product under an archived brand ("Restore the brand first."). Distinct from 400: nothing about the request is malformed. */
+            /** @description `BUSINESS_RULE_VIOLATION` — The request was well-formed and the entities exist, but a domain rule forbids it — publishing a product with no price, archiving a brand products still reference, deleting media a tier badge uses ("This media is still used — tier badge on Sprout of ladder version Launch. Replace or remove it first."), issuing more stock than a location holds, restoring a category under an archived parent ("Restore the parent category first.") or a product under an archived brand ("Restore the brand first."), refunding through the gateway a payment that was never captured ("The payment was never captured, so there is nothing to refund.") or one whose gateway refund is under way ("A refund through the payment gateway is already in progress for this order. Refresh it to see where it stands."), refreshing a refund that is not under way ("This order has no refund in progress at the payment gateway to refresh."). Distinct from 400: nothing about the request is malformed. */
             422: {
                 headers: {
                     [name: string]: unknown;
@@ -26428,7 +26958,7 @@ export interface operations {
                     "application/json": components["schemas"]["ErrorResponse"];
                 };
             };
-            /** @description `BUSINESS_RULE_VIOLATION` — The request was well-formed and the entities exist, but a domain rule forbids it — publishing a product with no price, archiving a brand products still reference, deleting media a tier badge uses ("This media is still used — tier badge on Sprout of ladder version Launch. Replace or remove it first."), issuing more stock than a location holds, restoring a category under an archived parent ("Restore the parent category first.") or a product under an archived brand ("Restore the brand first."). Distinct from 400: nothing about the request is malformed. */
+            /** @description `BUSINESS_RULE_VIOLATION` — The request was well-formed and the entities exist, but a domain rule forbids it — publishing a product with no price, archiving a brand products still reference, deleting media a tier badge uses ("This media is still used — tier badge on Sprout of ladder version Launch. Replace or remove it first."), issuing more stock than a location holds, restoring a category under an archived parent ("Restore the parent category first.") or a product under an archived brand ("Restore the brand first."), refunding through the gateway a payment that was never captured ("The payment was never captured, so there is nothing to refund.") or one whose gateway refund is under way ("A refund through the payment gateway is already in progress for this order. Refresh it to see where it stands."), refreshing a refund that is not under way ("This order has no refund in progress at the payment gateway to refresh."). Distinct from 400: nothing about the request is malformed. */
             422: {
                 headers: {
                     [name: string]: unknown;
@@ -26593,7 +27123,7 @@ export interface operations {
                     "application/json": components["schemas"]["ErrorResponse"];
                 };
             };
-            /** @description `BUSINESS_RULE_VIOLATION` — The request was well-formed and the entities exist, but a domain rule forbids it — publishing a product with no price, archiving a brand products still reference, deleting media a tier badge uses ("This media is still used — tier badge on Sprout of ladder version Launch. Replace or remove it first."), issuing more stock than a location holds, restoring a category under an archived parent ("Restore the parent category first.") or a product under an archived brand ("Restore the brand first."). Distinct from 400: nothing about the request is malformed. */
+            /** @description `BUSINESS_RULE_VIOLATION` — The request was well-formed and the entities exist, but a domain rule forbids it — publishing a product with no price, archiving a brand products still reference, deleting media a tier badge uses ("This media is still used — tier badge on Sprout of ladder version Launch. Replace or remove it first."), issuing more stock than a location holds, restoring a category under an archived parent ("Restore the parent category first.") or a product under an archived brand ("Restore the brand first."), refunding through the gateway a payment that was never captured ("The payment was never captured, so there is nothing to refund.") or one whose gateway refund is under way ("A refund through the payment gateway is already in progress for this order. Refresh it to see where it stands."), refreshing a refund that is not under way ("This order has no refund in progress at the payment gateway to refresh."). Distinct from 400: nothing about the request is malformed. */
             422: {
                 headers: {
                     [name: string]: unknown;
@@ -26676,7 +27206,7 @@ export interface operations {
                     "application/json": components["schemas"]["ErrorResponse"];
                 };
             };
-            /** @description `BUSINESS_RULE_VIOLATION` — The request was well-formed and the entities exist, but a domain rule forbids it — publishing a product with no price, archiving a brand products still reference, deleting media a tier badge uses ("This media is still used — tier badge on Sprout of ladder version Launch. Replace or remove it first."), issuing more stock than a location holds, restoring a category under an archived parent ("Restore the parent category first.") or a product under an archived brand ("Restore the brand first."). Distinct from 400: nothing about the request is malformed. */
+            /** @description `BUSINESS_RULE_VIOLATION` — The request was well-formed and the entities exist, but a domain rule forbids it — publishing a product with no price, archiving a brand products still reference, deleting media a tier badge uses ("This media is still used — tier badge on Sprout of ladder version Launch. Replace or remove it first."), issuing more stock than a location holds, restoring a category under an archived parent ("Restore the parent category first.") or a product under an archived brand ("Restore the brand first."), refunding through the gateway a payment that was never captured ("The payment was never captured, so there is nothing to refund.") or one whose gateway refund is under way ("A refund through the payment gateway is already in progress for this order. Refresh it to see where it stands."), refreshing a refund that is not under way ("This order has no refund in progress at the payment gateway to refresh."). Distinct from 400: nothing about the request is malformed. */
             422: {
                 headers: {
                     [name: string]: unknown;
@@ -26765,7 +27295,7 @@ export interface operations {
                     "application/json": components["schemas"]["ErrorResponse"];
                 };
             };
-            /** @description `BUSINESS_RULE_VIOLATION` — The request was well-formed and the entities exist, but a domain rule forbids it — publishing a product with no price, archiving a brand products still reference, deleting media a tier badge uses ("This media is still used — tier badge on Sprout of ladder version Launch. Replace or remove it first."), issuing more stock than a location holds, restoring a category under an archived parent ("Restore the parent category first.") or a product under an archived brand ("Restore the brand first."). Distinct from 400: nothing about the request is malformed. */
+            /** @description `BUSINESS_RULE_VIOLATION` — The request was well-formed and the entities exist, but a domain rule forbids it — publishing a product with no price, archiving a brand products still reference, deleting media a tier badge uses ("This media is still used — tier badge on Sprout of ladder version Launch. Replace or remove it first."), issuing more stock than a location holds, restoring a category under an archived parent ("Restore the parent category first.") or a product under an archived brand ("Restore the brand first."), refunding through the gateway a payment that was never captured ("The payment was never captured, so there is nothing to refund.") or one whose gateway refund is under way ("A refund through the payment gateway is already in progress for this order. Refresh it to see where it stands."), refreshing a refund that is not under way ("This order has no refund in progress at the payment gateway to refresh."). Distinct from 400: nothing about the request is malformed. */
             422: {
                 headers: {
                     [name: string]: unknown;
@@ -26839,7 +27369,7 @@ export interface operations {
                     "application/json": components["schemas"]["ErrorResponse"];
                 };
             };
-            /** @description `BUSINESS_RULE_VIOLATION` — The request was well-formed and the entities exist, but a domain rule forbids it — publishing a product with no price, archiving a brand products still reference, deleting media a tier badge uses ("This media is still used — tier badge on Sprout of ladder version Launch. Replace or remove it first."), issuing more stock than a location holds, restoring a category under an archived parent ("Restore the parent category first.") or a product under an archived brand ("Restore the brand first."). Distinct from 400: nothing about the request is malformed. */
+            /** @description `BUSINESS_RULE_VIOLATION` — The request was well-formed and the entities exist, but a domain rule forbids it — publishing a product with no price, archiving a brand products still reference, deleting media a tier badge uses ("This media is still used — tier badge on Sprout of ladder version Launch. Replace or remove it first."), issuing more stock than a location holds, restoring a category under an archived parent ("Restore the parent category first.") or a product under an archived brand ("Restore the brand first."), refunding through the gateway a payment that was never captured ("The payment was never captured, so there is nothing to refund.") or one whose gateway refund is under way ("A refund through the payment gateway is already in progress for this order. Refresh it to see where it stands."), refreshing a refund that is not under way ("This order has no refund in progress at the payment gateway to refresh."). Distinct from 400: nothing about the request is malformed. */
             422: {
                 headers: {
                     [name: string]: unknown;
@@ -27231,7 +27761,7 @@ export interface operations {
                     "application/json": components["schemas"]["ErrorResponse"];
                 };
             };
-            /** @description `BUSINESS_RULE_VIOLATION` — The request was well-formed and the entities exist, but a domain rule forbids it — publishing a product with no price, archiving a brand products still reference, deleting media a tier badge uses ("This media is still used — tier badge on Sprout of ladder version Launch. Replace or remove it first."), issuing more stock than a location holds, restoring a category under an archived parent ("Restore the parent category first.") or a product under an archived brand ("Restore the brand first."). Distinct from 400: nothing about the request is malformed. */
+            /** @description `BUSINESS_RULE_VIOLATION` — The request was well-formed and the entities exist, but a domain rule forbids it — publishing a product with no price, archiving a brand products still reference, deleting media a tier badge uses ("This media is still used — tier badge on Sprout of ladder version Launch. Replace or remove it first."), issuing more stock than a location holds, restoring a category under an archived parent ("Restore the parent category first.") or a product under an archived brand ("Restore the brand first."), refunding through the gateway a payment that was never captured ("The payment was never captured, so there is nothing to refund.") or one whose gateway refund is under way ("A refund through the payment gateway is already in progress for this order. Refresh it to see where it stands."), refreshing a refund that is not under way ("This order has no refund in progress at the payment gateway to refresh."). Distinct from 400: nothing about the request is malformed. */
             422: {
                 headers: {
                     [name: string]: unknown;
@@ -27438,7 +27968,7 @@ export interface operations {
                     "application/json": components["schemas"]["ErrorResponse"];
                 };
             };
-            /** @description `BUSINESS_RULE_VIOLATION` — The request was well-formed and the entities exist, but a domain rule forbids it — publishing a product with no price, archiving a brand products still reference, deleting media a tier badge uses ("This media is still used — tier badge on Sprout of ladder version Launch. Replace or remove it first."), issuing more stock than a location holds, restoring a category under an archived parent ("Restore the parent category first.") or a product under an archived brand ("Restore the brand first."). Distinct from 400: nothing about the request is malformed. */
+            /** @description `BUSINESS_RULE_VIOLATION` — The request was well-formed and the entities exist, but a domain rule forbids it — publishing a product with no price, archiving a brand products still reference, deleting media a tier badge uses ("This media is still used — tier badge on Sprout of ladder version Launch. Replace or remove it first."), issuing more stock than a location holds, restoring a category under an archived parent ("Restore the parent category first.") or a product under an archived brand ("Restore the brand first."), refunding through the gateway a payment that was never captured ("The payment was never captured, so there is nothing to refund.") or one whose gateway refund is under way ("A refund through the payment gateway is already in progress for this order. Refresh it to see where it stands."), refreshing a refund that is not under way ("This order has no refund in progress at the payment gateway to refresh."). Distinct from 400: nothing about the request is malformed. */
             422: {
                 headers: {
                     [name: string]: unknown;
@@ -27652,7 +28182,7 @@ export interface operations {
                     "application/json": components["schemas"]["ErrorResponse"];
                 };
             };
-            /** @description `BUSINESS_RULE_VIOLATION` — The request was well-formed and the entities exist, but a domain rule forbids it — publishing a product with no price, archiving a brand products still reference, deleting media a tier badge uses ("This media is still used — tier badge on Sprout of ladder version Launch. Replace or remove it first."), issuing more stock than a location holds, restoring a category under an archived parent ("Restore the parent category first.") or a product under an archived brand ("Restore the brand first."). Distinct from 400: nothing about the request is malformed. */
+            /** @description `BUSINESS_RULE_VIOLATION` — The request was well-formed and the entities exist, but a domain rule forbids it — publishing a product with no price, archiving a brand products still reference, deleting media a tier badge uses ("This media is still used — tier badge on Sprout of ladder version Launch. Replace or remove it first."), issuing more stock than a location holds, restoring a category under an archived parent ("Restore the parent category first.") or a product under an archived brand ("Restore the brand first."), refunding through the gateway a payment that was never captured ("The payment was never captured, so there is nothing to refund.") or one whose gateway refund is under way ("A refund through the payment gateway is already in progress for this order. Refresh it to see where it stands."), refreshing a refund that is not under way ("This order has no refund in progress at the payment gateway to refresh."). Distinct from 400: nothing about the request is malformed. */
             422: {
                 headers: {
                     [name: string]: unknown;
@@ -27817,7 +28347,7 @@ export interface operations {
                     "application/json": components["schemas"]["ErrorResponse"];
                 };
             };
-            /** @description `BUSINESS_RULE_VIOLATION` — The request was well-formed and the entities exist, but a domain rule forbids it — publishing a product with no price, archiving a brand products still reference, deleting media a tier badge uses ("This media is still used — tier badge on Sprout of ladder version Launch. Replace or remove it first."), issuing more stock than a location holds, restoring a category under an archived parent ("Restore the parent category first.") or a product under an archived brand ("Restore the brand first."). Distinct from 400: nothing about the request is malformed. */
+            /** @description `BUSINESS_RULE_VIOLATION` — The request was well-formed and the entities exist, but a domain rule forbids it — publishing a product with no price, archiving a brand products still reference, deleting media a tier badge uses ("This media is still used — tier badge on Sprout of ladder version Launch. Replace or remove it first."), issuing more stock than a location holds, restoring a category under an archived parent ("Restore the parent category first.") or a product under an archived brand ("Restore the brand first."), refunding through the gateway a payment that was never captured ("The payment was never captured, so there is nothing to refund.") or one whose gateway refund is under way ("A refund through the payment gateway is already in progress for this order. Refresh it to see where it stands."), refreshing a refund that is not under way ("This order has no refund in progress at the payment gateway to refresh."). Distinct from 400: nothing about the request is malformed. */
             422: {
                 headers: {
                     [name: string]: unknown;
@@ -27902,7 +28432,7 @@ export interface operations {
                     "application/json": components["schemas"]["ErrorResponse"];
                 };
             };
-            /** @description `BUSINESS_RULE_VIOLATION` — The request was well-formed and the entities exist, but a domain rule forbids it — publishing a product with no price, archiving a brand products still reference, deleting media a tier badge uses ("This media is still used — tier badge on Sprout of ladder version Launch. Replace or remove it first."), issuing more stock than a location holds, restoring a category under an archived parent ("Restore the parent category first.") or a product under an archived brand ("Restore the brand first."). Distinct from 400: nothing about the request is malformed. */
+            /** @description `BUSINESS_RULE_VIOLATION` — The request was well-formed and the entities exist, but a domain rule forbids it — publishing a product with no price, archiving a brand products still reference, deleting media a tier badge uses ("This media is still used — tier badge on Sprout of ladder version Launch. Replace or remove it first."), issuing more stock than a location holds, restoring a category under an archived parent ("Restore the parent category first.") or a product under an archived brand ("Restore the brand first."), refunding through the gateway a payment that was never captured ("The payment was never captured, so there is nothing to refund.") or one whose gateway refund is under way ("A refund through the payment gateway is already in progress for this order. Refresh it to see where it stands."), refreshing a refund that is not under way ("This order has no refund in progress at the payment gateway to refresh."). Distinct from 400: nothing about the request is malformed. */
             422: {
                 headers: {
                     [name: string]: unknown;
@@ -27987,7 +28517,7 @@ export interface operations {
                     "application/json": components["schemas"]["ErrorResponse"];
                 };
             };
-            /** @description `BUSINESS_RULE_VIOLATION` — The request was well-formed and the entities exist, but a domain rule forbids it — publishing a product with no price, archiving a brand products still reference, deleting media a tier badge uses ("This media is still used — tier badge on Sprout of ladder version Launch. Replace or remove it first."), issuing more stock than a location holds, restoring a category under an archived parent ("Restore the parent category first.") or a product under an archived brand ("Restore the brand first."). Distinct from 400: nothing about the request is malformed. */
+            /** @description `BUSINESS_RULE_VIOLATION` — The request was well-formed and the entities exist, but a domain rule forbids it — publishing a product with no price, archiving a brand products still reference, deleting media a tier badge uses ("This media is still used — tier badge on Sprout of ladder version Launch. Replace or remove it first."), issuing more stock than a location holds, restoring a category under an archived parent ("Restore the parent category first.") or a product under an archived brand ("Restore the brand first."), refunding through the gateway a payment that was never captured ("The payment was never captured, so there is nothing to refund.") or one whose gateway refund is under way ("A refund through the payment gateway is already in progress for this order. Refresh it to see where it stands."), refreshing a refund that is not under way ("This order has no refund in progress at the payment gateway to refresh."). Distinct from 400: nothing about the request is malformed. */
             422: {
                 headers: {
                     [name: string]: unknown;
@@ -28130,7 +28660,7 @@ export interface operations {
                     "application/json": components["schemas"]["ErrorResponse"];
                 };
             };
-            /** @description `BUSINESS_RULE_VIOLATION` — The request was well-formed and the entities exist, but a domain rule forbids it — publishing a product with no price, archiving a brand products still reference, deleting media a tier badge uses ("This media is still used — tier badge on Sprout of ladder version Launch. Replace or remove it first."), issuing more stock than a location holds, restoring a category under an archived parent ("Restore the parent category first.") or a product under an archived brand ("Restore the brand first."). Distinct from 400: nothing about the request is malformed. */
+            /** @description `BUSINESS_RULE_VIOLATION` — The request was well-formed and the entities exist, but a domain rule forbids it — publishing a product with no price, archiving a brand products still reference, deleting media a tier badge uses ("This media is still used — tier badge on Sprout of ladder version Launch. Replace or remove it first."), issuing more stock than a location holds, restoring a category under an archived parent ("Restore the parent category first.") or a product under an archived brand ("Restore the brand first."), refunding through the gateway a payment that was never captured ("The payment was never captured, so there is nothing to refund.") or one whose gateway refund is under way ("A refund through the payment gateway is already in progress for this order. Refresh it to see where it stands."), refreshing a refund that is not under way ("This order has no refund in progress at the payment gateway to refresh."). Distinct from 400: nothing about the request is malformed. */
             422: {
                 headers: {
                     [name: string]: unknown;
@@ -28228,7 +28758,7 @@ export interface operations {
                     "application/json": components["schemas"]["ErrorResponse"];
                 };
             };
-            /** @description `BUSINESS_RULE_VIOLATION` — The request was well-formed and the entities exist, but a domain rule forbids it — publishing a product with no price, archiving a brand products still reference, deleting media a tier badge uses ("This media is still used — tier badge on Sprout of ladder version Launch. Replace or remove it first."), issuing more stock than a location holds, restoring a category under an archived parent ("Restore the parent category first.") or a product under an archived brand ("Restore the brand first."). Distinct from 400: nothing about the request is malformed. */
+            /** @description `BUSINESS_RULE_VIOLATION` — The request was well-formed and the entities exist, but a domain rule forbids it — publishing a product with no price, archiving a brand products still reference, deleting media a tier badge uses ("This media is still used — tier badge on Sprout of ladder version Launch. Replace or remove it first."), issuing more stock than a location holds, restoring a category under an archived parent ("Restore the parent category first.") or a product under an archived brand ("Restore the brand first."), refunding through the gateway a payment that was never captured ("The payment was never captured, so there is nothing to refund.") or one whose gateway refund is under way ("A refund through the payment gateway is already in progress for this order. Refresh it to see where it stands."), refreshing a refund that is not under way ("This order has no refund in progress at the payment gateway to refresh."). Distinct from 400: nothing about the request is malformed. */
             422: {
                 headers: {
                     [name: string]: unknown;
@@ -28311,7 +28841,7 @@ export interface operations {
                     "application/json": components["schemas"]["ErrorResponse"];
                 };
             };
-            /** @description `BUSINESS_RULE_VIOLATION` — The request was well-formed and the entities exist, but a domain rule forbids it — publishing a product with no price, archiving a brand products still reference, deleting media a tier badge uses ("This media is still used — tier badge on Sprout of ladder version Launch. Replace or remove it first."), issuing more stock than a location holds, restoring a category under an archived parent ("Restore the parent category first.") or a product under an archived brand ("Restore the brand first."). Distinct from 400: nothing about the request is malformed. */
+            /** @description `BUSINESS_RULE_VIOLATION` — The request was well-formed and the entities exist, but a domain rule forbids it — publishing a product with no price, archiving a brand products still reference, deleting media a tier badge uses ("This media is still used — tier badge on Sprout of ladder version Launch. Replace or remove it first."), issuing more stock than a location holds, restoring a category under an archived parent ("Restore the parent category first.") or a product under an archived brand ("Restore the brand first."), refunding through the gateway a payment that was never captured ("The payment was never captured, so there is nothing to refund.") or one whose gateway refund is under way ("A refund through the payment gateway is already in progress for this order. Refresh it to see where it stands."), refreshing a refund that is not under way ("This order has no refund in progress at the payment gateway to refresh."). Distinct from 400: nothing about the request is malformed. */
             422: {
                 headers: {
                     [name: string]: unknown;
@@ -28459,7 +28989,7 @@ export interface operations {
                     "application/json": components["schemas"]["ErrorResponse"];
                 };
             };
-            /** @description `BUSINESS_RULE_VIOLATION` — The request was well-formed and the entities exist, but a domain rule forbids it — publishing a product with no price, archiving a brand products still reference, deleting media a tier badge uses ("This media is still used — tier badge on Sprout of ladder version Launch. Replace or remove it first."), issuing more stock than a location holds, restoring a category under an archived parent ("Restore the parent category first.") or a product under an archived brand ("Restore the brand first."). Distinct from 400: nothing about the request is malformed. */
+            /** @description `BUSINESS_RULE_VIOLATION` — The request was well-formed and the entities exist, but a domain rule forbids it — publishing a product with no price, archiving a brand products still reference, deleting media a tier badge uses ("This media is still used — tier badge on Sprout of ladder version Launch. Replace or remove it first."), issuing more stock than a location holds, restoring a category under an archived parent ("Restore the parent category first.") or a product under an archived brand ("Restore the brand first."), refunding through the gateway a payment that was never captured ("The payment was never captured, so there is nothing to refund.") or one whose gateway refund is under way ("A refund through the payment gateway is already in progress for this order. Refresh it to see where it stands."), refreshing a refund that is not under way ("This order has no refund in progress at the payment gateway to refresh."). Distinct from 400: nothing about the request is malformed. */
             422: {
                 headers: {
                     [name: string]: unknown;
@@ -28624,7 +29154,7 @@ export interface operations {
                     "application/json": components["schemas"]["ErrorResponse"];
                 };
             };
-            /** @description `BUSINESS_RULE_VIOLATION` — The request was well-formed and the entities exist, but a domain rule forbids it — publishing a product with no price, archiving a brand products still reference, deleting media a tier badge uses ("This media is still used — tier badge on Sprout of ladder version Launch. Replace or remove it first."), issuing more stock than a location holds, restoring a category under an archived parent ("Restore the parent category first.") or a product under an archived brand ("Restore the brand first."). Distinct from 400: nothing about the request is malformed. */
+            /** @description `BUSINESS_RULE_VIOLATION` — The request was well-formed and the entities exist, but a domain rule forbids it — publishing a product with no price, archiving a brand products still reference, deleting media a tier badge uses ("This media is still used — tier badge on Sprout of ladder version Launch. Replace or remove it first."), issuing more stock than a location holds, restoring a category under an archived parent ("Restore the parent category first.") or a product under an archived brand ("Restore the brand first."), refunding through the gateway a payment that was never captured ("The payment was never captured, so there is nothing to refund.") or one whose gateway refund is under way ("A refund through the payment gateway is already in progress for this order. Refresh it to see where it stands."), refreshing a refund that is not under way ("This order has no refund in progress at the payment gateway to refresh."). Distinct from 400: nothing about the request is malformed. */
             422: {
                 headers: {
                     [name: string]: unknown;
@@ -28709,7 +29239,7 @@ export interface operations {
                     "application/json": components["schemas"]["ErrorResponse"];
                 };
             };
-            /** @description `BUSINESS_RULE_VIOLATION` — The request was well-formed and the entities exist, but a domain rule forbids it — publishing a product with no price, archiving a brand products still reference, deleting media a tier badge uses ("This media is still used — tier badge on Sprout of ladder version Launch. Replace or remove it first."), issuing more stock than a location holds, restoring a category under an archived parent ("Restore the parent category first.") or a product under an archived brand ("Restore the brand first."). Distinct from 400: nothing about the request is malformed. */
+            /** @description `BUSINESS_RULE_VIOLATION` — The request was well-formed and the entities exist, but a domain rule forbids it — publishing a product with no price, archiving a brand products still reference, deleting media a tier badge uses ("This media is still used — tier badge on Sprout of ladder version Launch. Replace or remove it first."), issuing more stock than a location holds, restoring a category under an archived parent ("Restore the parent category first.") or a product under an archived brand ("Restore the brand first."), refunding through the gateway a payment that was never captured ("The payment was never captured, so there is nothing to refund.") or one whose gateway refund is under way ("A refund through the payment gateway is already in progress for this order. Refresh it to see where it stands."), refreshing a refund that is not under way ("This order has no refund in progress at the payment gateway to refresh."). Distinct from 400: nothing about the request is malformed. */
             422: {
                 headers: {
                     [name: string]: unknown;
@@ -28794,7 +29324,7 @@ export interface operations {
                     "application/json": components["schemas"]["ErrorResponse"];
                 };
             };
-            /** @description `BUSINESS_RULE_VIOLATION` — The request was well-formed and the entities exist, but a domain rule forbids it — publishing a product with no price, archiving a brand products still reference, deleting media a tier badge uses ("This media is still used — tier badge on Sprout of ladder version Launch. Replace or remove it first."), issuing more stock than a location holds, restoring a category under an archived parent ("Restore the parent category first.") or a product under an archived brand ("Restore the brand first."). Distinct from 400: nothing about the request is malformed. */
+            /** @description `BUSINESS_RULE_VIOLATION` — The request was well-formed and the entities exist, but a domain rule forbids it — publishing a product with no price, archiving a brand products still reference, deleting media a tier badge uses ("This media is still used — tier badge on Sprout of ladder version Launch. Replace or remove it first."), issuing more stock than a location holds, restoring a category under an archived parent ("Restore the parent category first.") or a product under an archived brand ("Restore the brand first."), refunding through the gateway a payment that was never captured ("The payment was never captured, so there is nothing to refund.") or one whose gateway refund is under way ("A refund through the payment gateway is already in progress for this order. Refresh it to see where it stands."), refreshing a refund that is not under way ("This order has no refund in progress at the payment gateway to refresh."). Distinct from 400: nothing about the request is malformed. */
             422: {
                 headers: {
                     [name: string]: unknown;
@@ -28879,7 +29409,7 @@ export interface operations {
                     "application/json": components["schemas"]["ErrorResponse"];
                 };
             };
-            /** @description `BUSINESS_RULE_VIOLATION` — The request was well-formed and the entities exist, but a domain rule forbids it — publishing a product with no price, archiving a brand products still reference, deleting media a tier badge uses ("This media is still used — tier badge on Sprout of ladder version Launch. Replace or remove it first."), issuing more stock than a location holds, restoring a category under an archived parent ("Restore the parent category first.") or a product under an archived brand ("Restore the brand first."). Distinct from 400: nothing about the request is malformed. */
+            /** @description `BUSINESS_RULE_VIOLATION` — The request was well-formed and the entities exist, but a domain rule forbids it — publishing a product with no price, archiving a brand products still reference, deleting media a tier badge uses ("This media is still used — tier badge on Sprout of ladder version Launch. Replace or remove it first."), issuing more stock than a location holds, restoring a category under an archived parent ("Restore the parent category first.") or a product under an archived brand ("Restore the brand first."), refunding through the gateway a payment that was never captured ("The payment was never captured, so there is nothing to refund.") or one whose gateway refund is under way ("A refund through the payment gateway is already in progress for this order. Refresh it to see where it stands."), refreshing a refund that is not under way ("This order has no refund in progress at the payment gateway to refresh."). Distinct from 400: nothing about the request is malformed. */
             422: {
                 headers: {
                     [name: string]: unknown;
@@ -28964,7 +29494,7 @@ export interface operations {
                     "application/json": components["schemas"]["ErrorResponse"];
                 };
             };
-            /** @description `BUSINESS_RULE_VIOLATION` — The request was well-formed and the entities exist, but a domain rule forbids it — publishing a product with no price, archiving a brand products still reference, deleting media a tier badge uses ("This media is still used — tier badge on Sprout of ladder version Launch. Replace or remove it first."), issuing more stock than a location holds, restoring a category under an archived parent ("Restore the parent category first.") or a product under an archived brand ("Restore the brand first."). Distinct from 400: nothing about the request is malformed. */
+            /** @description `BUSINESS_RULE_VIOLATION` — The request was well-formed and the entities exist, but a domain rule forbids it — publishing a product with no price, archiving a brand products still reference, deleting media a tier badge uses ("This media is still used — tier badge on Sprout of ladder version Launch. Replace or remove it first."), issuing more stock than a location holds, restoring a category under an archived parent ("Restore the parent category first.") or a product under an archived brand ("Restore the brand first."), refunding through the gateway a payment that was never captured ("The payment was never captured, so there is nothing to refund.") or one whose gateway refund is under way ("A refund through the payment gateway is already in progress for this order. Refresh it to see where it stands."), refreshing a refund that is not under way ("This order has no refund in progress at the payment gateway to refresh."). Distinct from 400: nothing about the request is malformed. */
             422: {
                 headers: {
                     [name: string]: unknown;
@@ -29049,7 +29579,7 @@ export interface operations {
                     "application/json": components["schemas"]["ErrorResponse"];
                 };
             };
-            /** @description `BUSINESS_RULE_VIOLATION` — The request was well-formed and the entities exist, but a domain rule forbids it — publishing a product with no price, archiving a brand products still reference, deleting media a tier badge uses ("This media is still used — tier badge on Sprout of ladder version Launch. Replace or remove it first."), issuing more stock than a location holds, restoring a category under an archived parent ("Restore the parent category first.") or a product under an archived brand ("Restore the brand first."). Distinct from 400: nothing about the request is malformed. */
+            /** @description `BUSINESS_RULE_VIOLATION` — The request was well-formed and the entities exist, but a domain rule forbids it — publishing a product with no price, archiving a brand products still reference, deleting media a tier badge uses ("This media is still used — tier badge on Sprout of ladder version Launch. Replace or remove it first."), issuing more stock than a location holds, restoring a category under an archived parent ("Restore the parent category first.") or a product under an archived brand ("Restore the brand first."), refunding through the gateway a payment that was never captured ("The payment was never captured, so there is nothing to refund.") or one whose gateway refund is under way ("A refund through the payment gateway is already in progress for this order. Refresh it to see where it stands."), refreshing a refund that is not under way ("This order has no refund in progress at the payment gateway to refresh."). Distinct from 400: nothing about the request is malformed. */
             422: {
                 headers: {
                     [name: string]: unknown;
@@ -29147,7 +29677,7 @@ export interface operations {
                     "application/json": components["schemas"]["ErrorResponse"];
                 };
             };
-            /** @description `BUSINESS_RULE_VIOLATION` — The request was well-formed and the entities exist, but a domain rule forbids it — publishing a product with no price, archiving a brand products still reference, deleting media a tier badge uses ("This media is still used — tier badge on Sprout of ladder version Launch. Replace or remove it first."), issuing more stock than a location holds, restoring a category under an archived parent ("Restore the parent category first.") or a product under an archived brand ("Restore the brand first."). Distinct from 400: nothing about the request is malformed. */
+            /** @description `BUSINESS_RULE_VIOLATION` — The request was well-formed and the entities exist, but a domain rule forbids it — publishing a product with no price, archiving a brand products still reference, deleting media a tier badge uses ("This media is still used — tier badge on Sprout of ladder version Launch. Replace or remove it first."), issuing more stock than a location holds, restoring a category under an archived parent ("Restore the parent category first.") or a product under an archived brand ("Restore the brand first."), refunding through the gateway a payment that was never captured ("The payment was never captured, so there is nothing to refund.") or one whose gateway refund is under way ("A refund through the payment gateway is already in progress for this order. Refresh it to see where it stands."), refreshing a refund that is not under way ("This order has no refund in progress at the payment gateway to refresh."). Distinct from 400: nothing about the request is malformed. */
             422: {
                 headers: {
                     [name: string]: unknown;
@@ -29232,7 +29762,7 @@ export interface operations {
                     "application/json": components["schemas"]["ErrorResponse"];
                 };
             };
-            /** @description `BUSINESS_RULE_VIOLATION` — The request was well-formed and the entities exist, but a domain rule forbids it — publishing a product with no price, archiving a brand products still reference, deleting media a tier badge uses ("This media is still used — tier badge on Sprout of ladder version Launch. Replace or remove it first."), issuing more stock than a location holds, restoring a category under an archived parent ("Restore the parent category first.") or a product under an archived brand ("Restore the brand first."). Distinct from 400: nothing about the request is malformed. */
+            /** @description `BUSINESS_RULE_VIOLATION` — The request was well-formed and the entities exist, but a domain rule forbids it — publishing a product with no price, archiving a brand products still reference, deleting media a tier badge uses ("This media is still used — tier badge on Sprout of ladder version Launch. Replace or remove it first."), issuing more stock than a location holds, restoring a category under an archived parent ("Restore the parent category first.") or a product under an archived brand ("Restore the brand first."), refunding through the gateway a payment that was never captured ("The payment was never captured, so there is nothing to refund.") or one whose gateway refund is under way ("A refund through the payment gateway is already in progress for this order. Refresh it to see where it stands."), refreshing a refund that is not under way ("This order has no refund in progress at the payment gateway to refresh."). Distinct from 400: nothing about the request is malformed. */
             422: {
                 headers: {
                     [name: string]: unknown;
@@ -29380,7 +29910,7 @@ export interface operations {
                     "application/json": components["schemas"]["ErrorResponse"];
                 };
             };
-            /** @description `BUSINESS_RULE_VIOLATION` — The request was well-formed and the entities exist, but a domain rule forbids it — publishing a product with no price, archiving a brand products still reference, deleting media a tier badge uses ("This media is still used — tier badge on Sprout of ladder version Launch. Replace or remove it first."), issuing more stock than a location holds, restoring a category under an archived parent ("Restore the parent category first.") or a product under an archived brand ("Restore the brand first."). Distinct from 400: nothing about the request is malformed. */
+            /** @description `BUSINESS_RULE_VIOLATION` — The request was well-formed and the entities exist, but a domain rule forbids it — publishing a product with no price, archiving a brand products still reference, deleting media a tier badge uses ("This media is still used — tier badge on Sprout of ladder version Launch. Replace or remove it first."), issuing more stock than a location holds, restoring a category under an archived parent ("Restore the parent category first.") or a product under an archived brand ("Restore the brand first."), refunding through the gateway a payment that was never captured ("The payment was never captured, so there is nothing to refund.") or one whose gateway refund is under way ("A refund through the payment gateway is already in progress for this order. Refresh it to see where it stands."), refreshing a refund that is not under way ("This order has no refund in progress at the payment gateway to refresh."). Distinct from 400: nothing about the request is malformed. */
             422: {
                 headers: {
                     [name: string]: unknown;
@@ -29545,7 +30075,7 @@ export interface operations {
                     "application/json": components["schemas"]["ErrorResponse"];
                 };
             };
-            /** @description `BUSINESS_RULE_VIOLATION` — The request was well-formed and the entities exist, but a domain rule forbids it — publishing a product with no price, archiving a brand products still reference, deleting media a tier badge uses ("This media is still used — tier badge on Sprout of ladder version Launch. Replace or remove it first."), issuing more stock than a location holds, restoring a category under an archived parent ("Restore the parent category first.") or a product under an archived brand ("Restore the brand first."). Distinct from 400: nothing about the request is malformed. */
+            /** @description `BUSINESS_RULE_VIOLATION` — The request was well-formed and the entities exist, but a domain rule forbids it — publishing a product with no price, archiving a brand products still reference, deleting media a tier badge uses ("This media is still used — tier badge on Sprout of ladder version Launch. Replace or remove it first."), issuing more stock than a location holds, restoring a category under an archived parent ("Restore the parent category first.") or a product under an archived brand ("Restore the brand first."), refunding through the gateway a payment that was never captured ("The payment was never captured, so there is nothing to refund.") or one whose gateway refund is under way ("A refund through the payment gateway is already in progress for this order. Refresh it to see where it stands."), refreshing a refund that is not under way ("This order has no refund in progress at the payment gateway to refresh."). Distinct from 400: nothing about the request is malformed. */
             422: {
                 headers: {
                     [name: string]: unknown;
@@ -29710,7 +30240,7 @@ export interface operations {
                     "application/json": components["schemas"]["ErrorResponse"];
                 };
             };
-            /** @description `BUSINESS_RULE_VIOLATION` — The request was well-formed and the entities exist, but a domain rule forbids it — publishing a product with no price, archiving a brand products still reference, deleting media a tier badge uses ("This media is still used — tier badge on Sprout of ladder version Launch. Replace or remove it first."), issuing more stock than a location holds, restoring a category under an archived parent ("Restore the parent category first.") or a product under an archived brand ("Restore the brand first."). Distinct from 400: nothing about the request is malformed. */
+            /** @description `BUSINESS_RULE_VIOLATION` — The request was well-formed and the entities exist, but a domain rule forbids it — publishing a product with no price, archiving a brand products still reference, deleting media a tier badge uses ("This media is still used — tier badge on Sprout of ladder version Launch. Replace or remove it first."), issuing more stock than a location holds, restoring a category under an archived parent ("Restore the parent category first.") or a product under an archived brand ("Restore the brand first."), refunding through the gateway a payment that was never captured ("The payment was never captured, so there is nothing to refund.") or one whose gateway refund is under way ("A refund through the payment gateway is already in progress for this order. Refresh it to see where it stands."), refreshing a refund that is not under way ("This order has no refund in progress at the payment gateway to refresh."). Distinct from 400: nothing about the request is malformed. */
             422: {
                 headers: {
                     [name: string]: unknown;
@@ -29877,7 +30407,7 @@ export interface operations {
                     "application/json": components["schemas"]["ErrorResponse"];
                 };
             };
-            /** @description `BUSINESS_RULE_VIOLATION` — The request was well-formed and the entities exist, but a domain rule forbids it — publishing a product with no price, archiving a brand products still reference, deleting media a tier badge uses ("This media is still used — tier badge on Sprout of ladder version Launch. Replace or remove it first."), issuing more stock than a location holds, restoring a category under an archived parent ("Restore the parent category first.") or a product under an archived brand ("Restore the brand first."). Distinct from 400: nothing about the request is malformed. */
+            /** @description `BUSINESS_RULE_VIOLATION` — The request was well-formed and the entities exist, but a domain rule forbids it — publishing a product with no price, archiving a brand products still reference, deleting media a tier badge uses ("This media is still used — tier badge on Sprout of ladder version Launch. Replace or remove it first."), issuing more stock than a location holds, restoring a category under an archived parent ("Restore the parent category first.") or a product under an archived brand ("Restore the brand first."), refunding through the gateway a payment that was never captured ("The payment was never captured, so there is nothing to refund.") or one whose gateway refund is under way ("A refund through the payment gateway is already in progress for this order. Refresh it to see where it stands."), refreshing a refund that is not under way ("This order has no refund in progress at the payment gateway to refresh."). Distinct from 400: nothing about the request is malformed. */
             422: {
                 headers: {
                     [name: string]: unknown;
@@ -29975,7 +30505,7 @@ export interface operations {
                     "application/json": components["schemas"]["ErrorResponse"];
                 };
             };
-            /** @description `BUSINESS_RULE_VIOLATION` — The request was well-formed and the entities exist, but a domain rule forbids it — publishing a product with no price, archiving a brand products still reference, deleting media a tier badge uses ("This media is still used — tier badge on Sprout of ladder version Launch. Replace or remove it first."), issuing more stock than a location holds, restoring a category under an archived parent ("Restore the parent category first.") or a product under an archived brand ("Restore the brand first."). Distinct from 400: nothing about the request is malformed. */
+            /** @description `BUSINESS_RULE_VIOLATION` — The request was well-formed and the entities exist, but a domain rule forbids it — publishing a product with no price, archiving a brand products still reference, deleting media a tier badge uses ("This media is still used — tier badge on Sprout of ladder version Launch. Replace or remove it first."), issuing more stock than a location holds, restoring a category under an archived parent ("Restore the parent category first.") or a product under an archived brand ("Restore the brand first."), refunding through the gateway a payment that was never captured ("The payment was never captured, so there is nothing to refund.") or one whose gateway refund is under way ("A refund through the payment gateway is already in progress for this order. Refresh it to see where it stands."), refreshing a refund that is not under way ("This order has no refund in progress at the payment gateway to refresh."). Distinct from 400: nothing about the request is malformed. */
             422: {
                 headers: {
                     [name: string]: unknown;
@@ -30073,7 +30603,7 @@ export interface operations {
                     "application/json": components["schemas"]["ErrorResponse"];
                 };
             };
-            /** @description `BUSINESS_RULE_VIOLATION` — The request was well-formed and the entities exist, but a domain rule forbids it — publishing a product with no price, archiving a brand products still reference, deleting media a tier badge uses ("This media is still used — tier badge on Sprout of ladder version Launch. Replace or remove it first."), issuing more stock than a location holds, restoring a category under an archived parent ("Restore the parent category first.") or a product under an archived brand ("Restore the brand first."). Distinct from 400: nothing about the request is malformed. */
+            /** @description `BUSINESS_RULE_VIOLATION` — The request was well-formed and the entities exist, but a domain rule forbids it — publishing a product with no price, archiving a brand products still reference, deleting media a tier badge uses ("This media is still used — tier badge on Sprout of ladder version Launch. Replace or remove it first."), issuing more stock than a location holds, restoring a category under an archived parent ("Restore the parent category first.") or a product under an archived brand ("Restore the brand first."), refunding through the gateway a payment that was never captured ("The payment was never captured, so there is nothing to refund.") or one whose gateway refund is under way ("A refund through the payment gateway is already in progress for this order. Refresh it to see where it stands."), refreshing a refund that is not under way ("This order has no refund in progress at the payment gateway to refresh."). Distinct from 400: nothing about the request is malformed. */
             422: {
                 headers: {
                     [name: string]: unknown;
@@ -30230,7 +30760,7 @@ export interface operations {
                     "application/json": components["schemas"]["ErrorResponse"];
                 };
             };
-            /** @description `BUSINESS_RULE_VIOLATION` — The request was well-formed and the entities exist, but a domain rule forbids it — publishing a product with no price, archiving a brand products still reference, deleting media a tier badge uses ("This media is still used — tier badge on Sprout of ladder version Launch. Replace or remove it first."), issuing more stock than a location holds, restoring a category under an archived parent ("Restore the parent category first.") or a product under an archived brand ("Restore the brand first."). Distinct from 400: nothing about the request is malformed. */
+            /** @description `BUSINESS_RULE_VIOLATION` — The request was well-formed and the entities exist, but a domain rule forbids it — publishing a product with no price, archiving a brand products still reference, deleting media a tier badge uses ("This media is still used — tier badge on Sprout of ladder version Launch. Replace or remove it first."), issuing more stock than a location holds, restoring a category under an archived parent ("Restore the parent category first.") or a product under an archived brand ("Restore the brand first."), refunding through the gateway a payment that was never captured ("The payment was never captured, so there is nothing to refund.") or one whose gateway refund is under way ("A refund through the payment gateway is already in progress for this order. Refresh it to see where it stands."), refreshing a refund that is not under way ("This order has no refund in progress at the payment gateway to refresh."). Distinct from 400: nothing about the request is malformed. */
             422: {
                 headers: {
                     [name: string]: unknown;
@@ -30378,7 +30908,7 @@ export interface operations {
                     "application/json": components["schemas"]["ErrorResponse"];
                 };
             };
-            /** @description `BUSINESS_RULE_VIOLATION` — The request was well-formed and the entities exist, but a domain rule forbids it — publishing a product with no price, archiving a brand products still reference, deleting media a tier badge uses ("This media is still used — tier badge on Sprout of ladder version Launch. Replace or remove it first."), issuing more stock than a location holds, restoring a category under an archived parent ("Restore the parent category first.") or a product under an archived brand ("Restore the brand first."). Distinct from 400: nothing about the request is malformed. */
+            /** @description `BUSINESS_RULE_VIOLATION` — The request was well-formed and the entities exist, but a domain rule forbids it — publishing a product with no price, archiving a brand products still reference, deleting media a tier badge uses ("This media is still used — tier badge on Sprout of ladder version Launch. Replace or remove it first."), issuing more stock than a location holds, restoring a category under an archived parent ("Restore the parent category first.") or a product under an archived brand ("Restore the brand first."), refunding through the gateway a payment that was never captured ("The payment was never captured, so there is nothing to refund.") or one whose gateway refund is under way ("A refund through the payment gateway is already in progress for this order. Refresh it to see where it stands."), refreshing a refund that is not under way ("This order has no refund in progress at the payment gateway to refresh."). Distinct from 400: nothing about the request is malformed. */
             422: {
                 headers: {
                     [name: string]: unknown;
@@ -30543,7 +31073,7 @@ export interface operations {
                     "application/json": components["schemas"]["ErrorResponse"];
                 };
             };
-            /** @description `BUSINESS_RULE_VIOLATION` — The request was well-formed and the entities exist, but a domain rule forbids it — publishing a product with no price, archiving a brand products still reference, deleting media a tier badge uses ("This media is still used — tier badge on Sprout of ladder version Launch. Replace or remove it first."), issuing more stock than a location holds, restoring a category under an archived parent ("Restore the parent category first.") or a product under an archived brand ("Restore the brand first."). Distinct from 400: nothing about the request is malformed. */
+            /** @description `BUSINESS_RULE_VIOLATION` — The request was well-formed and the entities exist, but a domain rule forbids it — publishing a product with no price, archiving a brand products still reference, deleting media a tier badge uses ("This media is still used — tier badge on Sprout of ladder version Launch. Replace or remove it first."), issuing more stock than a location holds, restoring a category under an archived parent ("Restore the parent category first.") or a product under an archived brand ("Restore the brand first."), refunding through the gateway a payment that was never captured ("The payment was never captured, so there is nothing to refund.") or one whose gateway refund is under way ("A refund through the payment gateway is already in progress for this order. Refresh it to see where it stands."), refreshing a refund that is not under way ("This order has no refund in progress at the payment gateway to refresh."). Distinct from 400: nothing about the request is malformed. */
             422: {
                 headers: {
                     [name: string]: unknown;
@@ -30628,7 +31158,7 @@ export interface operations {
                     "application/json": components["schemas"]["ErrorResponse"];
                 };
             };
-            /** @description `BUSINESS_RULE_VIOLATION` — The request was well-formed and the entities exist, but a domain rule forbids it — publishing a product with no price, archiving a brand products still reference, deleting media a tier badge uses ("This media is still used — tier badge on Sprout of ladder version Launch. Replace or remove it first."), issuing more stock than a location holds, restoring a category under an archived parent ("Restore the parent category first.") or a product under an archived brand ("Restore the brand first."). Distinct from 400: nothing about the request is malformed. */
+            /** @description `BUSINESS_RULE_VIOLATION` — The request was well-formed and the entities exist, but a domain rule forbids it — publishing a product with no price, archiving a brand products still reference, deleting media a tier badge uses ("This media is still used — tier badge on Sprout of ladder version Launch. Replace or remove it first."), issuing more stock than a location holds, restoring a category under an archived parent ("Restore the parent category first.") or a product under an archived brand ("Restore the brand first."), refunding through the gateway a payment that was never captured ("The payment was never captured, so there is nothing to refund.") or one whose gateway refund is under way ("A refund through the payment gateway is already in progress for this order. Refresh it to see where it stands."), refreshing a refund that is not under way ("This order has no refund in progress at the payment gateway to refresh."). Distinct from 400: nothing about the request is malformed. */
             422: {
                 headers: {
                     [name: string]: unknown;
@@ -30713,7 +31243,7 @@ export interface operations {
                     "application/json": components["schemas"]["ErrorResponse"];
                 };
             };
-            /** @description `BUSINESS_RULE_VIOLATION` — The request was well-formed and the entities exist, but a domain rule forbids it — publishing a product with no price, archiving a brand products still reference, deleting media a tier badge uses ("This media is still used — tier badge on Sprout of ladder version Launch. Replace or remove it first."), issuing more stock than a location holds, restoring a category under an archived parent ("Restore the parent category first.") or a product under an archived brand ("Restore the brand first."). Distinct from 400: nothing about the request is malformed. */
+            /** @description `BUSINESS_RULE_VIOLATION` — The request was well-formed and the entities exist, but a domain rule forbids it — publishing a product with no price, archiving a brand products still reference, deleting media a tier badge uses ("This media is still used — tier badge on Sprout of ladder version Launch. Replace or remove it first."), issuing more stock than a location holds, restoring a category under an archived parent ("Restore the parent category first.") or a product under an archived brand ("Restore the brand first."), refunding through the gateway a payment that was never captured ("The payment was never captured, so there is nothing to refund.") or one whose gateway refund is under way ("A refund through the payment gateway is already in progress for this order. Refresh it to see where it stands."), refreshing a refund that is not under way ("This order has no refund in progress at the payment gateway to refresh."). Distinct from 400: nothing about the request is malformed. */
             422: {
                 headers: {
                     [name: string]: unknown;

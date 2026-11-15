@@ -5,6 +5,7 @@ import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
+import { TierBadge } from '@/components/membership/TierBadge'
 import { MoneyInput } from '@/components/form/MoneyInput'
 import { NoticeBanner, noticeFromError, type Notice } from '@/components/common/NoticeBanner'
 import { formatMoney } from '@/lib/money'
@@ -145,7 +146,11 @@ function BitsOptionsEditor({
                 className="grid gap-3 rounded-md border p-3 sm:grid-cols-3"
               >
                 <div className="flex flex-col justify-center gap-0.5">
-                  <span className="text-sm font-medium">{row.name}</span>
+                  {row.inLadder ? (
+                    <TierBadge code={row.code} name={row.name} />
+                  ) : (
+                    <span className="text-sm font-medium">{row.name}</span>
+                  )}
                   <span className="font-mono text-xs text-muted-foreground">{row.code}</span>
                   {tierPrice !== undefined && (
                     <span className="text-xs text-muted-foreground">

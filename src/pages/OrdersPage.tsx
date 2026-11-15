@@ -1,5 +1,5 @@
 import * as React from 'react'
-import { Link, useNavigate } from 'react-router-dom'
+import { Link, useNavigate, useSearchParams } from 'react-router-dom'
 import type { ColumnDef } from '@tanstack/react-table'
 import { SettingsIcon } from 'lucide-react'
 
@@ -17,31 +17,35 @@ import {
 } from '@/components/ui/select'
 import { useBreadcrumb } from '@/layouts/breadcrumb-context'
 import { isApiError } from '@/lib/api-error'
-import { minorToMajorString } from '@/lib/money'
-import { isUuid, istDayStart, ORDER_STATUSES } from '@/lib/orders'
+import { isUuid, istDayStart, ORDER_STATUSES, paymentCapturedLabel, rupees } from '@/lib/orders'
 import {
   useCurrentOrderSettingsQuery,
   useOrdersQuery,
   type OrderStatus,
   type OrderSummary,
+  type RefundState,
 } from '@/api/orders'
 import { formatDateTime } from '@/lib/dates'
-import { ANY_STATUS, ORDER_STATUS_LABEL } from '@/lib/labels'
+import { ANY_STATUS, ORDER_STATUS_LABEL, REFUND_STATE_LABEL } from '@/lib/labels'
+import { Badge } from '@/components/ui/badge'
 import { TierBadge } from '@/components/membership/TierBadge'
 import { ConsumerLink } from '@/components/orders/ConsumerLink'
 
 const PAGE_SIZE = 20
 
-const rupees = (minor: number | undefined) => `₹${minorToMajorString(minor ?? 0)}`
-
 function OrdersPage() {
   useBreadcrumb([{ label: 'Orders' }])
   const navigate = useNavigate()
+  const [search] = useSearchParams()
 
   const [pageIndex, setPageIndex] = React.useState(0)
   const [status, setStatus] = React.useState<OrderStatus | 'ALL'>('ALL')
   const [number, setNumber] = React.useState('')
-  const [consumerId, setConsumerId] = React.useState('')
+  const [consumerId, setConsumerId] = React.useState(search.get('consumerId') ?? '')
+  const initialRefund = search.get('refundState')
+  const [refundState, setRefundState] = React.useState<RefundState | 'ALL'>(
+    initialRefund && initialRefund in REFUND_STATE_LABEL ? (initialRefund as RefundState) : 'ALL'
+  )
   const [fromDate, setFromDate] = React.useState('')
   const [toDate, setToDate] = React.useState('')
 
@@ -53,11 +57,16 @@ function OrdersPage() {
     status: status === 'ALL' ? undefined : status,
     number: number.trim(),
     consumerId: consumerValid ? consumerId.trim() : undefined,
+    refundState: refundState === 'ALL' ? undefined : refundState,
     from: istDayStart(fromDate),
     // The date box names the last day wanted; the server's `to` is exclusive.
     to: istDayStart(toDate, 1),
   })
   const settings = useCurrentOrderSettingsQuery()
+  // D9.8: money waiting for a person. Counted on its own, so the number shows whatever the filters say.
+  const owed = useOrdersQuery({ page: 0, size: 1, refundState: 'OWED' })
+  const owedCount = owed.data?.totalElements
+  const owedActive = refundState === 'OWED'
 
   function filter<T>(set: (value: T) => void) {
     return (value: T) => {
@@ -73,13 +82,13 @@ function OrdersPage() {
       cell: ({ row }) => <span className="font-mono">{row.original.number}</span>,
     },
     {
-      id: 'status',
-      header: 'Status',
-      cell: ({ row }) => <OrderStatusBadge status={row.original.status} />,
+      id: 'placedAt',
+      header: 'Placed',
+      cell: ({ row }) => formatDateTime(row.original.placedAt),
     },
     {
       id: 'consumer',
-      header: 'Consumer',
+      header: 'Customer',
       cell: ({ row }) => (
         <ConsumerLink
           consumerId={row.original.consumerId}
@@ -90,20 +99,58 @@ function OrdersPage() {
       ),
     },
     {
+      id: 'status',
+      header: 'Status',
+      cell: ({ row }) => <OrderStatusBadge status={row.original.status} />,
+    },
+    {
+      id: 'payment',
+      header: 'Payment',
+      cell: ({ row }) => (
+        <div className="leading-tight">
+          <div>{row.original.paymentMethod ?? '—'}</div>
+          <div className="text-xs text-muted-foreground">{paymentCapturedLabel(row.original)}</div>
+        </div>
+      ),
+    },
+    {
+      id: 'refund',
+      header: 'Refund',
+      cell: ({ row }) => {
+        const state = row.original.refundState ?? 'NONE'
+        return state === 'NONE' ? (
+          <span className="text-muted-foreground">{'—'}</span>
+        ) : (
+          <Badge variant={state === 'OWED' ? 'destructive' : 'outline'}>
+            {REFUND_STATE_LABEL[state]}
+          </Badge>
+        )
+      },
+    },
+    {
       id: 'payable',
-      header: 'Payable',
+      header: 'Total',
       cell: ({ row }) => rupees(row.original.payableMinor),
     },
     { id: 'tier', header: 'Tier', cell: ({ row }) => <TierBadge code={row.original.tierCode} /> },
-    {
-      id: 'placedAt',
-      header: 'Placed',
-      cell: ({ row }) => formatDateTime(row.original.placedAt),
-    },
   ]
 
   return (
     <div className="flex flex-col gap-4">
+      <div className="flex flex-wrap items-center gap-3">
+        <h1 className="text-xl font-semibold">Orders</h1>
+        <Button
+          variant={owedActive ? 'default' : 'outline'}
+          aria-pressed={owedActive}
+          className={owedCount ? 'border-destructive/50 text-destructive' : undefined}
+          onClick={() => filter(setRefundState)(owedActive ? 'ALL' : 'OWED')}
+        >
+          Refunds owed
+          <Badge variant={owedCount ? 'destructive' : 'secondary'} aria-label="Refunds owed count">
+            {owedCount ?? '…'}
+          </Badge>
+        </Button>
+      </div>
       <Card>
         <CardHeader>
           <CardTitle>Order settings in effect</CardTitle>
@@ -167,6 +214,22 @@ function OrdersPage() {
             {ORDER_STATUSES.map((s) => (
               <SelectItem key={s} value={s}>
                 {ORDER_STATUS_LABEL[s]}
+              </SelectItem>
+            ))}
+          </SelectContent>
+        </Select>
+        <Select
+          value={refundState}
+          onValueChange={(value) => filter(setRefundState)(value as RefundState | 'ALL')}
+        >
+          <SelectTrigger className="w-48" aria-label="Refund state filter">
+            <SelectValue placeholder="Refund state" />
+          </SelectTrigger>
+          <SelectContent>
+            <SelectItem value="ALL">Any refund state</SelectItem>
+            {(['OWED', 'INITIATED', 'REFUNDED', 'VOIDED'] as const).map((s) => (
+              <SelectItem key={s} value={s}>
+                {REFUND_STATE_LABEL[s]}
               </SelectItem>
             ))}
           </SelectContent>
