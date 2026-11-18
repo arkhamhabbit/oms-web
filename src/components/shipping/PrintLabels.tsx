@@ -2,8 +2,8 @@ import * as React from 'react'
 
 import { ConfirmDialog } from '@/components/common/ConfirmDialog'
 import { noticeFromError } from '@/components/common/NoticeBanner'
-import { usePrintLabelsMutation, useResolveLiveShipments } from '@/api/shipping'
-import { listInWords, openPrintTab } from '@/lib/shipping'
+import { usePrintLabelsMutation } from '@/api/shipping'
+import { openPrintTab } from '@/lib/shipping'
 
 export interface PrintOutcome {
   /** The server's sentence (or why nothing was asked): nothing was printed. */
@@ -17,12 +17,12 @@ export interface PrintOutcome {
 export type PrintTarget = { shipmentIds: string[] } | { orderNumbers: string[] }
 
 /**
- * Print labels as one merged PDF, all or nothing. The tab is opened inside the click, so no popup
+ * Print labels as one merged PDF, all or nothing, by order number or shipment id (the server finds
+ * each order's live shipment, and refuses naming the order that has none). The tab is opened inside the click, so no popup
  * blocker stops it, then filled with the PDF — or closed, and the server's sentence naming the
  * order is shown instead. Resolves true when the file printed.
  */
 export function usePrintLabels() {
-  const resolve = useResolveLiveShipments()
   const print = usePrintLabelsMutation()
   const [outcome, setOutcome] = React.useState<PrintOutcome | undefined>()
   const [pending, setPending] = React.useState(false)
@@ -31,24 +31,10 @@ export function usePrintLabels() {
     const tab = openPrintTab()
     setPending(true)
     try {
-      let ids: string[]
-      if ('orderNumbers' in target) {
-        const live = await resolve(target.orderNumbers)
-        const unbooked = live.filter((l) => !l.shipment).map((l) => l.orderNumber)
-        if (unbooked.length > 0) {
-          tab.close()
-          setOutcome({
-            refusal: `Nothing was printed: ${listInWords(unbooked)} ${unbooked.length === 1 ? 'has' : 'have'} no booked shipment.`,
-          })
-          return false
-        }
-        ids = live.map((l) => l.shipment!.id!)
-      } else {
-        ids = target.shipmentIds
-      }
-      const blob = await print.mutateAsync(ids)
+      const count = 'orderNumbers' in target ? target.orderNumbers.length : target.shipmentIds.length
+      const blob = await print.mutateAsync(target)
       const url = tab.show(blob)
-      setOutcome({ url, count: ids.length, blocked: tab.blocked })
+      setOutcome({ url, count, blocked: tab.blocked })
       return true
     } catch (error) {
       tab.close()

@@ -2075,8 +2075,12 @@ export interface paths {
          *      consumerId</code>, <code>number</code> (exact, e.g. <code>HBT_10000001</code>), a placement window <code>from</code>
          *      (inclusive) / <code>to</code> (exclusive), <code>refundState</code> — <code>OWED</code> is "Refunds owed":
          *      money owed back that no one has refunded yet — <code>shipmentState</code> (e.g. <code>
-         *      BOOKING_FAILED</code>: a booking was refused and nobody has resolved it) and <code>labelPrinted</code>
-         *      (<code>false</code>: booked, label not printed yet — the team's print queue).
+         *      BOOKING_FAILED</code>: a booking was refused and nobody has resolved it; since 2.11 several, as
+         *      <code>shipmentState=NONE&amp;shipmentState=BOOKING_FAILED</code> — any of them), <code>labelPrinted</code>
+         *      (<code>false</code>: booked, label not printed yet — the team's print queue) and <code>bookable</code>
+         *      (<code>true</code>: the orders that can be booked now — CONFIRMED, paid, with no shipment that is
+         *      neither cancelled nor failed; the "To ship" list). Each row carries its current shipment (the
+         *      one <code>shipmentState</code> describes), its item count and its payment status.
          *
          *     **Requires permission:** `orders.read`.
          */
@@ -4742,12 +4746,15 @@ export interface paths {
             cookie?: never;
         };
         /**
-         * One shipment: the package as booked, its timestamps, the provider's status history and every
-         *      exchange with the provider about it (summaries — each one whole at <code>GET
+         * One shipment: the package as booked, its timestamps, who booked and cancelled it, its status
+         *      history and its own exchanges with the provider (summaries — each one whole at <code>GET
          *      /api/admin/shipping/calls/{id</code>}).
-         * @description One shipment: the package as booked, its timestamps, the provider's status history and every
-         *      exchange with the provider about it (summaries — each one whole at <code>GET
-         *      /api/admin/shipping/calls/{id</code>}). 404 <code>NOT_FOUND</code> for an unknown id.
+         * @description One shipment: the package as booked, its timestamps, who booked and cancelled it, its status
+         *      history and its own exchanges with the provider (summaries — each one whole at <code>GET
+         *      /api/admin/shipping/calls/{id</code>}). Its calls are only its own: the call that booked it and every
+         *      call made about it since; an earlier refused attempt on the same order is listed on the order
+         *      (<code>shippingCalls</code> on <code>GET /api/admin/orders/{id</code>}). 404 <code>NOT_FOUND</code> for an
+         *      unknown id.
          *
          *     **Requires permission:** `shipping.read`.
          */
@@ -4886,22 +4893,60 @@ export interface paths {
         get?: never;
         put?: never;
         /**
-         * One merged PDF of up to 20 shipments' labels, in the order asked (<code>application/pdf</code>,
-         *      downloaded as <code>labels-&lt;date&gt;-&lt;n&gt;.pdf</code>). Each label is fetched fresh from the provider
-         *      that booked the shipment. All or nothing: 422 <code>BUSINESS_RULE_VIOLATION</code> naming the order
-         *      whose label could not be fetched (or whose shipment is cancelled, or Manual — which has no
-         *      provider label), and nothing is marked printed. Each shipment records when its label was first
-         *      printed. 404 <code>NOT_FOUND</code> for an unknown shipment.
-         * @description One merged PDF of up to 20 shipments' labels, in the order asked (<code>application/pdf</code>,
-         *      downloaded as <code>labels-&lt;date&gt;-&lt;n&gt;.pdf</code>). Each label is fetched fresh from the provider
-         *      that booked the shipment. All or nothing: 422 <code>BUSINESS_RULE_VIOLATION</code> naming the order
-         *      whose label could not be fetched (or whose shipment is cancelled, or Manual — which has no
-         *      provider label), and nothing is marked printed. Each shipment records when its label was first
-         *      printed. 404 <code>NOT_FOUND</code> for an unknown shipment.
+         * One merged PDF of up to 20 shipments' labels, named by <code>shipmentIds</code>, by <code>
+         *      orderNumbers</code> (each order's live shipment), or both — ids first, then orders — in the order
+         *      asked (<code>application/pdf</code>, downloaded as <code>labels-&lt;date&gt;-&lt;n&gt;.pdf</code>). Each label is
+         *      fetched fresh from the provider that booked the shipment. All or nothing: 422 <code>
+         *      BUSINESS_RULE_VIOLATION</code> naming the order whose label could not be fetched (or whose shipment
+         *      is cancelled, or Manual — which has no provider label), and nothing is marked printed. Each
+         *      shipment records when its label was first printed. 404 <code>NOT_FOUND</code> for an unknown
+         *      shipment.
+         * @description One merged PDF of up to 20 shipments' labels, named by <code>shipmentIds</code>, by <code>
+         *      orderNumbers</code> (each order's live shipment), or both — ids first, then orders — in the order
+         *      asked (<code>application/pdf</code>, downloaded as <code>labels-&lt;date&gt;-&lt;n&gt;.pdf</code>). Each label is
+         *      fetched fresh from the provider that booked the shipment. All or nothing: 422 <code>
+         *      BUSINESS_RULE_VIOLATION</code> naming the order whose label could not be fetched (or whose shipment
+         *      is cancelled, or Manual — which has no provider label), and nothing is marked printed. Each
+         *      shipment records when its label was first printed. 404 <code>NOT_FOUND</code> for an unknown
+         *      shipment.
          *
          *     **Requires permission:** `shipping.book`.
          */
         post: operations["shipmentPrintShipmentLabels"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/admin/shipments/preview": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * What booking up to 20 orders would send, without booking them (2.11): per order, the weight and
+         *      box OMS would send and whether each came from the products or the settings' fallback, the
+         *      provider (<code>providerCode</code>, else the settings' default) and the pickup warehouse that would
+         *      be used, and <code>bookable</code> — false with the sentence the booking would refuse with. Calls no
+         *      provider, writes nothing and logs nothing to the shipping log. An unknown order number is
+         *      answered as not bookable. 400 <code>VALIDATION_FAILED</code> for more than 20 numbers or a repeated
+         *      one; 422 <code>BUSINESS_RULE_VIOLATION</code> for a provider not configured on the server.
+         * @description What booking up to 20 orders would send, without booking them (2.11): per order, the weight and
+         *      box OMS would send and whether each came from the products or the settings' fallback, the
+         *      provider (<code>providerCode</code>, else the settings' default) and the pickup warehouse that would
+         *      be used, and <code>bookable</code> — false with the sentence the booking would refuse with. Calls no
+         *      provider, writes nothing and logs nothing to the shipping log. An unknown order number is
+         *      answered as not bookable. 400 <code>VALIDATION_FAILED</code> for more than 20 numbers or a repeated
+         *      one; 422 <code>BUSINESS_RULE_VIOLATION</code> for a provider not configured on the server.
+         *
+         *     **Requires permission:** `shipping.book`.
+         */
+        post: operations["shipmentPreviewShipments"];
         delete?: never;
         options?: never;
         head?: never;
@@ -5021,7 +5066,10 @@ export interface paths {
         };
         /**
          * The shipping settings in effect: default provider, pickup warehouse, automatic booking.
-         * @description The shipping settings in effect: default provider, pickup warehouse, automatic booking.
+         * @description The shipping settings in effect: default provider, pickup warehouse, automatic booking. <code>
+         *      pickupWarehouse</code> names the pickup warehouse with its contact and <code>missingContact</code> — what
+         *      a courier booking from it still needs (any of <code>NAME</code>, <code>PHONE</code>, <code>EMAIL</code>; all
+         *      three are required). Readable with <code>shipping.read</code> alone.
          *
          *     **Requires permission:** `shipping.read`.
          */
@@ -6257,6 +6305,25 @@ export interface components {
             password: string;
             token: string;
         };
+        /** @description Who did something (2.11). */
+        ActorResponse: {
+            /**
+             * @description the team member's name now (their email when they have none; "A former team
+             *          member" when the account is gone), or "System"
+             */
+            displayName?: string;
+            /**
+             * Format: uuid
+             * @description the team member; null for <code>SYSTEM</code>
+             */
+            id?: string | null;
+            /**
+             * @description <code>ADMIN</code> (a team member) or <code>SYSTEM</code> (a sweep, automatic booking, the
+             *          courier's own report, or the shopper's cancel of their order)
+             * @enum {string}
+             */
+            kind?: "ADMIN" | "SYSTEM";
+        };
         /** @description Adding an image. */
         AddImageRequest: {
             altText?: string;
@@ -6579,8 +6646,83 @@ export interface components {
             refused?: number;
             results?: components["schemas"]["BookingResultResponse"][];
         };
+        /** @description Orders to preview a booking for (2.11). */
+        BookingPreviewRequest: {
+            /** @description up to twenty, each once (<code>HBT_10000001</code>) */
+            orderNumbers: string[];
+            /** @description <code>PROSHIP</code> or <code>MANUAL</code>; omitted, the settings' default provider */
+            providerCode?: string;
+        };
+        /** @description What booking one order would send (2.11). */
+        BookingPreviewResponse: {
+            /**
+             * @description a booking with this provider now would be sent; when false, <code>sentence</code>
+             *          says why, word for word as the booking would refuse
+             */
+            bookable?: boolean;
+            /**
+             * @description <code>PRODUCTS</code> or <code>FALLBACK</code>
+             * @enum {string|null}
+             */
+            boxSource?: "PRODUCTS" | "FALLBACK" | "MIXED" | "OVERRIDE" | null;
+            /** Format: int32 */
+            heightMm?: number | null;
+            /**
+             * Format: int32
+             * @description the box OMS would send: the largest line's box, or the settings' fallback box
+             *          when no line's product has one; likewise <code>widthMm</code> and <code>heightMm</code>
+             */
+            lengthMm?: number | null;
+            /**
+             * Format: uuid
+             * @description null for a number OMS does not know
+             */
+            orderId?: string | null;
+            orderNumber?: string;
+            /**
+             * @description the warehouse it would be picked up from; null when none can be worked
+             *          out (no warehouse set, or several active and none chosen)
+             */
+            pickupWarehouse?: components["schemas"]["PickupWarehouseResponse"] | null;
+            /** @description the provider the booking would use */
+            providerCode?: string;
+            providerName?: string;
+            sentence?: string | null;
+            /**
+             * Format: int32
+             * @description the parcel's weight OMS would send: each line's product weight times its
+             *          quantity, the settings' fallback weight for a product with none; null for an unknown order
+             */
+            weightGrams?: number | null;
+            /**
+             * @description <code>PRODUCTS</code>, <code>FALLBACK</code> or <code>MIXED</code>
+             * @enum {string|null}
+             */
+            weightSource?: "PRODUCTS" | "FALLBACK" | "MIXED" | "OVERRIDE" | null;
+            /** Format: int32 */
+            widthMm?: number | null;
+        };
+        /** @description A booking preview: one answer per order asked, in the order asked. */
+        BookingPreviewsResponse: {
+            /**
+             * Format: int32
+             * @description how many would be booked
+             */
+            bookable?: number;
+            results?: components["schemas"]["BookingPreviewResponse"][];
+        };
         /** @description One order's outcome. */
         BookingResultResponse: {
+            /**
+             * @description the new shipment's tracking number, when <code>BOOKED</code> (Manual: the reference
+             *          typed)
+             */
+            awb?: string | null;
+            /**
+             * @description the courier the new shipment went to, when <code>BOOKED</code> (Manual: the
+             *          carrier typed; null when the provider named none)
+             */
+            courierName?: string | null;
             /** Format: uuid */
             orderId?: string;
             /** @description null for an order id OMS does not know */
@@ -7659,6 +7801,18 @@ export interface components {
             /** Format: uuid */
             versionId?: string;
         };
+        /**
+         * @description A line's product image, as the catalog publishes it (2.11): the variant's first image, else its
+         *      product's first. URLs are built when the order is read.
+         */
+        LineImageResponse: {
+            /** @description the image's object key; null for a hand-typed URL from before the media library */
+            mediaKey?: string | null;
+            /** @description the small rendition, for a list or a line */
+            thumbUrl?: string;
+            /** @description the image at full size */
+            url?: string;
+        };
         LoginEventResponse: {
             emailAttempted?: string;
             /** Format: uuid */
@@ -7837,6 +7991,11 @@ export interface components {
             carrotsRedeemedMinor?: number;
             /** Format: date-time */
             confirmedAt?: string;
+            /**
+             * @description the email on the shopper's profile now (2.11); null when they have none or
+             *          the account is gone
+             */
+            consumerEmail?: string | null;
             /** Format: uuid */
             consumerId?: string;
             /** @description the shopper's mobile now; null when the account is gone */
@@ -7930,6 +8089,12 @@ export interface components {
             shipmentState?: "NONE" | "BOOKING_FAILED" | "BOOKED" | "IN_TRANSIT" | "OUT_FOR_DELIVERY" | "DELIVERED" | "PROBLEM" | "CANCELLED";
             /** Format: date-time */
             shippedAt?: string;
+            /**
+             * @description the order's own exchanges with a shipping provider, newest first (2.11):
+             *          booking attempts that never produced a shipment — a refusal, a lost answer — and the
+             *          sign-ins made for them. A shipment's own calls are on <code>GET /api/admin/shipments/{id</code>}
+             */
+            shippingCalls?: components["schemas"]["OrderShippingCallResponse"][];
             /** Format: int64 */
             shippingMinor?: number;
             /** @enum {string} */
@@ -7994,6 +8159,11 @@ export interface components {
              *          BITS_PRICE</code>
              */
             priceSource?: string;
+            /**
+             * @description the product's image as the catalog serves it now (2.11); null when it has
+             *          none or the variant is gone. A picture, not part of what was sold
+             */
+            primaryImage?: components["schemas"]["LineImageResponse"] | null;
             /** Format: uuid */
             productId?: string;
             productName?: string;
@@ -8076,6 +8246,43 @@ export interface components {
             status?: string;
             trackingUrl?: string | null;
         };
+        /**
+         * @description One exchange with a shipping provider that belongs to the order rather than to a shipment
+         *      (2.11): a booking attempt that never produced a shipment — refused, or its answer lost — and
+         *      what was done on the way to it (a sign-in). Whole at <code>GET
+         *      /api/admin/shipping/calls/{id</code>}.
+         */
+        OrderShippingCallResponse: {
+            /**
+             * @description <code>AUTH</code>, <code>BOOK</code>, <code>LOOKUP</code> and so on, as the shipping log names
+             *          them
+             */
+            action?: string;
+            awb?: string | null;
+            /** Format: date-time */
+            createdAt?: string;
+            /**
+             * Format: int32
+             * @description null when no answer came, or for Manual, which calls no one
+             */
+            httpStatus?: number | null;
+            /** Format: uuid */
+            id?: string;
+            providerCode?: string;
+            providerErrorCode?: string | null;
+            /** @description what went wrong, when it failed */
+            sentence?: string | null;
+            success?: boolean;
+            /**
+             * Format: uuid
+             * @description the team member, when <code>triggeredByKind</code> is <code>ADMIN</code>
+             */
+            triggeredBy?: string | null;
+            /** @description <code>ADMIN</code> or <code>SYSTEM</code> */
+            triggeredByKind?: string;
+            /** @description the team member's name now; "System" for <code>SYSTEM</code> */
+            triggeredByName?: string;
+        };
         /** @description A fulfilment step with nothing else to say: pack, out for delivery, deliver. */
         OrderStepRequest: {
             /**
@@ -8087,8 +8294,15 @@ export interface components {
         };
         /** @description An order in the admin list. */
         OrderSummaryResponse: {
+            awb?: string | null;
             /** Format: int64 */
             bitsSpent?: number;
+            /**
+             * @description the order can be booked now (2.11): CONFIRMED, its payment CAPTURED, and no
+             *          shipment that is neither cancelled nor failed. The provider and pickup warehouse are a
+             *          booking's own checks — <code>POST /api/admin/shipments/preview</code> states them
+             */
+            bookable?: boolean;
             /** Format: int64 */
             carrotsRedeemedMinor?: number;
             /** Format: date-time */
@@ -8102,9 +8316,15 @@ export interface components {
              *          gone or has no name
              */
             consumerName?: string | null;
+            courierName?: string | null;
             currency?: string;
             /** Format: uuid */
             id?: string;
+            /**
+             * Format: int32
+             * @description units in the order: the sum of its lines' quantities (2.11)
+             */
+            itemCount?: number;
             /**
              * Format: int64
              * @description the goods, GST included
@@ -8120,8 +8340,16 @@ export interface components {
             payableMinor?: number;
             /** @enum {string} */
             paymentMethod?: "UPI" | "CARD" | "NETBANKING" | "WALLET" | "OTHER";
+            /**
+             * @description the payment as OMS holds it (2.11) — <code>CREATED</code>, <code>CAPTURED</code>,
+             *          <code>FAILED</code>, <code>REFUND_PENDING</code>, <code>REFUND_INITIATED</code>, <code>REFUNDED</code> or
+             *          <code>VOIDED</code>; see the order's <code>payment</code>
+             * @enum {string}
+             */
+            paymentStatus?: "CREATED" | "CAPTURED" | "FAILED" | "REFUND_PENDING" | "REFUND_INITIATED" | "REFUNDED" | "VOIDED";
             /** Format: date-time */
             placedAt?: string;
+            providerCode?: string | null;
             /**
              * @description where the order's refund stands: <code>NONE</code>, <code>OWED</code> (owed back, not
              *          started — an admin has to refund it or mark it refunded), <code>INITIATED</code> (the gateway is
@@ -8131,10 +8359,21 @@ export interface components {
              */
             refundState?: "NONE" | "OWED" | "INITIATED" | "REFUNDED" | "VOIDED";
             /**
-             * @description where its shipping stands (2.8): <code>NONE</code>, <code>BOOKING_FAILED</code> (the
-             *          last booking was refused — the sentence is on the order), <code>BOOKED</code>, <code>
-             *          IN_TRANSIT</code>, <code>OUT_FOR_DELIVERY</code>, <code>DELIVERED</code>, <code>PROBLEM</code> (delivery failed,
-             *          returning, lost or damaged) or <code>CANCELLED</code>
+             * Format: uuid
+             * @description the current shipment — the one <code>shipmentState</code> describes — when there
+             *          is one; null otherwise (2.11). Likewise <code>providerCode</code>, <code>courierName</code>, <code>
+             *          awb</code> and <code>trackingUrl</code>, which are the current shipment's
+             */
+            shipmentId?: string | null;
+            /**
+             * @description where its shipping stands (2.8), describing the order's <b>current</b>
+             *          shipment — the live one, booked and not cancelled — or the lack of one: <code>NONE</code>
+             *          (nothing booked now: never booked, or every shipment it had was cancelled — those stay in
+             *          the order's <code>shipments</code> history), <code>BOOKING_FAILED</code> (the last booking was
+             *          refused — the sentence is on the order), <code>BOOKED</code>, <code>IN_TRANSIT</code>, <code>
+             *          OUT_FOR_DELIVERY</code>, <code>DELIVERED</code> or <code>PROBLEM</code> (delivery failed, returning, lost
+             *          or damaged). <code>CANCELLED</code> is no longer written (2.11) and is removed in a later
+             *          release
              * @enum {string}
              */
             shipmentState?: "NONE" | "BOOKING_FAILED" | "BOOKED" | "IN_TRANSIT" | "OUT_FOR_DELIVERY" | "DELIVERED" | "PROBLEM" | "CANCELLED";
@@ -8143,6 +8382,7 @@ export interface components {
             /** @enum {string} */
             status?: "PENDING_PAYMENT" | "CONFIRMED" | "PACKED" | "SHIPPED" | "OUT_FOR_DELIVERY" | "DELIVERED" | "PAYMENT_FAILED" | "EXPIRED" | "CANCELLED" | "REFUNDED";
             tierCode?: string;
+            trackingUrl?: string | null;
             /** Format: int64 */
             version?: number;
         };
@@ -9382,6 +9622,13 @@ export interface components {
             domain?: string;
             key?: string;
         };
+        /** @description A pickup warehouse, as a booking would use it. */
+        PickupWarehouseResponse: {
+            code?: string;
+            /** Format: uuid */
+            id?: string;
+            name?: string;
+        };
         /**
          * @description Posting a goods receipt.
          *
@@ -10237,6 +10484,25 @@ export interface components {
             valueNumber?: number;
             valueText?: string;
         };
+        /** @description The pickup warehouse the settings name, as a courier booking needs it (2.11). */
+        SettingsWarehouseResponse: {
+            /** @description an inactive warehouse cannot be booked from */
+            active?: boolean;
+            code?: string;
+            contactEmail?: string | null;
+            contactName?: string | null;
+            contactPhone?: string | null;
+            /** Format: uuid */
+            id?: string;
+            /**
+             * @description what a courier booking from it still needs: any of <code>NAME</code>, <code>
+             *          PHONE</code>, <code>EMAIL</code>. All three are required to book with a courier (the 2.11 ruling,
+             *          which adds the email to D13.3's name and phone); empty when it has them. A Manual booking
+             *          calls no courier and does not need them
+             */
+            missingContact?: ("NAME" | "PHONE" | "EMAIL")[];
+            name?: string;
+        };
         /**
          * @description Setting a variant's Bits options across tiers in one write. <code>bitsOptions</code> <b>replaces</b>
          *      the variant's options in the draft: a tier not listed is cleared. An empty list clears them
@@ -10267,20 +10533,28 @@ export interface components {
         };
         /** @description One shipment, whole. */
         ShipmentDetailResponse: {
-            /** Format: uuid */
-            bookedBy?: string | null;
             /**
-             * @description <code>ADMIN</code> (then <code>bookedBy</code> is the team member) or <code>SYSTEM</code>
-             *          (automatic booking)
+             * @description who booked it: a team member, or <code>SYSTEM</code> (automatic booking). Since 2.11
+             *          an object, never null
              */
+            bookedBy?: components["schemas"]["ActorResponse"];
+            /** @description <code>ADMIN</code> or <code>SYSTEM</code>, as <code>bookedBy.kind</code> */
             bookedByKind?: string;
             /**
-             * @description its exchanges with the provider, newest first — the calls that booked it included;
-             *          each one whole at <code>GET /api/admin/shipping/calls/{id</code>}
+             * @description this shipment's own exchanges with the provider, newest first: the call that
+             *          booked it and every call made about it since. A refused attempt on the same order never
+             *          produced this shipment and is listed on the order (<code>shippingCalls</code> on <code>GET
+             *          /api/admin/orders/{id</code>}), not here. Each one whole at <code>GET
+             *          /api/admin/shipping/calls/{id</code>}
              */
             calls?: components["schemas"]["ShippingCallSummaryResponse"][];
             /** Format: date-time */
             cancelledAt?: string | null;
+            /**
+             * @description who cancelled it, once cancelled: a team member, or <code>SYSTEM</code> (the
+             *          shopper's own order cancel, or the courier); null while it is not cancelled
+             */
+            cancelledBy?: components["schemas"]["ActorResponse"] | null;
             cancelReason?: string | null;
             courierCode?: string | null;
             currency?: string;
@@ -10291,7 +10565,10 @@ export interface components {
             declaredValueMinor?: number;
             /** Format: date-time */
             deliveredAt?: string | null;
-            /** @description the provider's status history, oldest first */
+            /**
+             * @description its status history, oldest first: the courier's reports, and the steps OMS
+             *          records itself — a Manual booking (<code>BOOKED</code>) and every cancel (<code>CANCELLED</code>)
+             */
             events?: components["schemas"]["ShipmentEventResponse"][];
             /** Format: int32 */
             heightMm?: number;
@@ -10319,11 +10596,13 @@ export interface components {
             providerStatusText?: string | null;
             remark?: string | null;
             /**
-             * @description <code>POLL</code> (tracking or an admin's refresh), <code>WEBHOOK</code> or <code>ADMIN</code>
-             *          (a Manual shipment moved by hand)
+             * @description <code>POLL</code> (tracking or an admin's refresh), <code>WEBHOOK</code>, <code>ADMIN</code> (a
+             *          team member: a Manual shipment booked or moved by hand, or any shipment cancelled) or
+             *          <code>SYSTEM</code> (OMS with no team member: a cancel that followed the shopper's own order
+             *          cancel)
              * @enum {string}
              */
-            source?: "POLL" | "WEBHOOK" | "ADMIN";
+            source?: "POLL" | "WEBHOOK" | "ADMIN" | "SYSTEM";
             /**
              * @description what it means for the shipment; null for a code that moves nothing (a remark, a
              *          cancellation pending) or one OMS does not know
@@ -10331,10 +10610,16 @@ export interface components {
              */
             status?: "BOOKED" | "PICKED_UP" | "IN_TRANSIT" | "OUT_FOR_DELIVERY" | "DELIVERED" | "DELIVERY_FAILED" | "RETURNING" | "RETURNED" | "LOST" | "DAMAGED" | "CANCELLED" | null;
         };
-        /** @description Shipments whose labels to print, in the order they should come out of the printer. */
+        /**
+         * @description Shipments whose labels to print, in the order they should come out of the printer: by shipment
+         *      id, by order number (2.11: the order's live shipment), or both — shipment ids first, then the
+         *      orders. Twenty in all, each once; at least one.
+         */
         ShipmentLabelsRequest: {
-            /** @description up to twenty, each once */
-            shipmentIds: string[];
+            /** @description orders by number (<code>HBT_10000001</code>); each must have a live shipment */
+            orderNumbers?: string[];
+            /** @description shipments by id */
+            shipmentIds?: string[];
         };
         /** @description A shipment in the list. */
         ShipmentSummaryResponse: {
@@ -10464,11 +10749,11 @@ export interface components {
             shipmentId?: string | null;
             success?: boolean;
             /**
-             * Format: uuid
-             * @description the team member, when <code>triggeredByKind</code> is <code>ADMIN</code>; a sweep is
-             *          <code>SYSTEM</code>
+             * @description who made OMS call: a team member, or <code>SYSTEM</code> (a sweep, automatic
+             *          booking, the shopper's own cancel). Since 2.11 an object, never null
              */
-            triggeredBy?: string | null;
+            triggeredBy?: components["schemas"]["ActorResponse"];
+            /** @description <code>ADMIN</code> or <code>SYSTEM</code>, as <code>triggeredBy.kind</code> */
             triggeredByKind?: string;
         };
         /** @description A shipping provider. */
@@ -10503,6 +10788,11 @@ export interface components {
             /** Format: int32 */
             fallbackWidthMm?: number;
             notes?: string | null;
+            /**
+             * @description the warehouse <code>defaultPickupWarehouseId</code> names, with what it still
+             *          needs to be booked from (2.11); null when none is set
+             */
+            pickupWarehouse?: components["schemas"]["SettingsWarehouseResponse"] | null;
             /** Format: uuid */
             versionId?: string;
         };
@@ -18644,13 +18934,14 @@ export interface operations {
     orderListOrders: {
         parameters: {
             query: {
+                bookable?: boolean;
                 consumerId?: string;
                 from?: string;
                 labelPrinted?: boolean;
                 number?: string;
                 pageable: components["schemas"]["Pageable"];
                 refundState?: "NONE" | "OWED" | "INITIATED" | "REFUNDED" | "VOIDED";
-                shipmentState?: "NONE" | "BOOKING_FAILED" | "BOOKED" | "IN_TRANSIT" | "OUT_FOR_DELIVERY" | "DELIVERED" | "PROBLEM" | "CANCELLED";
+                shipmentState?: ("NONE" | "BOOKING_FAILED" | "BOOKED" | "IN_TRANSIT" | "OUT_FOR_DELIVERY" | "DELIVERED" | "PROBLEM" | "CANCELLED")[];
                 status?: "PENDING_PAYMENT" | "CONFIRMED" | "PACKED" | "SHIPPED" | "OUT_FOR_DELIVERY" | "DELIVERED" | "PAYMENT_FAILED" | "EXPIRED" | "CANCELLED" | "REFUNDED";
                 to?: string;
             };
@@ -28691,6 +28982,93 @@ export interface operations {
                 };
                 content: {
                     "*/*": string;
+                };
+            };
+            /** @description `VALIDATION_FAILED` — The request body could not be read, a field failed validation, a required header was absent, or a domain validation rule rejected an input the caller can correct, such as a tier colour ("Must be a colour written as #RRGGBB.") or a tier badge that does not exist or is a video ("Media <id> is a video; this takes an image."). */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description `AUTHENTICATION_FAILED` — No valid credential. Either none was presented, or the session behind it is expired, revoked, or belongs to a member who can no longer sign in. This status means the session is dead and nothing else does — a wrong *current* password on change-password is a 400 with a `currentPassword` field error, not this. */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description `ACCESS_DENIED` — Authenticated, but lacking the permission the endpoint declares. The session is valid; do not sign the operator out. */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description `CONFLICT` — The request collided with current state for a reason other than a version mismatch: a duplicate natural key (a slug, a code, an email), or a database constraint the application did not catch first. */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description `UNSUPPORTED_MEDIA_TYPE` — The request body was sent with a `Content-Type` the endpoint does not read. Every endpoint that takes a body reads `application/json`. */
+            415: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description `BUSINESS_RULE_VIOLATION` — The request was well-formed and the entities exist, but a domain rule forbids it — publishing a product with no price, archiving a brand products still reference, deleting media a tier badge uses ("This media is still used — tier badge on Sprout of ladder version Launch. Replace or remove it first."), issuing more stock than a location holds, restoring a category under an archived parent ("Restore the parent category first.") or a product under an archived brand ("Restore the brand first."), refunding through the gateway a payment that was never captured ("The payment was never captured, so there is nothing to refund.") or one whose gateway refund is under way ("A refund through the payment gateway is already in progress for this order. Refresh it to see where it stands."), refreshing a refund that is not under way ("This order has no refund in progress at the payment gateway to refresh."). Distinct from 400: nothing about the request is malformed. */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description `INTERNAL_ERROR` — An unhandled failure. The message is deliberately generic; `traceId` identifies the server log line that explains it. */
+            500: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+        };
+    };
+    shipmentPreviewShipments: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["BookingPreviewRequest"];
+            };
+        };
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "*/*": components["schemas"]["BookingPreviewsResponse"];
                 };
             };
             /** @description `VALIDATION_FAILED` — The request body could not be read, a field failed validation, a required header was absent, or a domain validation rule rejected an input the caller can correct, such as a tier colour ("Must be a colour written as #RRGGBB.") or a tier badge that does not exist or is a video ("Media <id> is a video; this takes an image."). */

@@ -1,5 +1,4 @@
 import * as React from 'react'
-import { useQueries } from '@tanstack/react-query'
 import { Link } from 'react-router-dom'
 
 import { Badge } from '@/components/ui/badge'
@@ -28,13 +27,14 @@ import {
   TableHeader,
   TableRow,
 } from '@/components/ui/table'
-import { api, unwrap } from '@/api/client'
 import {
   useBookAndPrintMutation,
+  useBookingPreviewQuery,
   useBookShipmentsMutation,
   useCurrentShippingSettingsQuery,
   useShippingProvidersQuery,
   type BookAndPrintResult,
+  type BookingPreview,
   type BookOrder,
   type BookingResult,
 } from '@/api/shipping'
@@ -42,6 +42,14 @@ import { usePermissions } from '@/auth/usePermissions'
 import { noticeFromError } from '@/components/common/NoticeBanner'
 import { isApiError } from '@/lib/api-error'
 import { base64ToBlob, box, grams, openPrintTab, providerLabel } from '@/lib/shipping'
+
+/** Where the weight or the box came from, as the team reads it. */
+const SOURCE_LABEL = {
+  PRODUCTS: 'from the products',
+  FALLBACK: 'fallback package',
+  MIXED: 'part from the products, part fallback',
+  OVERRIDE: 'typed by hand',
+} as const
 
 export interface OrderToBook {
   id: string
@@ -136,6 +144,17 @@ function Body({
   const [chosen, setChosen] = React.useState<string | undefined>()
   const provider = chosen ?? settings.data?.defaultProviderCode
   const manual = provider === 'MANUAL'
+  const [result, setResult] = React.useState<BookAndPrintResult | undefined>()
+  // What each order would send, asked before anything is booked: nothing is called or written.
+  // Not asked again once the booking is done.
+  const preview = useBookingPreviewQuery(
+    orders.map((o) => o.number),
+    chosen,
+    !result
+  )
+  const previews = new Map<string, BookingPreview>(
+    (preview.data?.results ?? []).map((p) => [p.orderNumber!, p])
+  )
   const [rows, setRows] = React.useState<Row[]>(() =>
     orders.map((o) => ({
       orderId: o.id,
@@ -150,11 +169,17 @@ function Body({
   )
   const [key, setKey] = React.useState(() => crypto.randomUUID())
   const [refusal, setRefusal] = React.useState<string | undefined>()
-  const [result, setResult] = React.useState<BookAndPrintResult | undefined>()
   const [labelsUrl, setLabelsUrl] = React.useState<string | undefined>()
 
+  // An order the preview refuses is shown with the server's sentence and left out of the booking.
+  const included = rows.filter((r) => previews.get(r.number)?.bookable === true)
+  const excluded = rows.filter((r) => previews.has(r.number) && !previews.get(r.number)!.bookable)
   const problems = rows.map((r) => rowProblem(r, manual))
-  const ready = !!provider && problems.every((p) => p === undefined) && rows.length > 0
+  const ready =
+    !!provider &&
+    preview.isSuccess &&
+    included.length > 0 &&
+    rows.every((r, i) => !included.includes(r) || problems[i] === undefined)
 
   function update(index: number, patch: Partial<Row>) {
     setRows((prev) => prev.map((r, i) => (i === index ? { ...r, ...patch } : r)))
@@ -163,7 +188,7 @@ function Body({
   function submit() {
     setRefusal(undefined)
     const body = {
-      orders: rows.map((r) => toBookOrder(r, manual)),
+      orders: included.map((r) => toBookOrder(r, manual)),
       // Shown, not chosen: the server's default is used unless a settings admin picked another.
       providerCode: chosen,
     }
@@ -276,14 +301,22 @@ function Body({
         </p>
       )}
       <p className="text-xs text-muted-foreground">
-        Left blank, OMS works out the weight from the catalog and uses the largest line&apos;s box;
-        a product with none uses the fallback package
-        {settings.data
-          ? ` (${grams(settings.data.fallbackWeightGrams)}, ${box(settings.data.fallbackLengthMm, settings.data.fallbackWidthMm, settings.data.fallbackHeightMm)})`
-          : ''}
-        . What was booked is on each shipment.
+        What each order would send is read first and nothing is booked yet. A weight or box typed
+        below replaces it; left blank, what is shown is sent.
         {manual && ' A Manual booking needs the carrier and the tracking reference for every order.'}
       </p>
+      {preview.isLoading && <p className="text-sm text-muted-foreground">Reading what would be sent…</p>}
+      {preview.isError && (
+        <p role="alert" className="text-sm text-destructive">
+          {noticeFromError(preview.error, 'This booking').text}
+        </p>
+      )}
+      {excluded.length > 0 && (
+        <p className="text-sm" data-testid="preview-excluded">
+          {excluded.length} {excluded.length === 1 ? 'order' : 'orders'} cannot be booked and{' '}
+          {excluded.length === 1 ? 'is' : 'are'} left out.
+        </p>
+      )}
 
       <Table className="[&_td]:px-1.5 [&_td]:align-top [&_th]:px-1.5">
         <TableHeader>
@@ -296,64 +329,98 @@ function Body({
           </TableRow>
         </TableHeader>
         <TableBody>
-          {rows.map((row, i) => (
-            <TableRow key={row.orderId}>
-              <TableCell className="font-mono">
-                {row.number}
-                {problems[i] && (
-                  <p className="mt-1 max-w-48 font-sans text-xs whitespace-normal text-destructive">
-                    {problems[i]}
-                  </p>
-                )}
-              </TableCell>
-              <TableCell>
-                <Input
-                  aria-label={`Weight for ${row.number}`}
-                  inputMode="numeric"
-                  placeholder="auto"
-                  className="w-24"
-                  value={row.weight}
-                  onChange={(e) => update(i, { weight: e.target.value })}
-                />
-              </TableCell>
-              <TableCell>
-                <div className="flex gap-1">
-                  {(['length', 'width', 'height'] as const).map((side) => (
+          {rows.map((row, i) => {
+            const p = previews.get(row.number)
+            if (p && !p.bookable) {
+              return (
+                <TableRow key={row.orderId} data-testid={`preview-${row.number}`} data-bookable="false">
+                  <TableCell className="font-mono">{row.number}</TableCell>
+                  <TableCell colSpan={manual ? 4 : 2} className="text-sm whitespace-normal">
+                    <Badge variant="destructive">Left out</Badge>{' '}
+                    <span role="note">{p.sentence ?? 'This order cannot be booked.'}</span>
+                  </TableCell>
+                </TableRow>
+              )
+            }
+            return (
+              <TableRow key={row.orderId} data-testid={`preview-${row.number}`} data-bookable="true">
+                <TableCell className="font-mono">
+                  {row.number}
+                  {p && (
+                    <p className="mt-1 max-w-56 font-sans text-xs whitespace-normal text-muted-foreground">
+                      {providerLabel(p.providerCode)}
+                      {p.pickupWarehouse ? ` · from ${p.pickupWarehouse.code}` : ' · no pickup warehouse'}
+                    </p>
+                  )}
+                  {problems[i] && (
+                    <p className="mt-1 max-w-48 font-sans text-xs whitespace-normal text-destructive">
+                      {problems[i]}
+                    </p>
+                  )}
+                </TableCell>
+                <TableCell>
+                  <Input
+                    aria-label={`Weight for ${row.number}`}
+                    inputMode="numeric"
+                    placeholder={p?.weightGrams == null ? 'auto' : String(p.weightGrams)}
+                    className="w-24"
+                    value={row.weight}
+                    onChange={(e) => update(i, { weight: e.target.value })}
+                  />
+                  {p && (
+                    <p className="mt-1 text-xs whitespace-normal text-muted-foreground">
+                      {grams(p.weightGrams)} {p.weightSource ? SOURCE_LABEL[p.weightSource] : ''}
+                    </p>
+                  )}
+                </TableCell>
+                <TableCell>
+                  <div className="flex gap-1">
+                    {(['length', 'width', 'height'] as const).map((side) => (
+                      <Input
+                        key={side}
+                        aria-label={`Box ${side} for ${row.number}`}
+                        inputMode="numeric"
+                        placeholder={
+                          p?.[`${side}Mm` as const] == null
+                            ? side[0].toUpperCase()
+                            : String(p[`${side}Mm` as const])
+                        }
+                        className="w-16"
+                        value={row[side]}
+                        onChange={(e) => update(i, { [side]: e.target.value })}
+                      />
+                    ))}
+                  </div>
+                  {p && (
+                    <p className="mt-1 text-xs whitespace-normal text-muted-foreground">
+                      {box(p.lengthMm, p.widthMm, p.heightMm)} {p.boxSource ? SOURCE_LABEL[p.boxSource] : ''}
+                    </p>
+                  )}
+                </TableCell>
+                {manual && (
+                  <TableCell>
                     <Input
-                      key={side}
-                      aria-label={`Box ${side} for ${row.number}`}
-                      inputMode="numeric"
-                      placeholder={side[0].toUpperCase()}
-                      className="w-16"
-                      value={row[side]}
-                      onChange={(e) => update(i, { [side]: e.target.value })}
+                      aria-label={`Carrier for ${row.number}`}
+                      placeholder="Delhivery"
+                      className="w-36"
+                      value={row.carrier}
+                      onChange={(e) => update(i, { carrier: e.target.value })}
                     />
-                  ))}
-                </div>
-              </TableCell>
-              {manual && (
-                <TableCell>
-                  <Input
-                    aria-label={`Carrier for ${row.number}`}
-                    placeholder="Delhivery"
-                    className="w-36"
-                    value={row.carrier}
-                    onChange={(e) => update(i, { carrier: e.target.value })}
-                  />
-                </TableCell>
-              )}
-              {manual && (
-                <TableCell>
-                  <Input
-                    aria-label={`Tracking reference for ${row.number}`}
-                    className="w-40"
-                    value={row.tracking}
-                    onChange={(e) => update(i, { tracking: e.target.value })}
-                  />
-                </TableCell>
-              )}
-            </TableRow>
-          ))}
+                  </TableCell>
+                )}
+                {manual && (
+                  <TableCell>
+                    <Input
+                      aria-label={`Tracking reference for ${row.number}`}
+                      className="w-40"
+                      value={row.tracking}
+                      onChange={(e) => update(i, { tracking: e.target.value })}
+                    />
+                  </TableCell>
+                )}
+              </TableRow>
+            )
+          })}
         </TableBody>
       </Table>
 
@@ -368,23 +435,15 @@ function Body({
           Cancel
         </Button>
         <Button onClick={submit} disabled={!ready || pending}>
-          {mode === 'book' ? `Book ${rows.length}` : `Book and print ${rows.length}`}
+          {mode === 'book' ? `Book ${included.length}` : `Book and print ${included.length}`}
         </Button>
       </DialogFooter>
     </DialogContent>
   )
 }
 
-/** Each order's outcome: Booked with its courier and AWB (read from the new shipment), or Refused with the sentence. */
+/** Each order's outcome: Booked with its courier and AWB (both on the result), or Refused with the sentence. */
 function BookingResults({ results }: { results: BookingResult[] }) {
-  const booked = useQueries({
-    queries: results.map((r) => ({
-      enabled: r.outcome === 'BOOKED' && !!r.shipmentId,
-      queryKey: ['shipping', 'shipment', r.shipmentId],
-      queryFn: () =>
-        unwrap(api.GET('/api/admin/shipments/{id}', { params: { path: { id: r.shipmentId! } } })),
-    })),
-  })
   return (
     <Table aria-label="Booking results" className="[&_td]:whitespace-normal">
       <TableHeader>
@@ -397,8 +456,7 @@ function BookingResults({ results }: { results: BookingResult[] }) {
         </TableRow>
       </TableHeader>
       <TableBody>
-        {results.map((r, i) => {
-          const shipment = booked[i]?.data?.shipment
+        {results.map((r) => {
           return (
             <TableRow key={r.orderId} data-outcome={r.outcome}>
               <TableCell className="font-mono">
@@ -411,9 +469,9 @@ function BookingResults({ results }: { results: BookingResult[] }) {
                   <Badge variant="destructive">Refused</Badge>
                 )}
               </TableCell>
-              <TableCell>{r.outcome === 'BOOKED' ? (shipment?.courierName ?? '…') : '—'}</TableCell>
+              <TableCell>{r.outcome === 'BOOKED' ? (r.courierName ?? '—') : '—'}</TableCell>
               <TableCell className="font-mono">
-                {r.outcome === 'BOOKED' ? (shipment?.awb ?? '…') : '—'}
+                {r.outcome === 'BOOKED' ? (r.awb ?? '—') : '—'}
               </TableCell>
               <TableCell className="text-sm">{r.outcome === 'REFUSED' ? r.sentence : ''}</TableCell>
             </TableRow>

@@ -12,7 +12,7 @@ import {
   DialogHeader,
   DialogTitle,
 } from '@/components/ui/dialog'
-import { useShippingCallQuery, type ShippingCallSummary } from '@/api/shipping'
+import { useShippingCallQuery, type ShippingCallAction, type ShippingCallSummary } from '@/api/shipping'
 import { isApiError } from '@/lib/api-error'
 import { formatDateTime } from '@/lib/dates'
 import { CALL_ACTION_LABEL, prettyBody, providerLabel } from '@/lib/shipping'
@@ -105,14 +105,7 @@ function CallDetail({ id }: { id: string }) {
     ],
     ['AWB', c.awb ? <span className="font-mono">{c.awb}</span> : '—'],
     ['Provider error code', c.providerErrorCode ?? '—'],
-    [
-      'Triggered by',
-      c.triggeredByKind === 'SYSTEM'
-        ? 'The system (a sweep)'
-        : c.triggeredBy
-          ? `A team member (${c.triggeredBy})`
-          : (c.triggeredByKind ?? '—'),
-    ],
+    ['Triggered by', c.triggeredBy?.displayName ?? '—'],
   ]
   if (c.responseBytes != null) {
     rows.push(['Label file', `${c.responseBytes.toLocaleString('en-IN')} bytes, ${c.responsePages ?? '?'} pages (not kept)`])
@@ -155,6 +148,18 @@ function ShippingCallDrawer({ callId, onClose }: { callId: string | undefined; o
   )
 }
 
+/** What the list in a drawer needs of a call: both the shipment's own and the order's carry it. */
+export interface CallRow {
+  id?: string
+  action?: string
+  success?: boolean
+  providerCode?: string
+  httpStatus?: number | null
+  latencyMs?: number | null
+  createdAt?: string
+  sentence?: string | null
+}
+
 /** A shipment's own calls (the Shipment panel's Log link), each opening in place. */
 function ShipmentLogDrawer({
   open,
@@ -165,6 +170,67 @@ function ShipmentLogDrawer({
   open: boolean
   calls: ShippingCallSummary[]
   awb: string | null | undefined
+  onClose: () => void
+}) {
+  return (
+    <CallListDrawer
+      open={open}
+      calls={calls}
+      title="Shipment log"
+      description={
+        <>
+          Every exchange with the provider about{' '}
+          {awb ? <span className="font-mono">{awb}</span> : 'this shipment'}, newest first.
+        </>
+      }
+      empty="No calls are recorded for this shipment."
+      listLabel="Shipment calls"
+      onClose={onClose}
+    />
+  )
+}
+
+/**
+ * The order's booking attempts (refused bookings and lost answers, with the sign-ins made for
+ * them): calls that never produced a shipment, so they belong to the order, not to one shipment.
+ */
+function BookingAttemptsDrawer({
+  open,
+  calls,
+  onClose,
+}: {
+  open: boolean
+  calls: CallRow[]
+  onClose: () => void
+}) {
+  return (
+    <CallListDrawer
+      open={open}
+      calls={calls}
+      title="Booking attempts"
+      description="Bookings of this order that never produced a shipment, a refusal or a lost answer, and the sign-ins made for them, newest first."
+      empty="No booking attempts are recorded for this order."
+      listLabel="Booking attempts"
+      onClose={onClose}
+    />
+  )
+}
+
+function CallListDrawer({
+  open,
+  calls,
+  title,
+  description,
+  empty,
+  listLabel,
+  onClose,
+}: {
+  open: boolean
+  calls: CallRow[]
+  title: string
+  description: React.ReactNode
+  empty: string
+  listLabel: string
   onClose: () => void
 }) {
   const [callId, setCallId] = React.useState<string | undefined>()
@@ -180,10 +246,8 @@ function ShipmentLogDrawer({
     >
       <DialogContent className={DRAWER} aria-describedby="shipment-log-description">
         <DialogHeader>
-          <DialogTitle>Shipment log</DialogTitle>
-          <DialogDescription id="shipment-log-description">
-            Every exchange with the provider about {awb ? <span className="font-mono">{awb}</span> : 'this shipment'}, newest first.
-          </DialogDescription>
+          <DialogTitle>{title}</DialogTitle>
+          <DialogDescription id="shipment-log-description">{description}</DialogDescription>
         </DialogHeader>
         {callId ? (
           <div className="flex flex-col gap-3">
@@ -193,9 +257,9 @@ function ShipmentLogDrawer({
             <CallDetail id={callId} />
           </div>
         ) : calls.length === 0 ? (
-          <p className="text-sm text-muted-foreground">No calls are recorded for this shipment.</p>
+          <p className="text-sm text-muted-foreground">{empty}</p>
         ) : (
-          <ol aria-label="Shipment calls" className="flex flex-col gap-2">
+          <ol aria-label={listLabel} className="flex flex-col gap-2">
             {calls.map((c) => (
               <li key={c.id}>
                 <button
@@ -204,7 +268,11 @@ function ShipmentLogDrawer({
                   className="flex w-full flex-col gap-0.5 rounded-md border px-3 py-2 text-left text-sm hover:bg-muted/50"
                 >
                   <span className="flex flex-wrap items-center gap-2">
-                    <span className="font-medium">{c.action ? CALL_ACTION_LABEL[c.action] : '—'}</span>
+                    <span className="font-medium">
+                      {c.action
+                        ? (CALL_ACTION_LABEL[c.action as ShippingCallAction] ?? c.action)
+                        : '—'}
+                    </span>
                     <SuccessChip success={c.success} />
                     <span className="text-xs text-muted-foreground">
                       {providerLabel(c.providerCode)}
@@ -224,4 +292,4 @@ function ShipmentLogDrawer({
   )
 }
 
-export { ShippingCallDrawer, ShipmentLogDrawer, SuccessChip }
+export { ShippingCallDrawer, ShipmentLogDrawer, BookingAttemptsDrawer, SuccessChip }

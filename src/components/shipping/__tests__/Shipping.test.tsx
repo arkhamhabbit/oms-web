@@ -10,9 +10,13 @@ import type { OrderDetail, OrderSummary } from '@/api/orders'
 import { WarehouseFormDialog } from '@/components/inventory/WarehouseFormDialog'
 import { BreadcrumbProvider } from '@/layouts/breadcrumb-context'
 import {
-  missingContacts,
+  actionBlockedReason,
+  canBookRow,
+  canPrintRow,
+  canSelectRow,
   SELECTION_CAP,
   SELECTION_CAP_HINT,
+  SHIPPING_PRESETS,
   selectionBlocked,
   togglePage,
   toggleSelected,
@@ -32,7 +36,10 @@ function summary(n: number, extra: Partial<OrderSummary> = {}): OrderSummary {
     status: 'CONFIRMED',
     refundState: 'NONE',
     shipmentState: 'NONE',
+    bookable: true,
     labelPrinted: false,
+    itemCount: 3,
+    paymentStatus: 'CAPTURED',
     payableMinor: 84800,
     paymentMethod: 'CARD',
     confirmedAt: '2026-11-18T08:00:00Z',
@@ -51,6 +58,16 @@ const SETTINGS = {
   fallbackWidthMm: 150,
   fallbackHeightMm: 100,
   effectiveFrom: '2026-11-18T15:51:20Z',
+  pickupWarehouse: {
+    id: 'w-1',
+    code: 'VERIFY',
+    name: 'Verify Warehouse',
+    active: true,
+    contactName: 'Habbit Dispatch',
+    contactPhone: '+919999999999',
+    contactEmail: null,
+    missingContact: ['EMAIL'],
+  },
 }
 
 const PROVIDERS = [
@@ -163,7 +180,7 @@ describe('the selection cap', () => {
     expect(last).toBeDisabled()
     expect(last.parentElement).toHaveAttribute('title', SELECTION_CAP_HINT)
     expect(calls.some((c) => c.method === 'POST')).toBe(false)
-  })
+  }, 15000) // 21 rows: slow under a full parallel run
 
   it('shows no boxes and no selection bar without shipping.book', async () => {
     serve(['orders.read', 'shipping.read'])
@@ -184,27 +201,165 @@ describe('the selection cap', () => {
     await user.click(screen.getByRole('button', { name: /^To ship/ }))
     await waitFor(() => {
       const list = calls.filter((c) => c.url.pathname === '/api/admin/orders' && c.url.searchParams.get('size') === '20').at(-1)!
-      expect(list.url.searchParams.get('status')).toBe('CONFIRMED')
+      expect(list.url.searchParams.get('bookable')).toBe('true')
+      expect(list.url.searchParams.get('status')).toBeNull()
+      expect(list.url.searchParams.getAll('shipmentState')).toEqual(['NONE'])
     })
+  })
+
+  it('sends exactly what each preset says, and To ship is the bookable, never-failed list', () => {
+    const sent = Object.fromEntries(SHIPPING_PRESETS.map((p) => [p.key, p.filter]))
+    expect(sent).toEqual({
+      TO_SHIP: { bookable: true, shipmentState: ['NONE'] },
+      BOOKING_FAILED: { shipmentState: ['BOOKING_FAILED'] },
+      NOT_PRINTED: { shipmentState: ['BOOKED'], labelPrinted: false },
+      IN_TRANSIT: { shipmentState: ['IN_TRANSIT'] },
+      PROBLEMS: { shipmentState: ['PROBLEM'] },
+    })
+  })
+
+  it('counts an order with a failed booking under Booking failed only', async () => {
+    const user = userEvent.setup()
+    const rows = [summary(5), summary(6, { shipmentState: 'BOOKING_FAILED', bookable: true })]
+    serve(
+      ALL,
+      (call) => {
+        if (call.url.pathname !== '/api/admin/orders') return undefined
+        const q = call.url.searchParams
+        const states = q.getAll('shipmentState')
+        const hit = rows.filter(
+          (r) =>
+            (q.get('bookable') === null || String(r.bookable) === q.get('bookable')) &&
+            (states.length === 0 || states.includes(r.shipmentState!))
+        )
+        return json(200, { content: hit, totalElements: hit.length, totalPages: 1 })
+      },
+      rows
+    )
+    render(<OrdersPage />, '/orders', '/orders')
+    await waitFor(() => expect(screen.getByLabelText('To ship count')).toHaveTextContent('1'))
+    expect(screen.getByLabelText('Booking failed count')).toHaveTextContent('1')
+    await user.click(screen.getByRole('button', { name: /^To ship/ }))
+    await waitFor(() => {
+      expect(screen.getByText('HBT_10000005')).toBeInTheDocument()
+      expect(screen.queryByText('HBT_10000006')).not.toBeInTheDocument()
+    })
+    await user.click(screen.getByRole('button', { name: /^Booking failed/ }))
+    await waitFor(() => {
+      expect(screen.getByText('HBT_10000006')).toBeInTheDocument()
+      expect(screen.queryByText('HBT_10000005')).not.toBeInTheDocument()
+    })
+  })
+
+  it('offers a box only on bookable rows and rows with a live shipment, and says why an action is off', async () => {
+    const user = userEvent.setup()
+    const rows = [
+      summary(5),
+      summary(6, { bookable: false, status: 'PACKED', shipmentState: 'BOOKED', shipmentId: 's-6', courierName: 'Delhivery', awb: 'AWB6' }),
+      summary(7, { bookable: false, status: 'DELIVERED', shipmentState: 'DELIVERED', shipmentId: null }),
+    ]
+    serve(ALL, undefined, rows)
+    render(<OrdersPage />, '/orders', '/orders')
+    await waitFor(() => expect(screen.getByLabelText('Select HBT_10000005')).toBeInTheDocument())
+    expect(screen.getByLabelText('Select HBT_10000006')).toBeInTheDocument()
+    expect(screen.queryByLabelText('Select HBT_10000007')).not.toBeInTheDocument()
+    expect(rows.map(canSelectRow)).toEqual([true, true, false])
+    expect(rows.map(canBookRow)).toEqual([true, false, false])
+    expect(rows.map(canPrintRow)).toEqual([false, true, false])
+
+    // only the booked order is ticked: booking fits none of the selection, printing fits it
+    await user.click(screen.getByLabelText('Select HBT_10000006'))
+    const bar = await screen.findByRole('region', { name: 'Selection' })
+    expect(within(bar).getByRole('button', { name: 'Book shipments' })).toBeDisabled()
+    expect(within(bar).getByRole('button', { name: 'Book and print' })).toBeDisabled()
+    expect(within(bar).getByRole('button', { name: 'Print labels' })).toBeEnabled()
+    expect(within(bar).getByTestId('selection-reason')).toHaveTextContent(
+      'Booking is off: None of the selected orders can be booked now.'
+    )
+    // both ticked: both actions fit something, and each says how many it takes
+    await user.click(screen.getByLabelText('Select HBT_10000005'))
+    expect(within(bar).getByRole('button', { name: 'Book shipments (1)' })).toBeEnabled()
+    expect(within(bar).getByRole('button', { name: 'Print labels (1)' })).toBeEnabled()
+    expect(within(bar).queryByTestId('selection-reason')).not.toBeInTheDocument()
+    expect(actionBlockedReason(new Map(), 'print')).toMatch(/booked shipment/)
+  })
+
+  it('reads courier, AWB and tracking from the row with no shipment reads, and shows items and payment status', async () => {
+    serve(
+      ALL,
+      undefined,
+      [
+        summary(5),
+        summary(6, {
+          bookable: false,
+          status: 'PACKED',
+          shipmentState: 'BOOKED',
+          shipmentId: 's-6',
+          providerCode: 'PROSHIP',
+          courierName: 'Delhivery',
+          awb: 'AWB-6',
+          trackingUrl: 'https://track.example/AWB-6',
+          itemCount: 7,
+          paymentStatus: 'REFUND_PENDING',
+        }),
+      ]
+    )
+    render(<OrdersPage />, '/orders', '/orders')
+    const rowOf = (n: string) => screen.getByText(n).closest('tr')!
+    await waitFor(() => expect(rowOf('HBT_10000006')).toHaveTextContent('Delhivery · AWB-6'))
+    const row6 = rowOf('HBT_10000006')
+    expect(within(row6).getByRole('link', { name: 'Track' })).toHaveAttribute('href', 'https://track.example/AWB-6')
+    expect(row6).toHaveTextContent('7')
+    expect(row6).toHaveTextContent('Refund owed') // the served paymentStatus, not a guess from confirmedAt
+    expect(rowOf('HBT_10000005')).toHaveTextContent('Not booked')
+    expect(rowOf('HBT_10000005')).toHaveTextContent('Captured')
+    expect(screen.getByRole('columnheader', { name: 'Items' })).toBeInTheDocument()
+    // the whole page cost: no shipment read per row, however many rows are booked
+    expect(calls.filter((c) => c.url.pathname.startsWith('/api/admin/shipments'))).toHaveLength(0)
   })
 })
 
 describe('booking from the list', () => {
-  it('books with Manual (carrier and tracking per row) and lists each order booked or refused', async () => {
+  const PREVIEW = {
+    bookable: 1,
+    results: [
+      {
+        orderId: 'o-5',
+        orderNumber: 'HBT_10000005',
+        bookable: true,
+        providerCode: 'MANUAL',
+        providerName: 'Manual',
+        pickupWarehouse: { id: 'w-1', code: 'VERIFY', name: 'Verify Warehouse' },
+        weightGrams: 200,
+        weightSource: 'PRODUCTS',
+        lengthMm: 200,
+        widthMm: 150,
+        heightMm: 100,
+        boxSource: 'FALLBACK',
+      },
+      {
+        orderId: 'o-6',
+        orderNumber: 'HBT_10000006',
+        bookable: false,
+        providerCode: 'MANUAL',
+        providerName: 'Manual',
+        sentence: 'Order HBT_10000006 is not paid yet, so it cannot be booked.',
+      },
+    ],
+  }
+
+  it('opens with the preview, leaves out the order it refuses, and books the rest with courier and AWB from the result', async () => {
     const user = userEvent.setup()
     serve(ALL, (call) => {
+      if (call.url.pathname === '/api/admin/shipments/preview') return json(200, PREVIEW)
       if (call.url.pathname === '/api/admin/shipments/book') {
         return json(200, {
           booked: 1,
-          refused: 1,
+          refused: 0,
           results: [
-            { orderId: 'o-5', orderNumber: 'HBT_10000005', outcome: 'BOOKED', shipmentId: 's-5' },
-            { orderId: 'o-6', orderNumber: 'HBT_10000006', outcome: 'REFUSED', sentence: 'HBT_10000006 is not paid.' },
+            { orderId: 'o-5', orderNumber: 'HBT_10000005', outcome: 'BOOKED', shipmentId: 's-5', courierName: 'Hand delivery', awb: 'W-1' },
           ],
         })
-      }
-      if (call.url.pathname === '/api/admin/shipments/s-5') {
-        return json(200, { shipment: { id: 's-5', courierName: 'Hand delivery', awb: 'W-1' } })
       }
       return undefined
     }, [summary(5), summary(6)])
@@ -216,47 +371,67 @@ describe('booking from the list', () => {
     await user.click(screen.getByRole('button', { name: 'Book shipments' }))
 
     const dialog = await screen.findByRole('dialog')
-    await waitFor(() => expect(within(dialog).getByTestId('booking-provider')).toHaveTextContent('Manual (the default)'))
-    const book = within(dialog).getByRole('button', { name: 'Book 2' })
-    expect(book).toBeDisabled() // Manual needs carrier and tracking on every row
-    for (const n of ['HBT_10000005', 'HBT_10000006']) {
-      await user.type(within(dialog).getByLabelText(`Carrier for ${n}`), 'Hand delivery')
-      await user.type(within(dialog).getByLabelText(`Tracking reference for ${n}`), `T-${n}`)
-    }
+    const row5 = await within(dialog).findByTestId('preview-HBT_10000005')
+    expect(row5).toHaveTextContent('200 g from the products')
+    expect(row5).toHaveTextContent('200 × 150 × 100 mm fallback package')
+    expect(row5).toHaveTextContent('Manual · from VERIFY')
+    const row6 = within(dialog).getByTestId('preview-HBT_10000006')
+    expect(row6).toHaveAttribute('data-bookable', 'false')
+    expect(row6).toHaveTextContent('Order HBT_10000006 is not paid yet, so it cannot be booked.')
+    expect(within(dialog).getByTestId('preview-excluded')).toHaveTextContent('1 order cannot be booked and is left out')
+    const preview = calls.find((c) => c.url.pathname === '/api/admin/shipments/preview')!
+    expect(preview.body).toEqual({ orderNumbers: ['HBT_10000005', 'HBT_10000006'] })
+
+    const book = within(dialog).getByRole('button', { name: 'Book 1' })
+    expect(book).toBeDisabled() // Manual needs carrier and tracking
+    await user.type(within(dialog).getByLabelText('Carrier for HBT_10000005'), 'Hand delivery')
+    await user.type(within(dialog).getByLabelText('Tracking reference for HBT_10000005'), 'W-1')
     await user.click(book)
 
     const results = await screen.findByRole('table', { name: 'Booking results' })
     const booked = within(results).getAllByRole('row').find((r) => r.getAttribute('data-outcome') === 'BOOKED')!
-    await waitFor(() => expect(booked).toHaveTextContent('W-1'))
     expect(booked).toHaveTextContent('Hand delivery')
-    const refused = within(results).getAllByRole('row').find((r) => r.getAttribute('data-outcome') === 'REFUSED')!
-    expect(refused).toHaveTextContent('Refused')
-    expect(refused).toHaveTextContent('HBT_10000006 is not paid.')
+    expect(booked).toHaveTextContent('W-1')
 
     const post = calls.find((c) => c.url.pathname === '/api/admin/shipments/book')!
     expect(post.headers.get('Idempotency-Key')).toBeTruthy()
-    expect(post.body).toEqual({
-      orders: [
-        { orderId: 'o-5', carrier: 'Hand delivery', trackingReference: 'T-HBT_10000005' },
-        { orderId: 'o-6', carrier: 'Hand delivery', trackingReference: 'T-HBT_10000006' },
-      ],
-    })
-    // the selection cleared after the action
+    expect(post.body).toEqual({ orders: [{ orderId: 'o-5', carrier: 'Hand delivery', trackingReference: 'W-1' }] })
+    // courier and AWB came with the result: no follow-up read of the new shipment
+    expect(calls.some((c) => c.method === 'GET' && c.url.pathname.startsWith('/api/admin/shipments/'))).toBe(false)
     expect(screen.queryByRole('region', { name: 'Selection' })).not.toBeInTheDocument()
+  }, 15000) // types into fields: slow under a full parallel run
 
-  }, 15000) // types into four fields: slow under a full parallel run
+  it('keeps an override editable and sends it', async () => {
+    const user = userEvent.setup()
+    serve(ALL, (call) => {
+      if (call.url.pathname === '/api/admin/shipments/preview') return json(200, { bookable: 1, results: [PREVIEW.results[0]] })
+      if (call.url.pathname === '/api/admin/shipments/book') return json(200, { booked: 1, refused: 0, results: [] })
+      return undefined
+    }, [summary(5)])
+    render(<OrdersPage />, '/orders', '/orders')
+    await waitFor(() => expect(screen.getByLabelText('Select HBT_10000005')).toBeInTheDocument())
+    await user.click(screen.getByLabelText('Select HBT_10000005'))
+    await user.click(await screen.findByRole('button', { name: 'Book shipments' }))
+    const dialog = await screen.findByRole('dialog')
+    const weight = await within(dialog).findByLabelText('Weight for HBT_10000005')
+    expect(weight).toHaveAttribute('placeholder', '200')
+    await user.type(weight, '350')
+    await user.type(within(dialog).getByLabelText('Carrier for HBT_10000005'), 'X')
+    await user.type(within(dialog).getByLabelText('Tracking reference for HBT_10000005'), 'T')
+    await user.click(within(dialog).getByRole('button', { name: 'Book 1' }))
+    await waitFor(() => expect(calls.some((c) => c.url.pathname === '/api/admin/shipments/book')).toBe(true))
+    const post = calls.find((c) => c.url.pathname === '/api/admin/shipments/book')!
+    expect(post.body).toMatchObject({ orders: [{ orderId: 'o-5', weightGrams: 350 }] })
+  }, 15000)
 
   it('prints nothing when the server refuses one label, and shows its sentence', async () => {
     const user = userEvent.setup()
     serve(ALL, (call) => {
-      if (call.url.pathname === '/api/admin/shipments') {
-        return json(200, { content: [{ id: 's-5', orderNumber: 'HBT_10000005', status: 'BOOKED', direction: 'FORWARD', providerCode: 'MANUAL' }], totalElements: 1, totalPages: 1 })
-      }
       if (call.url.pathname === '/api/admin/shipments/labels') {
         return refusal(422, 'BUSINESS_RULE_VIOLATION', 'HBT_10000005 has no provider label: it was booked by hand.')
       }
       return undefined
-    }, [summary(5, { status: 'PACKED', shipmentState: 'BOOKED' })])
+    }, [summary(5, { status: 'PACKED', shipmentState: 'BOOKED', bookable: false, shipmentId: 's-5', providerCode: 'MANUAL' })])
     render(<OrdersPage />, '/orders', '/orders')
 
     await waitFor(() => expect(screen.getByLabelText('Select HBT_10000005')).toBeInTheDocument())
@@ -268,7 +443,8 @@ describe('booking from the list', () => {
     expect(tab.close).toHaveBeenCalled()
     expect(tab.location.href).toBe('')
     const print = calls.find((c) => c.url.pathname === '/api/admin/shipments/labels')!
-    expect(print.body).toEqual({ shipmentIds: ['s-5'] })
+    expect(print.body).toEqual({ orderNumbers: ['HBT_10000005'] }) // by order number: no shipment is resolved first
+    expect(calls.some((c) => c.url.pathname === '/api/admin/shipments')).toBe(false)
     // a refusal keeps the selection (behind the open dialog, so hidden from the accessibility tree)
     expect(screen.getByRole('region', { name: 'Selection', hidden: true })).toBeInTheDocument()
   })
@@ -321,16 +497,17 @@ describe('the Shipment panel', () => {
   const detail = (providerCode: string) => ({
     shipment: { ...manualShipment, providerCode, version: 1 },
     bookedByKind: 'ADMIN',
-    bookedBy: 'u-1',
+    bookedBy: { id: 'u-1', kind: 'ADMIN', displayName: 'Super Admin' },
     weightGrams: 500,
     lengthMm: 200,
     widthMm: 150,
     heightMm: 100,
     events: [
+      { id: 'ev0', eventAt: '2026-11-17T09:00:00Z', providerStatusCode: 'CANCELLED', status: 'CANCELLED', source: 'SYSTEM' },
       { id: 'ev1', eventAt: '2026-11-18T10:00:00Z', providerStatusCode: 'BOOKED', status: 'BOOKED', source: 'ADMIN' },
       { id: 'ev2', eventAt: '2026-11-18T12:00:00Z', providerStatusCode: '6', status: 'IN_TRANSIT', location: 'Delhi hub', source: 'POLL' },
     ],
-    calls: [],
+    calls: [{ id: 'c-own', action: 'BOOK', success: true, providerCode, createdAt: BOOKED_AT }],
   })
   const packed: OrderDetail = {
     ...ORDER,
@@ -341,7 +518,11 @@ describe('the Shipment panel', () => {
       manualShipment,
       { id: 's-old', providerCode: 'MANUAL', status: 'CANCELLED', awb: 'W-OLD', bookedAt: '2026-11-17T10:00:00Z', cancelledAt: '2026-11-17T10:05:00Z' },
     ],
-    events: [{ id: 'e1', kind: 'STATUS', fromStatus: 'CONFIRMED', toStatus: 'PACKED', actorName: 'Super Admin', occurredAt: BOOKED_AT }],
+    events: [],
+    shippingCalls: [
+      { id: 'c-1', action: 'BOOK', success: false, providerCode: 'PROSHIP', httpStatus: 422, createdAt: '2026-11-17T10:00:00Z', sentence: 'No courier rule covers this order.', triggeredByName: 'Super Admin' },
+      { id: 'c-2', action: 'AUTH', success: true, providerCode: 'PROSHIP', httpStatus: 200, createdAt: '2026-11-17T09:59:59Z' },
+    ],
   }
 
   it('Manual booked: the hand steps stay, with the timeline newest first, booked by and the history', async () => {
@@ -353,10 +534,49 @@ describe('the Shipment panel', () => {
     const events = within(await screen.findByRole('list', { name: 'Tracking events' })).getAllByRole('listitem')
     expect(events[0]).toHaveTextContent('In transit · Delhi hub')
     expect(events[1]).toHaveTextContent('Booked')
+    expect(events[2]).toHaveTextContent('Cancelled')
+    expect(events[2]).toHaveTextContent('System') // an event OMS wrote with no team member
+    // booked by is a name from the shipment itself; the order's history is not searched
     expect(await screen.findByText(/Super Admin/)).toBeInTheDocument()
     expect(screen.getByText('500 g, 200 × 150 × 100 mm')).toBeInTheDocument()
     expect(screen.getByText('Previous shipments (1)')).toBeInTheDocument()
     expect(screen.queryByRole('button', { name: 'Refresh tracking' })).not.toBeInTheDocument()
+  })
+
+  it('lists the order\'s booking attempts apart from the shipment\'s own log, each opening whole with a name', async () => {
+    const user = userEvent.setup()
+    serve(ALL, (call) => {
+      if (call.url.pathname === '/api/admin/orders/o-5') return json(200, packed)
+      if (call.url.pathname === '/api/admin/shipments/s-5') return json(200, detail('MANUAL'))
+      if (call.url.pathname === '/api/admin/shipping/calls/c-1') {
+        return json(200, {
+          call: { id: 'c-1', action: 'BOOK', success: false, providerCode: 'PROSHIP', triggeredBy: { id: null, kind: 'SYSTEM', displayName: 'System' } },
+          requestBody: '{"a":1}',
+          responseBody: '{"error":"3013"}',
+        })
+      }
+      return undefined
+    })
+    render(<OrderDetailPage />, '/orders/o-5', '/orders/:id')
+    const section = await screen.findByRole('region', { name: 'Booking attempts' })
+    expect(section).toHaveTextContent('2 calls, 1 failed')
+    await user.click(within(section).getByRole('button', { name: /Open/ }))
+    const list = await screen.findByRole('list', { name: 'Booking attempts' })
+    const items = within(list).getAllByRole('listitem')
+    expect(items).toHaveLength(2)
+    expect(items[0]).toHaveTextContent('No courier rule covers this order.')
+    await user.click(within(items[0]).getByRole('button'))
+    expect(await screen.findByText('System')).toBeInTheDocument() // triggered by, as a name
+    expect(screen.getByText(/3013/)).toBeInTheDocument()
+  })
+
+  it('shows the shipment\'s own log, not the order\'s attempts', async () => {
+    const user = userEvent.setup()
+    serveOrder(packed, ALL, detail('MANUAL'))
+    render(<OrderDetailPage />, '/orders/o-5', '/orders/:id')
+    await user.click(await screen.findByRole('button', { name: /Log/ }))
+    const list = await screen.findByRole('list', { name: 'Shipment calls' })
+    expect(within(list).getAllByRole('listitem')).toHaveLength(1)
   })
 
   it('courier booked: the hand steps are hidden and Print label is the header action', async () => {
@@ -379,6 +599,34 @@ describe('the Shipment panel', () => {
   })
 })
 
+describe('the order page extras', () => {
+  it('draws the line thumbnail (or a placeholder) and the customer email when served', async () => {
+    serveOrder({
+      ...ORDER,
+      consumerId: 'c-1',
+      consumerName: 'Asha',
+      consumerMobile: '+919999900001',
+      consumerEmail: 'asha@example.com',
+      lines: [
+        { lineNumber: 1, productName: 'Tee', skuCode: 'TEE-1', quantity: 1, primaryImage: { thumbUrl: 'https://cdn.example/tee-thumb.jpg', url: 'https://cdn.example/tee.jpg' } },
+        { lineNumber: 2, productName: 'Cap', skuCode: 'CAP-1', quantity: 1, primaryImage: null },
+      ],
+    })
+    render(<OrderDetailPage />, '/orders/o-5', '/orders/:id')
+    const img = await screen.findByAltText('Tee')
+    expect(img).toHaveAttribute('src', 'https://cdn.example/tee-thumb.jpg')
+    expect(screen.getAllByLabelText('No image')).toHaveLength(1)
+    expect(screen.getByRole('link', { name: 'asha@example.com' })).toHaveAttribute('href', 'mailto:asha@example.com')
+  })
+
+  it('shows no email line when none is served', async () => {
+    serveOrder({ ...ORDER, consumerId: 'c-1', consumerName: 'Asha', consumerEmail: null })
+    render(<OrderDetailPage />, '/orders/o-5', '/orders/:id')
+    await screen.findByText('Asha')
+    expect(screen.queryByRole('link', { name: /@/ })).not.toBeInTheDocument()
+  })
+})
+
 describe('shipping settings', () => {
   it('disables an unconfigured provider with why, keeps Proship off the default, and warns of a missing contact', async () => {
     serve([...ALL, 'shipping.settings'])
@@ -395,7 +643,22 @@ describe('shipping settings', () => {
 
     const warning = await screen.findByTestId('pickup-contact-warning')
     expect(warning).toHaveTextContent('Verify Warehouse has no contact email.')
+    expect(warning).toHaveTextContent('a Manual booking does not need them')
     expect(within(warning).getByRole('link')).toHaveAttribute('href', '/inventory/warehouses/w-1')
+    expect(screen.getByText(/needed for courier bookings, not for Manual ones/)).toBeInTheDocument()
+    // the warning came with the settings: the warehouse itself was never read
+    expect(calls.some((c) => c.url.pathname === '/api/admin/warehouses/w-1')).toBe(false)
+  })
+
+  it('works without warehouse.read, and names every missing contact from missingContact', async () => {
+    serve(['shipping.read', 'shipping.settings'], (call) =>
+      call.url.pathname === '/api/admin/shipping/settings'
+        ? json(200, { ...SETTINGS, pickupWarehouse: { ...SETTINGS.pickupWarehouse, missingContact: ['NAME', 'PHONE', 'EMAIL'] } })
+        : undefined
+    )
+    render(<ShippingSettingsPage />, '/shipping/settings', '/shipping/settings')
+    const warning = await screen.findByTestId('pickup-contact-warning')
+    expect(warning).toHaveTextContent('no contact name, contact phone and contact email')
   })
 
   it('shows the server sentence from Test connection', async () => {
@@ -411,9 +674,15 @@ describe('shipping settings', () => {
     expect(await screen.findByText('Proship accepted the credentials.')).toBeInTheDocument()
   })
 
-  it('names nothing missing once all three contacts are there', () => {
-    expect(missingContacts({ ...WAREHOUSE, contactEmail: 'dispatch@habbit.local' })).toEqual([])
-    expect(missingContacts({ contactName: ' ' })).toEqual(['contact name', 'contact phone', 'contact email'])
+  it('shows no warning once the settings say nothing is missing', async () => {
+    serve([...ALL, 'shipping.settings'], (call) =>
+      call.url.pathname === '/api/admin/shipping/settings'
+        ? json(200, { ...SETTINGS, pickupWarehouse: { ...SETTINGS.pickupWarehouse, contactEmail: 'dispatch@habbit.local', missingContact: [] } })
+        : undefined
+    )
+    render(<ShippingSettingsPage />, '/shipping/settings', '/shipping/settings')
+    await screen.findByLabelText('Pickup warehouse')
+    expect(screen.queryByTestId('pickup-contact-warning')).not.toBeInTheDocument()
   })
 })
 

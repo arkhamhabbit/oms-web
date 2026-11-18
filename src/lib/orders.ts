@@ -3,7 +3,6 @@ import type {
   OrderDetail,
   OrderPayment,
   OrderStatus,
-  RefundState,
 } from '@/api/orders'
 import { minorToMajorString } from '@/lib/money'
 
@@ -172,14 +171,6 @@ export function refundedMinor(order: OrderDetail): number {
   return (order.refunds ?? [])
     .filter((r) => r.outcome === 'PROCESSED' || r.outcome === 'SETTLED')
     .reduce((sum, r) => sum + (r.amountMinor ?? 0), 0)
-}
-
-/** Whether the payment counts as captured, from what the list row carries. */
-export function paymentCapturedLabel(order: {
-  confirmedAt?: string
-  refundState?: RefundState
-}): 'Captured' | 'Not captured' {
-  return order.refundState !== 'VOIDED' && order.confirmedAt ? 'Captured' : 'Not captured'
 }
 
 const CARRIER_TRACKING: { match: RegExp; url: (ref: string) => string }[] = [

@@ -36,6 +36,7 @@ import { ShipmentPanel } from '@/components/shipping/ShipmentPanel'
 import { useOrderQuery, useOrdersQuery, type FulfilAction, type OrderDetail } from '@/api/orders'
 import { formatDateTime } from '@/lib/dates'
 import { TierBadge } from '@/components/membership/TierBadge'
+import { LineThumb } from '@/components/orders/LineThumb'
 import { ConsumerLink } from '@/components/orders/ConsumerLink'
 
 function BackLink() {
@@ -188,6 +189,14 @@ function OrderDetailPage() {
                   name={order.consumerName}
                   mobile={order.consumerMobile}
                 />
+                {order.consumerEmail && (
+                  <a
+                    href={`mailto:${order.consumerEmail}`}
+                    className="w-fit text-xs break-all text-muted-foreground underline-offset-2 hover:underline"
+                  >
+                    {order.consumerEmail}
+                  </a>
+                )}
                 <div>
                   <TierBadge code={order.tierCode} />
                 </div>
@@ -240,11 +249,16 @@ function OrderDetailPage() {
                   {(order.lines ?? []).map((line) => (
                     <TableRow key={line.lineNumber}>
                       <TableCell>
-                        <div>{line.productName}</div>
-                        <div className="text-xs text-muted-foreground">
-                          {[line.variantName, ...(line.optionLabels ?? [])]
-                            .filter(Boolean)
-                            .join(' · ')}
+                        <div className="flex items-center gap-3">
+                          <LineThumb image={line.primaryImage} alt={line.productName ?? 'Product'} />
+                          <div>
+                            <div>{line.productName}</div>
+                            <div className="text-xs text-muted-foreground">
+                              {[line.variantName, ...(line.optionLabels ?? [])]
+                                .filter(Boolean)
+                                .join(' · ')}
+                            </div>
+                          </div>
                         </div>
                       </TableCell>
                       <TableCell className="font-mono text-xs">{line.skuCode}</TableCell>
