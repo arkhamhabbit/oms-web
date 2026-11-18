@@ -144,10 +144,13 @@ function Body({
   const [chosen, setChosen] = React.useState<string | undefined>()
   const provider = chosen ?? settings.data?.defaultProviderCode
   const manual = provider === 'MANUAL'
+  const [result, setResult] = React.useState<BookAndPrintResult | undefined>()
   // What each order would send, asked before anything is booked: nothing is called or written.
+  // Not asked again once the booking is done.
   const preview = useBookingPreviewQuery(
     orders.map((o) => o.number),
-    chosen
+    chosen,
+    !result
   )
   const previews = new Map<string, BookingPreview>(
     (preview.data?.results ?? []).map((p) => [p.orderNumber!, p])
@@ -166,7 +169,6 @@ function Body({
   )
   const [key, setKey] = React.useState(() => crypto.randomUUID())
   const [refusal, setRefusal] = React.useState<string | undefined>()
-  const [result, setResult] = React.useState<BookAndPrintResult | undefined>()
   const [labelsUrl, setLabelsUrl] = React.useState<string | undefined>()
 
   // An order the preview refuses is shown with the server's sentence and left out of the booking.

@@ -198,14 +198,16 @@ function ShipmentPanel({
                 'Booked',
                 [formatDateTime(live.bookedAt), detail?.bookedBy?.displayName].filter(Boolean).join(' · '),
               ],
-              [
-                'Cancelled',
-                detail?.cancelledBy
-                  ? [formatDateTime(live.cancelledAt), detail.cancelledBy.displayName]
-                      .filter(Boolean)
-                      .join(' · ')
-                  : undefined,
-              ],
+              ...(detail?.cancelledBy
+                ? ([
+                    [
+                      'Cancelled',
+                      [formatDateTime(live.cancelledAt), detail.cancelledBy.displayName]
+                        .filter(Boolean)
+                        .join(' · '),
+                    ],
+                  ] as [string, React.ReactNode][])
+                : []),
               ['Label printed', live.labelPrintedAt ? formatDateTime(live.labelPrintedAt) : 'Not yet'],
               ['Expected delivery', live.expectedDeliveryAt ? formatDateTime(live.expectedDeliveryAt) : undefined],
               ['Last problem', live.lastError],
