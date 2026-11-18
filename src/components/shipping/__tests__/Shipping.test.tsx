@@ -203,18 +203,51 @@ describe('the selection cap', () => {
       const list = calls.filter((c) => c.url.pathname === '/api/admin/orders' && c.url.searchParams.get('size') === '20').at(-1)!
       expect(list.url.searchParams.get('bookable')).toBe('true')
       expect(list.url.searchParams.get('status')).toBeNull()
-      expect(list.url.searchParams.getAll('shipmentState')).toEqual([])
+      expect(list.url.searchParams.getAll('shipmentState')).toEqual(['NONE'])
     })
   })
 
-  it('sends exactly what each preset says, and To ship is the bookable list', () => {
+  it('sends exactly what each preset says, and To ship is the bookable, never-failed list', () => {
     const sent = Object.fromEntries(SHIPPING_PRESETS.map((p) => [p.key, p.filter]))
     expect(sent).toEqual({
-      TO_SHIP: { bookable: true },
+      TO_SHIP: { bookable: true, shipmentState: ['NONE'] },
       BOOKING_FAILED: { shipmentState: ['BOOKING_FAILED'] },
       NOT_PRINTED: { shipmentState: ['BOOKED'], labelPrinted: false },
       IN_TRANSIT: { shipmentState: ['IN_TRANSIT'] },
       PROBLEMS: { shipmentState: ['PROBLEM'] },
+    })
+  })
+
+  it('counts an order with a failed booking under Booking failed only', async () => {
+    const user = userEvent.setup()
+    const rows = [summary(5), summary(6, { shipmentState: 'BOOKING_FAILED', bookable: true })]
+    serve(
+      ALL,
+      (call) => {
+        if (call.url.pathname !== '/api/admin/orders') return undefined
+        const q = call.url.searchParams
+        const states = q.getAll('shipmentState')
+        const hit = rows.filter(
+          (r) =>
+            (q.get('bookable') === null || String(r.bookable) === q.get('bookable')) &&
+            (states.length === 0 || states.includes(r.shipmentState!))
+        )
+        return json(200, { content: hit, totalElements: hit.length, totalPages: 1 })
+      },
+      rows
+    )
+    render(<OrdersPage />, '/orders', '/orders')
+    await waitFor(() => expect(screen.getByLabelText('To ship count')).toHaveTextContent('1'))
+    expect(screen.getByLabelText('Booking failed count')).toHaveTextContent('1')
+    await user.click(screen.getByRole('button', { name: /^To ship/ }))
+    await waitFor(() => {
+      expect(screen.getByText('HBT_10000005')).toBeInTheDocument()
+      expect(screen.queryByText('HBT_10000006')).not.toBeInTheDocument()
+    })
+    await user.click(screen.getByRole('button', { name: /^Booking failed/ }))
+    await waitFor(() => {
+      expect(screen.getByText('HBT_10000006')).toBeInTheDocument()
+      expect(screen.queryByText('HBT_10000005')).not.toBeInTheDocument()
     })
   })
 

@@ -119,15 +119,15 @@ export interface PresetFilter {
 
 /**
  * The packing presets, and what each one sends to `GET /api/admin/orders`:
- * - **To ship**: `bookable=true` — CONFIRMED, paid, and no shipment that is neither cancelled nor
- *   failed (OMS 2.11). An order whose booking was refused can be booked again, so it is in this list
- *   as well as under Booking failed; the two counts overlap on purpose.
+ * - **To ship**: `bookable=true` and `shipmentState=NONE` — CONFIRMED, paid, nothing booked and no
+ *   booking refused. An order whose booking failed is bookable too, but it is counted under Booking
+ *   failed only, so the two presets never share an order.
  * - **Booking failed**: `shipmentState=BOOKING_FAILED`.
  * - **Booked, label not printed**: `shipmentState=BOOKED` and `labelPrinted=false`.
  * - **In transit**: `shipmentState=IN_TRANSIT`. **Problems**: `shipmentState=PROBLEM`.
  */
 export const SHIPPING_PRESETS: { key: ShippingPreset; label: string; filter: PresetFilter }[] = [
-  { key: 'TO_SHIP', label: 'To ship', filter: { bookable: true } },
+  { key: 'TO_SHIP', label: 'To ship', filter: { bookable: true, shipmentState: ['NONE'] } },
   { key: 'BOOKING_FAILED', label: 'Booking failed', filter: { shipmentState: ['BOOKING_FAILED'] } },
   {
     key: 'NOT_PRINTED',
