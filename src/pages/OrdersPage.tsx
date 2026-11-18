@@ -17,7 +17,7 @@ import {
 } from '@/components/ui/select'
 import { useBreadcrumb } from '@/layouts/breadcrumb-context'
 import { isApiError } from '@/lib/api-error'
-import { isUuid, istDayStart, ORDER_STATUSES, paymentCapturedLabel, rupees } from '@/lib/orders'
+import { isUuid, istDayStart, ORDER_STATUSES, rupees } from '@/lib/orders'
 import {
   useCurrentOrderSettingsQuery,
   useOrdersQuery,
@@ -26,13 +26,12 @@ import {
   type RefundState,
 } from '@/api/orders'
 import { formatDateTime } from '@/lib/dates'
-import { ANY_STATUS, ORDER_STATUS_LABEL, REFUND_STATE_LABEL } from '@/lib/labels'
+import { ANY_STATUS, ORDER_STATUS_LABEL, PAYMENT_STATUS_LABEL, REFUND_STATE_LABEL } from '@/lib/labels'
 import { Badge } from '@/components/ui/badge'
 import { TierBadge } from '@/components/membership/TierBadge'
 import { ConsumerLink } from '@/components/orders/ConsumerLink'
 import { Checkbox } from '@/components/ui/checkbox'
 import { usePermissions } from '@/auth/usePermissions'
-import { useLiveShipmentsQueries } from '@/api/shipping'
 import {
   BookShipmentsDialog,
   type BookMode,
@@ -45,6 +44,10 @@ import {
   SELECTION_CAP,
   SELECTION_CAP_HINT,
   SHIPPING_PRESETS,
+  actionBlockedReason,
+  canBookRow,
+  canPrintRow,
+  canSelectRow,
   selectionBlocked,
   type PresetFilter,
   type ShippingPreset,
@@ -72,7 +75,6 @@ function OrdersPage() {
 
   const { has } = usePermissions()
   const canBook = has('shipping.book')
-  const canReadShipping = has('shipping.read')
   const { selection, toggle, togglePage, clear } = useOrderSelection()
   const [booking, setBooking] = React.useState<
     { mode: BookMode; orders: OrderToBook[] } | undefined
@@ -84,9 +86,10 @@ function OrdersPage() {
   const orders = useOrdersQuery({
     page: pageIndex,
     size: PAGE_SIZE,
-    // A preset sets the shipping filters (and To ship the status) while it is on.
-    status: presetFilter.status ?? (status === 'ALL' ? undefined : status),
+    // A preset sets the shipping filters while it is on.
+    status: status === 'ALL' ? undefined : status,
     shipmentState: presetFilter.shipmentState,
+    bookable: presetFilter.bookable,
     labelPrinted: presetFilter.labelPrinted,
     number: number.trim(),
     consumerId: consumerValid ? consumerId.trim() : undefined,
@@ -101,17 +104,18 @@ function OrdersPage() {
   const owedCount = owed.data?.totalElements
   const owedActive = refundState === 'OWED'
   const rows = orders.data?.content ?? []
-  const bookedNumbers = rows
-    .filter((o) => !['NONE', 'CANCELLED', 'BOOKING_FAILED'].includes(o.shipmentState ?? 'NONE'))
-    .map((o) => o.number!)
-  const liveShipments = useLiveShipmentsQueries(bookedNumbers, canReadShipping)
+  // Booking is offered on bookable rows, printing on rows with a live shipment (both from the row).
+  const selectable = rows.filter(canSelectRow)
+  const selectedRows = [...selection.values()]
+  const toBook: OrderToBook[] = selectedRows
+    .filter(canBookRow)
+    .map((o) => ({ id: o.id!, number: o.number! }))
+  const toPrint = selectedRows.filter(canPrintRow).map((o) => o.number!)
+  const bookBlocked = actionBlockedReason(selection, 'book')
+  const printBlocked = actionBlockedReason(selection, 'print')
 
-  function selected(): OrderToBook[] {
-    return [...selection.values()].map((o) => ({ id: o.id!, number: o.number! }))
-  }
-
-  const pageAllOn = rows.length > 0 && rows.every((r) => selection.has(r.id!))
-  const pageSomeOn = rows.some((r) => selection.has(r.id!))
+  const pageAllOn = selectable.length > 0 && selectable.every((r) => selection.has(r.id!))
+  const pageSomeOn = selectable.some((r) => selection.has(r.id!))
   const selectColumn: ColumnDef<OrderSummary, unknown> = {
     id: 'select',
     enableHiding: false,
@@ -119,10 +123,14 @@ function OrdersPage() {
       <Checkbox
         aria-label="Select this page"
         checked={pageAllOn ? true : pageSomeOn ? 'indeterminate' : false}
-        onCheckedChange={() => togglePage(rows)}
+        disabled={selectable.length === 0}
+        onCheckedChange={() => togglePage(selectable)}
       />
     ),
     cell: ({ row }) => {
+      if (!canSelectRow(row.original)) {
+        return null
+      }
       const blocked = selectionBlocked(selection, row.original.id!)
       return (
         <span
@@ -183,7 +191,9 @@ function OrdersPage() {
       cell: ({ row }) => (
         <div className="leading-tight">
           <div>{row.original.paymentMethod ?? '—'}</div>
-          <div className="text-xs text-muted-foreground">{paymentCapturedLabel(row.original)}</div>
+          <div className="text-xs text-muted-foreground">
+            {row.original.paymentStatus ? PAYMENT_STATUS_LABEL[row.original.paymentStatus] : '—'}
+          </div>
         </div>
       ),
     },
@@ -205,25 +215,44 @@ function OrdersPage() {
       id: 'shipment',
       header: 'Shipment',
       cell: ({ row }) => {
-        const live = liveShipments.get(row.original.number!)
+        const o = row.original
         return (
           <div className="flex flex-col items-start gap-0.5 leading-tight">
             <span className="inline-flex items-center gap-1">
-              <ShipmentStateChip state={row.original.shipmentState} />
-              {row.original.labelPrinted && (
+              <ShipmentStateChip state={o.shipmentState} />
+              {o.labelPrinted && (
                 <span title="Label printed" aria-label="Label printed" role="img">
                   <PrinterIcon className="size-4 text-muted-foreground" />
                 </span>
               )}
             </span>
-            {live && (
+            {o.shipmentId && (
               <span className="text-xs text-muted-foreground">
-                {live.courierName ?? '—'} · <span className="font-mono">{live.awb ?? '—'}</span>
+                {o.courierName ?? '—'} · <span className="font-mono">{o.awb ?? '—'}</span>
+                {o.trackingUrl && (
+                  <>
+                    {' · '}
+                    <a
+                      href={o.trackingUrl}
+                      target="_blank"
+                      rel="noreferrer"
+                      onClick={(e) => e.stopPropagation()}
+                      className="underline underline-offset-2"
+                    >
+                      Track
+                    </a>
+                  </>
+                )}
               </span>
             )}
           </div>
         )
       },
+    },
+    {
+      id: 'items',
+      header: 'Items',
+      cell: ({ row }) => row.original.itemCount ?? '—',
     },
     {
       id: 'payable',
@@ -394,27 +423,43 @@ function OrdersPage() {
           {selection.size >= SELECTION_CAP && (
             <span className="text-xs text-muted-foreground">{SELECTION_CAP_HINT}</span>
           )}
+          {(bookBlocked || printBlocked) && (
+            <span className="text-xs text-muted-foreground" data-testid="selection-reason">
+              {[
+                bookBlocked && `Booking is off: ${bookBlocked}`,
+                printBlocked && `Printing is off: ${printBlocked}`,
+              ]
+                .filter(Boolean)
+                .join(' ')}
+            </span>
+          )}
           <div className="ml-auto flex flex-wrap gap-2">
             <Button
               size="sm"
               variant="outline"
-              onClick={() => setBooking({ mode: 'book', orders: selected() })}
+              disabled={!!bookBlocked}
+              title={bookBlocked}
+              onClick={() => setBooking({ mode: 'book', orders: toBook })}
             >
               Book shipments
+              {toBook.length > 0 && toBook.length < selection.size ? ` (${toBook.length})` : ''}
             </Button>
             <Button
               size="sm"
               variant="outline"
-              disabled={printer.pending}
-              onClick={() =>
-                void printer
-                  .run({ orderNumbers: selected().map((o) => o.number) })
-                  .then((ok) => ok && clear())
-              }
+              disabled={printer.pending || !!printBlocked}
+              title={printBlocked}
+              onClick={() => void printer.run({ orderNumbers: toPrint }).then((ok) => ok && clear())}
             >
               Print labels
+              {toPrint.length > 0 && toPrint.length < selection.size ? ` (${toPrint.length})` : ''}
             </Button>
-            <Button size="sm" onClick={() => setBooking({ mode: 'book-and-print', orders: selected() })}>
+            <Button
+              size="sm"
+              disabled={!!bookBlocked}
+              title={bookBlocked}
+              onClick={() => setBooking({ mode: 'book-and-print', orders: toBook })}
+            >
               Book and print
             </Button>
             <Button size="sm" variant="ghost" onClick={clear}>

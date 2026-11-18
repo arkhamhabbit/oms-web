@@ -1,4 +1,4 @@
-import { useMutation, useQueries, useQuery, useQueryClient } from '@tanstack/react-query'
+import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 
 import { api, unwrap } from '@/api/client'
 import type { components } from '@/api/schema.gen'
@@ -15,6 +15,8 @@ export type BookShipmentsRequest = Schemas['BookShipmentsRequest']
 export type BookShipmentsResult = Schemas['BookShipmentsResponse']
 export type BookAndPrintResult = Schemas['BookAndPrintResponse']
 export type BookingResult = Schemas['BookingResultResponse']
+export type BookingPreviews = Schemas['BookingPreviewsResponse']
+export type BookingPreview = Schemas['BookingPreviewResponse']
 export type LabelFile = Schemas['LabelFileResponse']
 export type ShippingCallSummary = Schemas['ShippingCallSummaryResponse']
 export type ShippingCall = Schemas['ShippingCallResponse']
@@ -46,53 +48,22 @@ export function useShipmentQuery(id: string | undefined, enabled = true) {
   })
 }
 
-function shipmentsOfOrderQuery(orderNumber: string) {
-  return {
-    queryKey: [SHIPPING_KEY, 'by-order', orderNumber],
+/**
+ * What booking these orders would send, with this provider (or the settings' default when none is
+ * given). Read-only: no provider is called, nothing is written or logged (OMS 2.11).
+ */
+export function useBookingPreviewQuery(orderNumbers: string[], providerCode?: string, enabled = true) {
+  return useQuery({
+    enabled: enabled && orderNumbers.length > 0,
+    queryKey: [SHIPPING_KEY, 'preview', orderNumbers, providerCode ?? null],
+    staleTime: 0,
     queryFn: () =>
-      unwrap(
-        api.GET('/api/admin/shipments', {
-          params: { query: { orderNumber, pageable: { page: 0, size: 10 } } },
+      unwrap<BookingPreviews>(
+        api.POST('/api/admin/shipments/preview', {
+          body: { orderNumbers, providerCode },
         })
       ),
-  }
-}
-
-/** The order's live forward shipment: the newest one not cancelled (D13.2: at most one). */
-export function liveShipmentOf(shipments: ShipmentSummary[] | undefined): ShipmentSummary | undefined {
-  return (shipments ?? []).find((s) => s.status !== 'CANCELLED' && s.direction !== 'RETURN')
-}
-
-/**
- * The live shipment of each order number given. The list row (`OrderSummaryResponse`) carries
- * the shipment state but no shipment id, courier or AWB, so each booked row is read once from
- * the shipments list filtered by its order number (at most a page of 20).
- */
-export function useLiveShipmentsQueries(orderNumbers: string[], enabled: boolean) {
-  return useQueries({
-    queries: orderNumbers.map((n) => ({ ...shipmentsOfOrderQuery(n), enabled })),
-    combine: (results) => {
-      const byOrder = new Map<string, ShipmentSummary>()
-      results.forEach((r, i) => {
-        const live = liveShipmentOf(r.data?.content)
-        if (live) {
-          byOrder.set(orderNumbers[i], live)
-        }
-      })
-      return byOrder
-    },
   })
-}
-
-/** For a print from the selection: each selected order's live shipment, read fresh. */
-export function useResolveLiveShipments() {
-  const queryClient = useQueryClient()
-  return async (orderNumbers: string[]) => {
-    const pages = await Promise.all(
-      orderNumbers.map((n) => queryClient.fetchQuery({ ...shipmentsOfOrderQuery(n), staleTime: 0 }))
-    )
-    return orderNumbers.map((n, i) => ({ orderNumber: n, shipment: liveShipmentOf(pages[i].content) }))
-  }
 }
 
 export function useBookShipmentsMutation() {
@@ -130,10 +101,10 @@ export function useBookAndPrintMutation() {
 export function usePrintLabelsMutation() {
   const queryClient = useQueryClient()
   return useMutation({
-    mutationFn: (shipmentIds: string[]) =>
+    mutationFn: (target: { orderNumbers: string[] } | { shipmentIds: string[] }) =>
       unwrap<Blob>(
         api.POST('/api/admin/shipments/labels', {
-          body: { shipmentIds },
+          body: target,
           parseAs: 'blob',
         }) as Promise<{ data?: Blob; error?: Schemas['ErrorResponse']; response: Response }>
       ),

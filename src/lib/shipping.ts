@@ -1,4 +1,4 @@
-import type { OrderStatus, OrderSummary } from '@/api/orders'
+import type { OrderSummary } from '@/api/orders'
 import type { ShipmentStatus, ShippingCallAction } from '@/api/shipping'
 
 export type ShipmentState = NonNullable<OrderSummary['shipmentState']>
@@ -12,7 +12,8 @@ export const SHIPMENT_STATE_LABEL: Record<ShipmentState, string> = {
   OUT_FOR_DELIVERY: 'Out for delivery',
   DELIVERED: 'Delivered',
   PROBLEM: 'Problem',
-  CANCELLED: 'Cancelled',
+  // No longer written by OMS (2.11: a cancelled shipment leaves the order NONE); read the same.
+  CANCELLED: 'Not booked',
 }
 
 /** A shipment's own status. */
@@ -111,48 +112,68 @@ export function selectionBlocked(selection: Selection, id: string): boolean {
 export type ShippingPreset = 'TO_SHIP' | 'BOOKING_FAILED' | 'NOT_PRINTED' | 'IN_TRANSIT' | 'PROBLEMS'
 
 export interface PresetFilter {
-  status?: OrderStatus
-  shipmentState?: ShipmentState
+  shipmentState?: ShipmentState[]
+  bookable?: boolean
   labelPrinted?: boolean
 }
 
 /**
- * The packing presets. "To ship" is every CONFIRMED order: a confirmed order is paid and captured
- * (D9.7) and has no live shipment, because booking makes it PACKED. It cannot be `shipmentState
- * NONE`: an order whose earlier shipment was cancelled reads CANCELLED and is ready to book again,
- * and the filter takes one value.
+ * The packing presets, and what each one sends to `GET /api/admin/orders`:
+ * - **To ship**: `bookable=true` — CONFIRMED, paid, and no shipment that is neither cancelled nor
+ *   failed (OMS 2.11). An order whose booking was refused can be booked again, so it is in this list
+ *   as well as under Booking failed; the two counts overlap on purpose.
+ * - **Booking failed**: `shipmentState=BOOKING_FAILED`.
+ * - **Booked, label not printed**: `shipmentState=BOOKED` and `labelPrinted=false`.
+ * - **In transit**: `shipmentState=IN_TRANSIT`. **Problems**: `shipmentState=PROBLEM`.
  */
 export const SHIPPING_PRESETS: { key: ShippingPreset; label: string; filter: PresetFilter }[] = [
-  { key: 'TO_SHIP', label: 'To ship', filter: { status: 'CONFIRMED' } },
-  { key: 'BOOKING_FAILED', label: 'Booking failed', filter: { shipmentState: 'BOOKING_FAILED' } },
+  { key: 'TO_SHIP', label: 'To ship', filter: { bookable: true } },
+  { key: 'BOOKING_FAILED', label: 'Booking failed', filter: { shipmentState: ['BOOKING_FAILED'] } },
   {
     key: 'NOT_PRINTED',
     label: 'Booked, label not printed',
-    filter: { shipmentState: 'BOOKED', labelPrinted: false },
+    filter: { shipmentState: ['BOOKED'], labelPrinted: false },
   },
-  { key: 'IN_TRANSIT', label: 'In transit', filter: { shipmentState: 'IN_TRANSIT' } },
-  { key: 'PROBLEMS', label: 'Problems', filter: { shipmentState: 'PROBLEM' } },
+  { key: 'IN_TRANSIT', label: 'In transit', filter: { shipmentState: ['IN_TRANSIT'] } },
+  { key: 'PROBLEMS', label: 'Problems', filter: { shipmentState: ['PROBLEM'] } },
 ]
+
+// --- what a row can be selected for ------------------------------------------------------------
+
+/** Booking is offered on `bookable` rows only. */
+export function canBookRow(row: OrderSummary): boolean {
+  return row.bookable === true
+}
+
+/** Printing is offered on rows with a live shipment: the row carries its current shipment's id. */
+export function canPrintRow(row: OrderSummary): boolean {
+  return !!row.shipmentId
+}
+
+export function canSelectRow(row: OrderSummary): boolean {
+  return canBookRow(row) || canPrintRow(row)
+}
+
+/** Why an action in the selection bar is off, or undefined when it fits at least one selected order. */
+export function actionBlockedReason(
+  selection: Selection,
+  action: 'book' | 'print'
+): string | undefined {
+  const rows = [...selection.values()]
+  if (action === 'book') {
+    return rows.some(canBookRow) ? undefined : 'None of the selected orders can be booked now.'
+  }
+  return rows.some(canPrintRow) ? undefined : 'None of the selected orders has a booked shipment.'
+}
 
 // --- warehouses --------------------------------------------------------------------------------
 
-export interface WarehouseContact {
-  contactName?: string | null
-  contactPhone?: string | null
-  contactEmail?: string | null
-}
-
-/** What a pickup warehouse lacks for a courier booking (the server refuses one missing any of the three). */
-export function missingContacts(w: WarehouseContact | undefined): string[] {
-  if (!w) {
-    return []
-  }
-  const missing: string[] = []
-  if (!w.contactName?.trim()) missing.push('contact name')
-  if (!w.contactPhone?.trim()) missing.push('contact phone')
-  if (!w.contactEmail?.trim()) missing.push('contact email')
-  return missing
-}
+/** What `pickupWarehouse.missingContact` names, in words. */
+export const MISSING_CONTACT_LABEL = {
+  NAME: 'contact name',
+  PHONE: 'contact phone',
+  EMAIL: 'contact email',
+} as const
 
 export function listInWords(items: string[]): string {
   if (items.length <= 1) {

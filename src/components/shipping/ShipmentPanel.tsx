@@ -5,7 +5,7 @@ import { toast } from 'sonner'
 
 import { ConfirmDialog } from '@/components/common/ConfirmDialog'
 import { noticeFromError } from '@/components/common/NoticeBanner'
-import { ShipmentLogDrawer } from '@/components/shipping/ShippingCallDrawer'
+import { BookingAttemptsDrawer, ShipmentLogDrawer } from '@/components/shipping/ShippingCallDrawer'
 import { ShipmentStateChip, ShipmentStatusChip } from '@/components/shipping/ShipmentStateChip'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
@@ -41,6 +41,14 @@ import {
 
 const DASH = '—'
 
+/** Where a tracking event came from. SYSTEM is OMS with no team member (a cancel after the shopper's own). */
+const EVENT_SOURCE_LABEL = {
+  POLL: 'polled',
+  WEBHOOK: 'webhook',
+  ADMIN: 'by hand',
+  SYSTEM: 'System',
+} as const
+
 function Facts({ rows }: { rows: [string, React.ReactNode][] }) {
   return (
     <dl className="grid gap-x-6 gap-y-3 text-sm sm:grid-cols-2">
@@ -52,27 +60,6 @@ function Facts({ rows }: { rows: [string, React.ReactNode][] }) {
       ))}
     </dl>
   )
-}
-
-/**
- * Who booked it. The shipment carries the member's id only; the order's history names the
- * person who moved the order to PACKED at the moment of booking.
- */
-export function bookedByName(order: OrderDetail, detail: ShipmentDetail | undefined): string | undefined {
-  if (!detail) {
-    return undefined
-  }
-  if (detail.bookedByKind === 'SYSTEM') {
-    return 'Automatic booking'
-  }
-  const bookedAt = Date.parse(detail.shipment?.bookedAt ?? '')
-  const event = (order.events ?? []).find(
-    (e) =>
-      e.toStatus === 'PACKED' &&
-      e.actorName &&
-      Math.abs(Date.parse(e.occurredAt ?? '') - bookedAt) < 5000
-  )
-  return event?.actorName ?? (detail.bookedBy ? `Team member ${detail.bookedBy.slice(0, 8)}…` : undefined)
 }
 
 function CopyButton({ text, what }: { text: string; what: string }) {
@@ -120,6 +107,10 @@ function ShipmentPanel({
   const warehouseId = live?.pickupWarehouseId ?? ''
   const warehouse = useWarehouseQuery(warehouseId, !!warehouseId && has('warehouse.read'))
   const [logOpen, setLogOpen] = React.useState(false)
+  const [attemptsOpen, setAttemptsOpen] = React.useState(false)
+  const [previousOpen, setPreviousOpen] = React.useState(false)
+  const attempts = order.shippingCalls ?? []
+  const failedAttempts = attempts.filter((c) => !c.success).length
   const [cancelOpen, setCancelOpen] = React.useState(false)
   const [refusal, setRefusal] = React.useState<string | undefined>()
 
@@ -205,7 +196,15 @@ function ShipmentPanel({
               ],
               [
                 'Booked',
-                [formatDateTime(live.bookedAt), bookedByName(order, detail)].filter(Boolean).join(' · '),
+                [formatDateTime(live.bookedAt), detail?.bookedBy?.displayName].filter(Boolean).join(' · '),
+              ],
+              [
+                'Cancelled',
+                detail?.cancelledBy
+                  ? [formatDateTime(live.cancelledAt), detail.cancelledBy.displayName]
+                      .filter(Boolean)
+                      .join(' · ')
+                  : undefined,
               ],
               ['Label printed', live.labelPrintedAt ? formatDateTime(live.labelPrintedAt) : 'Not yet'],
               ['Expected delivery', live.expectedDeliveryAt ? formatDateTime(live.expectedDeliveryAt) : undefined],
@@ -277,8 +276,20 @@ function ShipmentPanel({
 
         {live && canRead && <Timeline detail={detail} loading={detailQuery.isLoading} error={detailQuery.error} />}
 
+        {canRead && attempts.length > 0 && (
+          <section aria-label="Booking attempts" className="flex flex-wrap items-center gap-2 text-sm">
+            <h3 className="font-medium">Booking attempts</h3>
+            <span className="text-muted-foreground">
+              {attempts.length} {attempts.length === 1 ? 'call' : 'calls'}, {failedAttempts} failed
+            </span>
+            <Button variant="ghost" size="sm" onClick={() => setAttemptsOpen(true)}>
+              <ScrollTextIcon /> Open
+            </Button>
+          </section>
+        )}
+
         {previous.length > 0 && (
-          <details className="text-sm">
+          <details className="text-sm" onToggle={(e) => setPreviousOpen(e.currentTarget.open)}>
             <summary className="cursor-pointer font-medium">
               Previous shipments ({previous.length})
             </summary>
@@ -291,20 +302,12 @@ function ShipmentPanel({
                   <TableHead>AWB</TableHead>
                   <TableHead>Status</TableHead>
                   <TableHead>Cancelled</TableHead>
+                  <TableHead>Cancelled by</TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
                 {previous.map((s) => (
-                  <TableRow key={s.id}>
-                    <TableCell>{formatDateTime(s.bookedAt)}</TableCell>
-                    <TableCell>{providerLabel(s.providerCode)}</TableCell>
-                    <TableCell>{s.courierName ?? DASH}</TableCell>
-                    <TableCell className="font-mono">{s.awb ?? DASH}</TableCell>
-                    <TableCell>
-                      <ShipmentStatusChip status={s.status as never} />
-                    </TableCell>
-                    <TableCell>{s.cancelledAt ? formatDateTime(s.cancelledAt) : DASH}</TableCell>
-                  </TableRow>
+                  <PreviousShipmentRow key={s.id} shipment={s} read={previousOpen && canRead} />
                 ))}
               </TableBody>
             </Table>
@@ -312,6 +315,13 @@ function ShipmentPanel({
         )}
       </CardContent>
 
+      {canRead && (
+        <BookingAttemptsDrawer
+          open={attemptsOpen}
+          calls={attempts}
+          onClose={() => setAttemptsOpen(false)}
+        />
+      )}
       {live && (
         <ShipmentLogDrawer
           open={logOpen}
@@ -329,6 +339,33 @@ function ShipmentPanel({
         />
       )}
     </Card>
+  )
+}
+
+/**
+ * One earlier shipment. Who cancelled it is on the shipment's own record, read once the list is
+ * opened (and only for a member who can read shipments).
+ */
+function PreviousShipmentRow({
+  shipment,
+  read,
+}: {
+  shipment: NonNullable<OrderDetail['shipments']>[number]
+  read: boolean
+}) {
+  const detail = useShipmentQuery(shipment.id, read && !!shipment.cancelledAt)
+  return (
+    <TableRow>
+      <TableCell>{formatDateTime(shipment.bookedAt)}</TableCell>
+      <TableCell>{providerLabel(shipment.providerCode)}</TableCell>
+      <TableCell>{shipment.courierName ?? DASH}</TableCell>
+      <TableCell className="font-mono">{shipment.awb ?? DASH}</TableCell>
+      <TableCell>
+        <ShipmentStatusChip status={shipment.status as never} />
+      </TableCell>
+      <TableCell>{shipment.cancelledAt ? formatDateTime(shipment.cancelledAt) : DASH}</TableCell>
+      <TableCell>{detail.data?.cancelledBy?.displayName ?? DASH}</TableCell>
+    </TableRow>
   )
 }
 
@@ -368,7 +405,7 @@ function Timeline({
               </div>
               <div className="text-xs">
                 {formatDateTime(e.eventAt)}
-                {` · ${e.source === 'ADMIN' ? 'by hand' : e.source === 'WEBHOOK' ? 'webhook' : 'polled'}`}
+                {` · ${EVENT_SOURCE_LABEL[e.source ?? 'POLL']}`}
                 {e.providerStatusCode && ` · code ${e.providerStatusCode}`}
                 {e.providerStatusText && e.status && ` (${e.providerStatusText})`}
                 {e.remark && ` · ${e.remark}`}

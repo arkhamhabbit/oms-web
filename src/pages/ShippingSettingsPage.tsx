@@ -14,7 +14,7 @@ import { Label } from '@/components/ui/label'
 import { Switch } from '@/components/ui/switch'
 import { useBreadcrumb } from '@/layouts/breadcrumb-context'
 import { usePermissions } from '@/auth/usePermissions'
-import { useWarehouseQuery, useWarehousesQuery } from '@/api/inventory'
+import { useWarehousesQuery } from '@/api/inventory'
 import {
   useCurrentShippingSettingsQuery,
   usePublishShippingSettingsMutation,
@@ -31,7 +31,7 @@ import {
   box,
   grams,
   listInWords,
-  missingContacts,
+  MISSING_CONTACT_LABEL,
   providerLabel,
   UNPROVEN_PROVIDERS,
 } from '@/lib/shipping'
@@ -251,7 +251,12 @@ function SettingsForm({
         </CardContent>
       </Card>
 
-      <PickupCard warehouseId={warehouseId} onChange={setWarehouseId} disabled={disabled} />
+      <PickupCard
+        warehouseId={warehouseId}
+        saved={current.pickupWarehouse}
+        onChange={setWarehouseId}
+        disabled={disabled}
+      />
 
       <Card>
         <CardHeader>
@@ -447,31 +452,38 @@ function ProvidersCard({
   )
 }
 
-/** The default pickup warehouse, with what it lacks for a courier booking named and linked. */
+/**
+ * The default pickup warehouse, with what it lacks for a courier booking named and linked. What is
+ * missing comes with the settings (`pickupWarehouse.missingContact`), so no warehouse read is made
+ * and `warehouse.read` is not needed. It speaks for the warehouse the settings name; a different
+ * one picked in the form is checked when it is published.
+ */
 function PickupCard({
   warehouseId,
+  saved,
   onChange,
   disabled,
 }: {
   warehouseId: string
+  saved: ShippingSettings['pickupWarehouse']
   onChange: (id: string) => void
   disabled: boolean
 }) {
-  const { has } = usePermissions()
-  const warehouse = useWarehouseQuery(warehouseId, !!warehouseId && has('warehouse.read'))
-  const missing = missingContacts(warehouse.data)
+  const inEffect = saved && saved.id === warehouseId ? saved : undefined
+  const missing = (inEffect?.missingContact ?? []).map((m) => MISSING_CONTACT_LABEL[m])
   return (
     <Card>
       <CardHeader>
         <CardTitle>Pickup warehouse</CardTitle>
         <CardDescription>
           Where couriers collect parcels. Each shipment records the warehouse it was picked up from.
+          Its contact name, phone and email are needed for courier bookings, not for Manual ones.
         </CardDescription>
       </CardHeader>
       <CardContent className="flex flex-col gap-3">
         {disabled ? (
           <p className="text-sm font-medium">
-            {warehouse.data ? `${warehouse.data.code} — ${warehouse.data.name}` : warehouseId || 'None chosen'}
+            {inEffect ? `${inEffect.code} — ${inEffect.name}` : warehouseId || 'None chosen'}
           </p>
         ) : (
           <WarehouseSelect
@@ -488,16 +500,17 @@ function PickupCard({
             No pickup warehouse is chosen: nothing can be booked.
           </p>
         )}
-        {warehouse.data && missing.length > 0 && (
+        {inEffect && missing.length > 0 && (
           <p
             role="alert"
             data-testid="pickup-contact-warning"
             className="rounded-md border border-amber-300 bg-amber-50 p-3 text-sm dark:border-amber-700 dark:bg-amber-950/40"
           >
-            {warehouse.data.name} has no {listInWords(missing)}. A courier cannot be booked from a
-            warehouse missing any of the contact name, phone and email.{' '}
+            {inEffect.name} has no {listInWords(missing)}. A courier cannot be booked from a
+            warehouse missing any of the contact name, phone and email; a Manual booking does not
+            need them.{' '}
             <Link
-              to={`/inventory/warehouses/${warehouse.data.id}`}
+              to={`/inventory/warehouses/${inEffect.id}`}
               className="font-medium underline underline-offset-2"
             >
               Add them on the warehouse

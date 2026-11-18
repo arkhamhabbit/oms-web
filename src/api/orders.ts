@@ -12,6 +12,8 @@ export type OrderEvent = Schemas['OrderEventResponse']
 export type OrderRefund = Schemas['PaymentRefundResponse']
 export type RefundState = NonNullable<OrderSummary['refundState']>
 export type ShipmentState = NonNullable<OrderSummary['shipmentState']>
+export type OrderShippingCall = Schemas['OrderShippingCallResponse']
+export type Actor = Schemas['ActorResponse']
 export type OrderStatus = NonNullable<OrderDetail['status']>
 export type OrderPayment = Schemas['PaymentResponse']
 export type OrderSettings = Schemas['OrderSettingsResponse']
@@ -27,7 +29,10 @@ export interface OrderListParams {
   number?: string
   consumerId?: string
   refundState?: RefundState
-  shipmentState?: ShipmentState
+  /** Any of these (2.11: the filter takes several). */
+  shipmentState?: ShipmentState[]
+  /** `true`: the orders that can be booked now (the "To ship" list). */
+  bookable?: boolean
   /** `false`: booked, label not printed yet (the print queue). */
   labelPrinted?: boolean
   /** ISO instant, inclusive. */
@@ -51,6 +56,7 @@ export function useOrdersQuery(params: OrderListParams, enabled = true) {
               consumerId: params.consumerId || undefined,
               refundState: params.refundState,
               shipmentState: params.shipmentState,
+              bookable: params.bookable,
               labelPrinted: params.labelPrinted,
               from: params.from,
               to: params.to,
