@@ -62,8 +62,9 @@ export function useWarehousesQuery(params: WarehouseListParams) {
   })
 }
 
-export function useWarehouseQuery(id: string) {
+export function useWarehouseQuery(id: string, enabled = true) {
   return useQuery({
+    enabled: enabled && !!id,
     queryKey: [INVENTORY_KEY, 'warehouses', 'detail', id],
     queryFn: () => unwrap(api.GET('/api/admin/warehouses/{id}', { params: { path: { id } } })),
   })

@@ -4,12 +4,19 @@ import { actionsFor, istDayStart, isUuid } from '../orders'
 
 describe('orders lib', () => {
   it('offers the next step and the way out for each status', () => {
-    expect(actionsFor('CONFIRMED')).toEqual(['pack', 'cancel'])
+    // Booking replaces packing (2.8): a confirmed order is booked from the Shipment panel.
+    expect(actionsFor('CONFIRMED')).toEqual(['cancel'])
     expect(actionsFor('PACKED')).toEqual(['ship', 'cancel'])
     expect(actionsFor('SHIPPED')).toEqual(['out-for-delivery', 'refund'])
     expect(actionsFor('OUT_FOR_DELIVERY')).toEqual(['deliver', 'refund'])
     expect(actionsFor('DELIVERED')).toEqual(['refund'])
     expect(actionsFor('PENDING_PAYMENT')).toEqual(['cancel'])
+  })
+
+  it('hides the hand steps for a courier shipment: its own events move the order', () => {
+    expect(actionsFor('PACKED', true)).toEqual(['cancel'])
+    expect(actionsFor('SHIPPED', true)).toEqual(['refund'])
+    expect(actionsFor('OUT_FOR_DELIVERY', true)).toEqual(['refund'])
   })
 
   it('offers nothing on a finished order', () => {

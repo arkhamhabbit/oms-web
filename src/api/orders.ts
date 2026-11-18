@@ -11,6 +11,7 @@ export type OrderLine = Schemas['OrderLineResponse']
 export type OrderEvent = Schemas['OrderEventResponse']
 export type OrderRefund = Schemas['PaymentRefundResponse']
 export type RefundState = NonNullable<OrderSummary['refundState']>
+export type ShipmentState = NonNullable<OrderSummary['shipmentState']>
 export type OrderStatus = NonNullable<OrderDetail['status']>
 export type OrderPayment = Schemas['PaymentResponse']
 export type OrderSettings = Schemas['OrderSettingsResponse']
@@ -26,6 +27,9 @@ export interface OrderListParams {
   number?: string
   consumerId?: string
   refundState?: RefundState
+  shipmentState?: ShipmentState
+  /** `false`: booked, label not printed yet (the print queue). */
+  labelPrinted?: boolean
   /** ISO instant, inclusive. */
   from?: string
   /** ISO instant, exclusive. */
@@ -46,6 +50,8 @@ export function useOrdersQuery(params: OrderListParams, enabled = true) {
               number: params.number || undefined,
               consumerId: params.consumerId || undefined,
               refundState: params.refundState,
+              shipmentState: params.shipmentState,
+              labelPrinted: params.labelPrinted,
               from: params.from,
               to: params.to,
             },
@@ -64,7 +70,7 @@ export function useOrderQuery(id: string) {
 }
 
 /** Every write carries a client-minted key (one per confirm dialog), so a resend is not a second action. */
-export type FulfilAction = 'pack' | 'ship' | 'out-for-delivery' | 'deliver' | 'cancel' | 'refund'
+export type FulfilAction = 'ship' | 'out-for-delivery' | 'deliver' | 'cancel' | 'refund'
 
 export interface OrderActionInput {
   action: FulfilAction
@@ -83,10 +89,6 @@ export function useOrderActionMutation(id: string) {
         params: { path: { id }, header: { 'Idempotency-Key': input.idempotencyKey } },
       }
       switch (input.action) {
-        case 'pack':
-          return unwrap<OrderDetail>(
-            api.POST('/api/admin/orders/{id}/pack', { ...base, body: { version: input.version } })
-          )
         case 'out-for-delivery':
           return unwrap<OrderDetail>(
             api.POST('/api/admin/orders/{id}/out-for-delivery', {

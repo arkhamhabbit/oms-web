@@ -139,11 +139,13 @@ describe('the order page', () => {
     serve(['orders.read'])
     render(<OrderDetailPage />, '/orders/o-1', '/orders/:id')
 
-    const pack = await screen.findAllByRole('button', { name: 'Pack' })
-    expect(pack).toHaveLength(2) // the header and the actions box
-    pack.forEach((b) => expect(b).toBeDisabled())
+    const book = await screen.findAllByRole('button', { name: 'Book shipment' })
+    expect(book).toHaveLength(2) // the header and the Shipment panel
+    book.forEach((b) => expect(b).toBeDisabled())
+    expect(screen.queryByRole('button', { name: 'Pack' })).not.toBeInTheDocument()
     expect(screen.getByLabelText('Add note')).toBeDisabled()
-    expect(screen.getAllByText('Needs orders.fulfil').length).toBeGreaterThan(0)
+    expect(screen.getAllByText('Needs shipping.book').length).toBeGreaterThan(0)
+    expect(screen.getAllByText('Needs orders.write').length).toBeGreaterThan(0)
   })
 
   it('adds a private note with an Idempotency-Key and no version', async () => {
@@ -220,10 +222,11 @@ describe('the orders list', () => {
     serve(['orders.read'])
     render(<OrdersPage />, '/orders', '/orders')
 
-    expect(await screen.findByText('HBT_10000005')).toBeInTheDocument()
+    // The preset counts arrive after the list and re-render its cells: wait on a fresh lookup.
+    await waitFor(() => expect(screen.getByText('HBT_10000005')).toBeInTheDocument())
     await user.click(screen.getByRole('button', { name: /Refunds owed/ }))
 
-    expect(await screen.findByText('HBT_10000006')).toBeInTheDocument()
+    await waitFor(() => expect(screen.getByText('HBT_10000006')).toBeInTheDocument())
     expect(screen.getAllByText('Refund owed').length).toBeGreaterThan(0)
     const listCall = calls
       .filter((c) => c.url.pathname === '/api/admin/orders')

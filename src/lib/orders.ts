@@ -22,7 +22,6 @@ export const ORDER_STATUSES: OrderStatus[] = [
 
 /** Which permission each action needs — `orders.fulfil` for the steps, `write` to cancel, `refund` to refund. */
 export const ACTION_PERMISSION: Record<FulfilAction, string> = {
-  pack: 'orders.fulfil',
   ship: 'orders.fulfil',
   'out-for-delivery': 'orders.fulfil',
   deliver: 'orders.fulfil',
@@ -31,7 +30,6 @@ export const ACTION_PERMISSION: Record<FulfilAction, string> = {
 }
 
 export const ACTION_LABEL: Record<FulfilAction, string> = {
-  pack: 'Pack',
   ship: 'Ship',
   'out-for-delivery': 'Out for delivery',
   deliver: 'Deliver',
@@ -43,17 +41,23 @@ export const ACTION_LABEL: Record<FulfilAction, string> = {
  * The actions worth offering from a status. Whether a cancel is still inside the window is the
  * server's call (the settings the order was placed under) — it refuses with its own sentence,
  * which the dialog shows, so the button is offered for every status a cancel can ever apply to.
+ *
+ * 2.8: booking replaces packing (a confirmed order is booked from the Shipment panel; `pack` is a
+ * deprecated alias and is not called). The hand steps remain only for a Manual shipment, or an
+ * order with none: a courier's own events move the order (D13.6), so `courier` hides them.
  */
-export function actionsFor(status: OrderStatus | undefined): FulfilAction[] {
+export function actionsFor(status: OrderStatus | undefined, courier = false): FulfilAction[] {
   switch (status) {
     case 'PENDING_PAYMENT':
-      return ['cancel']
     case 'CONFIRMED':
-      return ['pack', 'cancel']
+      return ['cancel']
     case 'PACKED':
-      return ['ship', 'cancel']
+      return courier ? ['cancel'] : ['ship', 'cancel']
     case 'SHIPPED':
     case 'OUT_FOR_DELIVERY':
+      if (courier) {
+        return ['refund']
+      }
       return [status === 'SHIPPED' ? 'out-for-delivery' : 'deliver', 'refund']
     case 'DELIVERED':
       return ['refund']

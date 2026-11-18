@@ -31,6 +31,8 @@ import InvitesPage from '@/pages/InvitesPage'
 import OrdersPage from '@/pages/OrdersPage'
 import OrderDetailPage from '@/pages/OrderDetailPage'
 import OrderSettingsPage from '@/pages/OrderSettingsPage'
+import ShippingSettingsPage from '@/pages/ShippingSettingsPage'
+import ShippingLogPage from '@/pages/ShippingLogPage'
 import WarehousesPage from '@/pages/WarehousesPage'
 import WarehouseDetailPage from '@/pages/WarehouseDetailPage'
 import StockPage from '@/pages/StockPage'
@@ -186,6 +188,22 @@ export const router = createBrowserRouter([
             element: (
               <RequirePermission permission="orders.read">
                 <OrderSettingsPage />
+              </RequirePermission>
+            ),
+          },
+          {
+            path: '/shipping/settings',
+            element: (
+              <RequirePermission permission="shipping.settings">
+                <ShippingSettingsPage />
+              </RequirePermission>
+            ),
+          },
+          {
+            path: '/shipping/log',
+            element: (
+              <RequirePermission permission="shipping.read">
+                <ShippingLogPage />
               </RequirePermission>
             ),
           },
