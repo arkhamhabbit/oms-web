@@ -12,11 +12,6 @@ const COPY: Record<
   FulfilAction,
   { title: string; confirm: string; destructive?: boolean; body: (o: OrderDetail) => string }
 > = {
-  pack: {
-    title: 'Pack this order',
-    confirm: 'Pack',
-    body: (o) => `${o.number} moves from Confirmed to Packed.`,
-  },
   ship: {
     title: 'Ship this order',
     confirm: 'Ship',

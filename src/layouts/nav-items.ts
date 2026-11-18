@@ -22,6 +22,8 @@ import {
   Truck,
   ClipboardList,
   PackageCheck,
+  Ship,
+  FileText,
 } from 'lucide-react'
 
 export interface NavItem {
@@ -45,7 +47,21 @@ export const navItems: NavItem[] = [
   { label: 'Pricing', to: '/pricing', icon: IndianRupee, permission: 'pricing.read' },
   { label: 'Membership', to: '/membership', icon: Medal, permission: 'membership.read' },
   { label: 'Earn rules', to: '/earn', icon: Gift, permission: 'earn.read' },
-  { label: 'Orders', to: '/orders', icon: ShoppingBag, permission: 'orders.read' },
+  { label: 'Orders', to: '/orders', icon: ShoppingBag, permission: 'orders.read', group: 'Orders' },
+  {
+    label: 'Shipping',
+    to: '/shipping/settings',
+    icon: Ship,
+    permission: 'shipping.settings',
+    group: 'Orders',
+  },
+  {
+    label: 'Shipping log',
+    to: '/shipping/log',
+    icon: FileText,
+    permission: 'shipping.read',
+    group: 'Orders',
+  },
   {
     label: 'Warehouses',
     to: '/inventory/warehouses',

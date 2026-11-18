@@ -28,7 +28,11 @@ import {
 import { useBreadcrumb } from '@/layouts/breadcrumb-context'
 import { usePermissions } from '@/auth/usePermissions'
 import { isApiError } from '@/lib/api-error'
-import { ACTION_LABEL, ACTION_PERMISSION, actionsFor, rupees, trackingUrl } from '@/lib/orders'
+import { ACTION_LABEL, ACTION_PERMISSION, actionsFor, rupees } from '@/lib/orders'
+import { isCourierProvider } from '@/lib/shipping'
+import { BookShipmentsDialog, type OrderToBook } from '@/components/shipping/BookShipmentsDialog'
+import { PrintOutcomeDialog, usePrintLabels } from '@/components/shipping/PrintLabels'
+import { ShipmentPanel } from '@/components/shipping/ShipmentPanel'
 import { useOrderQuery, useOrdersQuery, type FulfilAction, type OrderDetail } from '@/api/orders'
 import { formatDateTime } from '@/lib/dates'
 import { TierBadge } from '@/components/membership/TierBadge'
@@ -60,7 +64,7 @@ function Facts({ rows }: { rows: [string, React.ReactNode][] }) {
   )
 }
 
-const PRIMARY: FulfilAction[] = ['pack', 'ship', 'out-for-delivery', 'deliver']
+const PRIMARY: FulfilAction[] = ['ship', 'out-for-delivery', 'deliver']
 
 function OrderDetailPage() {
   const { id = '' } = useParams()
@@ -76,6 +80,8 @@ function OrderDetailPage() {
   useBreadcrumb([{ label: 'Orders', to: '/orders' }, { label: order?.number ?? 'Order' }])
 
   const [action, setAction] = React.useState<FulfilAction | undefined>()
+  const [booking, setBooking] = React.useState<OrderToBook[] | undefined>()
+  const printer = usePrintLabels()
 
   if (orderQuery.isLoading) {
     return <p className="text-sm text-muted-foreground">Loading…</p>
@@ -93,11 +99,22 @@ function OrderDetailPage() {
     )
   }
 
-  const actions = actionsFor(order.status)
-  const primary = actions.find((a) => PRIMARY.includes(a))
+  // A courier's shipment is moved by its own events: the hand steps are hidden (D13.6).
+  const courier = isCourierProvider(order.shipment?.providerCode)
+  const actions = actionsFor(order.status, courier)
+  // The header's primary action is Book or Print label when the shipment state calls for one.
+  const shippingPrimary: 'book' | 'print' | undefined =
+    order.status === 'CONFIRMED' && !order.shipment
+      ? 'book'
+      : order.status === 'PACKED' && courier && !order.labelPrinted && order.shipment
+        ? 'print'
+        : undefined
+  const primary = shippingPrimary ? undefined : actions.find((a) => PRIMARY.includes(a))
   const overflow = actions.filter((a) => a !== primary)
   const owed = order.refundState === 'OWED'
-  const tracking = trackingUrl(order.carrier, order.trackingReference)
+  const canBook = has('shipping.book')
+  const book = () => setBooking([{ id: order.id!, number: order.number! }])
+  const print = (shipmentId: string) => void printer.run({ shipmentIds: [shipmentId] })
   const orderCount = order.consumerId ? customerOrders.data?.totalElements : undefined
 
   return (
@@ -112,6 +129,17 @@ function OrderDetailPage() {
         )}
         <span className="text-sm text-muted-foreground">Placed {formatDateTime(order.placedAt)}</span>
         <div className="ml-auto flex items-center gap-2">
+          {shippingPrimary && (
+            <Button
+              disabled={!canBook || printer.pending}
+              title={canBook ? undefined : 'Needs shipping.book'}
+              onClick={() =>
+                shippingPrimary === 'book' ? book() : print(order.shipment!.id!)
+              }
+            >
+              {shippingPrimary === 'book' ? 'Book shipment' : 'Print label'}
+            </Button>
+          )}
           {primary && (
             <Button
               disabled={!has(ACTION_PERMISSION[primary])}
@@ -241,43 +269,12 @@ function OrderDetailPage() {
 
           <OrderRefundsCard order={order} onStale={() => void orderQuery.refetch()} />
 
-          <Card>
-            <CardHeader>
-              <CardTitle>Shipment</CardTitle>
-            </CardHeader>
-            <CardContent>
-              <Facts
-                rows={[
-                  ['Carrier', order.carrier],
-                  [
-                    'Tracking reference',
-                    tracking ? (
-                      <a
-                        href={tracking}
-                        target="_blank"
-                        rel="noreferrer"
-                        className="underline underline-offset-2"
-                      >
-                        {order.trackingReference}
-                      </a>
-                    ) : (
-                      order.trackingReference
-                    ),
-                  ],
-                  ['Packed', order.packedAt ? formatDateTime(order.packedAt) : undefined],
-                  ['Shipped', order.shippedAt ? formatDateTime(order.shippedAt) : undefined],
-                  [
-                    'Out for delivery',
-                    order.outForDeliveryAt ? formatDateTime(order.outForDeliveryAt) : undefined,
-                  ],
-                  [
-                    'Delivered',
-                    order.deliveredAt ? formatDateTime(order.deliveredAt) : undefined,
-                  ],
-                ]}
-              />
-            </CardContent>
-          </Card>
+          <ShipmentPanel
+            order={order}
+            onBook={book}
+            onPrint={print}
+            printing={printer.pending}
+          />
 
           <Card>
             <CardHeader>
@@ -351,6 +348,8 @@ function OrderDetailPage() {
         onClose={() => setAction(undefined)}
         onStale={() => void orderQuery.refetch()}
       />
+      <BookShipmentsDialog orders={booking} mode="book" onClose={() => setBooking(undefined)} />
+      <PrintOutcomeDialog outcome={printer.outcome} onClose={printer.clear} />
     </div>
   )
 }

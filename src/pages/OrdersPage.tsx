@@ -1,7 +1,7 @@
 import * as React from 'react'
 import { Link, useNavigate, useSearchParams } from 'react-router-dom'
 import type { ColumnDef } from '@tanstack/react-table'
-import { SettingsIcon } from 'lucide-react'
+import { PrinterIcon, SettingsIcon } from 'lucide-react'
 
 import { DataTable } from '@/components/data-table/DataTable'
 import { OrderStatusBadge } from '@/components/orders/OrderStatusBadge'
@@ -30,6 +30,25 @@ import { ANY_STATUS, ORDER_STATUS_LABEL, REFUND_STATE_LABEL } from '@/lib/labels
 import { Badge } from '@/components/ui/badge'
 import { TierBadge } from '@/components/membership/TierBadge'
 import { ConsumerLink } from '@/components/orders/ConsumerLink'
+import { Checkbox } from '@/components/ui/checkbox'
+import { usePermissions } from '@/auth/usePermissions'
+import { useLiveShipmentsQueries } from '@/api/shipping'
+import {
+  BookShipmentsDialog,
+  type BookMode,
+  type OrderToBook,
+} from '@/components/shipping/BookShipmentsDialog'
+import { PrintOutcomeDialog, usePrintLabels } from '@/components/shipping/PrintLabels'
+import { ShipmentStateChip } from '@/components/shipping/ShipmentStateChip'
+import { useOrderSelection } from '@/components/shipping/useOrderSelection'
+import {
+  SELECTION_CAP,
+  SELECTION_CAP_HINT,
+  SHIPPING_PRESETS,
+  selectionBlocked,
+  type PresetFilter,
+  type ShippingPreset,
+} from '@/lib/shipping'
 
 const PAGE_SIZE = 20
 
@@ -48,13 +67,27 @@ function OrdersPage() {
   )
   const [fromDate, setFromDate] = React.useState('')
   const [toDate, setToDate] = React.useState('')
+  const [preset, setPreset] = React.useState<ShippingPreset | undefined>()
+  const presetFilter: PresetFilter = SHIPPING_PRESETS.find((p) => p.key === preset)?.filter ?? {}
+
+  const { has } = usePermissions()
+  const canBook = has('shipping.book')
+  const canReadShipping = has('shipping.read')
+  const { selection, toggle, togglePage, clear } = useOrderSelection()
+  const [booking, setBooking] = React.useState<
+    { mode: BookMode; orders: OrderToBook[] } | undefined
+  >()
+  const printer = usePrintLabels()
 
   const consumerValid = consumerId.trim() === '' || isUuid(consumerId)
 
   const orders = useOrdersQuery({
     page: pageIndex,
     size: PAGE_SIZE,
-    status: status === 'ALL' ? undefined : status,
+    // A preset sets the shipping filters (and To ship the status) while it is on.
+    status: presetFilter.status ?? (status === 'ALL' ? undefined : status),
+    shipmentState: presetFilter.shipmentState,
+    labelPrinted: presetFilter.labelPrinted,
     number: number.trim(),
     consumerId: consumerValid ? consumerId.trim() : undefined,
     refundState: refundState === 'ALL' ? undefined : refundState,
@@ -67,6 +100,46 @@ function OrdersPage() {
   const owed = useOrdersQuery({ page: 0, size: 1, refundState: 'OWED' })
   const owedCount = owed.data?.totalElements
   const owedActive = refundState === 'OWED'
+  const rows = orders.data?.content ?? []
+  const bookedNumbers = rows
+    .filter((o) => !['NONE', 'CANCELLED', 'BOOKING_FAILED'].includes(o.shipmentState ?? 'NONE'))
+    .map((o) => o.number!)
+  const liveShipments = useLiveShipmentsQueries(bookedNumbers, canReadShipping)
+
+  function selected(): OrderToBook[] {
+    return [...selection.values()].map((o) => ({ id: o.id!, number: o.number! }))
+  }
+
+  const pageAllOn = rows.length > 0 && rows.every((r) => selection.has(r.id!))
+  const pageSomeOn = rows.some((r) => selection.has(r.id!))
+  const selectColumn: ColumnDef<OrderSummary, unknown> = {
+    id: 'select',
+    enableHiding: false,
+    header: () => (
+      <Checkbox
+        aria-label="Select this page"
+        checked={pageAllOn ? true : pageSomeOn ? 'indeterminate' : false}
+        onCheckedChange={() => togglePage(rows)}
+      />
+    ),
+    cell: ({ row }) => {
+      const blocked = selectionBlocked(selection, row.original.id!)
+      return (
+        <span
+          onClick={(e) => e.stopPropagation()}
+          title={blocked ? SELECTION_CAP_HINT : undefined}
+          className="inline-flex"
+        >
+          <Checkbox
+            aria-label={`Select ${row.original.number}`}
+            checked={selection.has(row.original.id!)}
+            disabled={blocked}
+            onCheckedChange={() => toggle(row.original)}
+          />
+        </span>
+      )
+    },
+  }
 
   function filter<T>(set: (value: T) => void) {
     return (value: T) => {
@@ -76,6 +149,7 @@ function OrdersPage() {
   }
 
   const columns: ColumnDef<OrderSummary, unknown>[] = [
+    ...(canBook ? [selectColumn] : []),
     {
       id: 'number',
       header: 'Order',
@@ -128,6 +202,30 @@ function OrdersPage() {
       },
     },
     {
+      id: 'shipment',
+      header: 'Shipment',
+      cell: ({ row }) => {
+        const live = liveShipments.get(row.original.number!)
+        return (
+          <div className="flex flex-col items-start gap-0.5 leading-tight">
+            <span className="inline-flex items-center gap-1">
+              <ShipmentStateChip state={row.original.shipmentState} />
+              {row.original.labelPrinted && (
+                <span title="Label printed" aria-label="Label printed" role="img">
+                  <PrinterIcon className="size-4 text-muted-foreground" />
+                </span>
+              )}
+            </span>
+            {live && (
+              <span className="text-xs text-muted-foreground">
+                {live.courierName ?? '—'} · <span className="font-mono">{live.awb ?? '—'}</span>
+              </span>
+            )}
+          </div>
+        )
+      },
+    },
+    {
       id: 'payable',
       header: 'Total',
       cell: ({ row }) => rupees(row.original.payableMinor),
@@ -150,6 +248,15 @@ function OrdersPage() {
             {owedCount ?? '…'}
           </Badge>
         </Button>
+        {SHIPPING_PRESETS.map((p) => (
+          <PresetButton
+            key={p.key}
+            label={p.label}
+            filter={p.filter}
+            active={preset === p.key}
+            onClick={() => filter(setPreset)(preset === p.key ? undefined : p.key)}
+          />
+        ))}
       </div>
       <Card>
         <CardHeader>
@@ -275,9 +382,51 @@ function OrdersPage() {
         </p>
       )}
 
+      {canBook && selection.size > 0 && (
+        <div
+          role="region"
+          aria-label="Selection"
+          className="sticky top-0 z-10 flex flex-wrap items-center gap-2 rounded-md border bg-background/95 p-2 shadow-sm backdrop-blur"
+        >
+          <span className="text-sm font-medium" data-testid="selection-count">
+            {selection.size} of {SELECTION_CAP} selected
+          </span>
+          {selection.size >= SELECTION_CAP && (
+            <span className="text-xs text-muted-foreground">{SELECTION_CAP_HINT}</span>
+          )}
+          <div className="ml-auto flex flex-wrap gap-2">
+            <Button
+              size="sm"
+              variant="outline"
+              onClick={() => setBooking({ mode: 'book', orders: selected() })}
+            >
+              Book shipments
+            </Button>
+            <Button
+              size="sm"
+              variant="outline"
+              disabled={printer.pending}
+              onClick={() =>
+                void printer
+                  .run({ orderNumbers: selected().map((o) => o.number) })
+                  .then((ok) => ok && clear())
+              }
+            >
+              Print labels
+            </Button>
+            <Button size="sm" onClick={() => setBooking({ mode: 'book-and-print', orders: selected() })}>
+              Book and print
+            </Button>
+            <Button size="sm" variant="ghost" onClick={clear}>
+              Clear
+            </Button>
+          </div>
+        </div>
+      )}
+
       <DataTable
         columns={columns}
-        data={orders.data?.content ?? []}
+        data={rows}
         isLoading={orders.isLoading}
         emptyMessage="No orders match these filters."
         onRowClick={(order) => navigate(`/orders/${order.id}`)}
@@ -289,7 +438,38 @@ function OrdersPage() {
           onPageIndexChange: setPageIndex,
         }}
       />
+
+      <BookShipmentsDialog
+        orders={booking?.orders}
+        mode={booking?.mode ?? 'book'}
+        onClose={() => setBooking(undefined)}
+        onDone={clear}
+      />
+      <PrintOutcomeDialog outcome={printer.outcome} onClose={printer.clear} />
     </div>
+  )
+}
+
+/** A packing preset with its own count (counted on its own, like Refunds owed). */
+function PresetButton({
+  label,
+  filter,
+  active,
+  onClick,
+}: {
+  label: string
+  filter: PresetFilter
+  active: boolean
+  onClick: () => void
+}) {
+  const count = useOrdersQuery({ page: 0, size: 1, ...filter }).data?.totalElements
+  return (
+    <Button variant={active ? 'default' : 'outline'} aria-pressed={active} onClick={onClick}>
+      {label}
+      <Badge variant="secondary" aria-label={`${label} count`}>
+        {count ?? '…'}
+      </Badge>
+    </Button>
   )
 }
 

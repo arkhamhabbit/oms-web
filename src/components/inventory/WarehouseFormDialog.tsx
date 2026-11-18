@@ -29,6 +29,7 @@ import {
 import { optionalText, WAREHOUSE_TYPES } from '@/lib/inventory'
 import { fieldMessage, toRefusal, type Refusal } from '@/lib/refusal'
 import { WAREHOUSE_TYPE_LABEL } from '@/lib/labels'
+import { isEmailLike } from '@/lib/shipping'
 
 const FIELDS = [
   'code',
@@ -40,6 +41,9 @@ const FIELDS = [
   'state',
   'pincode',
   'gstin',
+  'contactName',
+  'contactPhone',
+  'contactEmail',
 ]
 
 /** Create, or edit when `warehouse` is given (carries its `version`; the code cannot change). */
@@ -84,9 +88,17 @@ function Body({
   const [state, setState] = React.useState(warehouse?.state ?? '')
   const [pincode, setPincode] = React.useState(warehouse?.pincode ?? '')
   const [gstin, setGstin] = React.useState(warehouse?.gstin ?? '')
+  const [contactName, setContactName] = React.useState(warehouse?.contactName ?? '')
+  const [contactPhone, setContactPhone] = React.useState(warehouse?.contactPhone ?? '')
+  const [contactEmail, setContactEmail] = React.useState(warehouse?.contactEmail ?? '')
   const [refusal, setRefusal] = React.useState<Refusal | undefined>()
 
-  const ready = [code, name, line1, city, state, pincode].every((v) => v.trim() !== '')
+  const emailProblem =
+    contactEmail.trim() !== '' && !isEmailLike(contactEmail)
+      ? 'Enter an email address, e.g. dispatch@example.com.'
+      : undefined
+  const ready =
+    [code, name, line1, city, state, pincode].every((v) => v.trim() !== '') && !emailProblem
 
   function submit() {
     setRefusal(undefined)
@@ -101,9 +113,22 @@ function Body({
       pincode: pincode.trim(),
       gstin: optionalText(gstin),
     }
+    // On an edit a null contact clears it; on a create an empty one is simply left out.
+    const contact = (value: string) => value.trim() || null
     const saved = isEdit
-      ? update.mutateAsync({ ...common, version: warehouse!.version! })
-      : create.mutateAsync(common)
+      ? update.mutateAsync({
+          ...common,
+          contactName: contact(contactName),
+          contactPhone: contact(contactPhone),
+          contactEmail: contact(contactEmail),
+          version: warehouse!.version!,
+        })
+      : create.mutateAsync({
+          ...common,
+          contactName: optionalText(contactName),
+          contactPhone: optionalText(contactPhone),
+          contactEmail: optionalText(contactEmail),
+        })
     saved
       .then((result) => {
         toast.success(isEdit ? 'Warehouse updated' : 'Warehouse created')
@@ -200,6 +225,38 @@ function Body({
           onValueChange={setGstin}
           error={fieldMessage(refusal, 'gstin')}
         />
+        <fieldset className="grid gap-3 rounded-md border p-3">
+          <legend className="px-1 text-sm font-medium">Pickup contact</legend>
+          <p className="text-xs text-muted-foreground">
+            Optional here, but a courier shipment cannot be booked from a warehouse missing any of
+            the three. The email is given to the courier as the pickup and return email.
+          </p>
+          <div className="grid gap-4 sm:grid-cols-2">
+            <LabelledInput
+              id="wh-contact-name"
+              label="Contact name"
+              value={contactName}
+              onValueChange={setContactName}
+              error={fieldMessage(refusal, 'contactName')}
+            />
+            <LabelledInput
+              id="wh-contact-phone"
+              label="Contact phone"
+              inputMode="tel"
+              value={contactPhone}
+              onValueChange={setContactPhone}
+              error={fieldMessage(refusal, 'contactPhone')}
+            />
+          </div>
+          <LabelledInput
+            id="wh-contact-email"
+            label="Contact email"
+            type="email"
+            value={contactEmail}
+            onValueChange={setContactEmail}
+            error={emailProblem ?? fieldMessage(refusal, 'contactEmail')}
+          />
+        </fieldset>
         <RefusalText refusal={refusal} knownFields={FIELDS} />
       </div>
       <DialogFooter>
