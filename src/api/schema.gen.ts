@@ -6665,6 +6665,17 @@ export interface components {
              * @enum {string|null}
              */
             boxSource?: "PRODUCTS" | "FALLBACK" | "MIXED" | "OVERRIDE" | null;
+            /**
+             * @description the delivery city a courier booking would send: the district India Post's
+             *          pincode lookup gave for the PIN code, as OMS keeps it from an earlier booking. Null when no
+             *          booking has looked the PIN code up yet — the booking then asks, and sends it empty if the
+             *          lookup cannot say. A preview asks no one. The order itself holds no city and is not changed
+             */
+            deliveryCity?: string | null;
+            /** @description the order's delivery PIN code; null for an unknown order */
+            deliveryPincode?: string | null;
+            /** @description the delivery state a courier booking would send, likewise */
+            deliveryState?: string | null;
             /** Format: int32 */
             heightMm?: number | null;
             /**

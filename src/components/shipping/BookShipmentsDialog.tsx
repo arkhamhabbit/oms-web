@@ -43,7 +43,14 @@ import { noticeFromError } from '@/components/common/NoticeBanner'
 import { isApiError } from '@/lib/api-error'
 import { base64ToBlob, box, grams, openPrintTab, providerLabel } from '@/lib/shipping'
 
-/** Where the weight or the box came from, as the team reads it. */
+/** The delivery pincode with the city and state that will be sent; never blank, never a guess. */
+function deliveryLine(p: BookingPreview): string {
+  const place = [p.deliveryCity, p.deliveryState].filter(Boolean).join(', ')
+  const pin = p.deliveryPincode ? `Deliver to ${p.deliveryPincode}` : 'Deliver to'
+  return place ? `${pin}, ${place}` : `${pin} · City and state will be looked up at booking`
+}
+
+/** Where the weight or the box came, as the team reads it. */
 const SOURCE_LABEL = {
   PRODUCTS: 'from the products',
   FALLBACK: 'fallback package',
@@ -350,6 +357,14 @@ function Body({
                     <p className="mt-1 max-w-56 font-sans text-xs whitespace-normal text-muted-foreground">
                       {providerLabel(p.providerCode)}
                       {p.pickupWarehouse ? ` · from ${p.pickupWarehouse.code}` : ' · no pickup warehouse'}
+                    </p>
+                  )}
+                  {p && (
+                    <p
+                      className="mt-1 max-w-56 font-sans text-xs whitespace-normal text-muted-foreground"
+                      data-testid={`preview-destination-${row.number}`}
+                    >
+                      {deliveryLine(p)}
                     </p>
                   )}
                   {problems[i] && (
