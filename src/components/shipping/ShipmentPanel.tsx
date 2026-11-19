@@ -37,6 +37,7 @@ import {
   isCourierProvider,
   providerLabel,
   SHIPMENT_STATUS_LABEL,
+  trackingEventTitle,
 } from '@/lib/shipping'
 
 const DASH = '—'
@@ -402,7 +403,8 @@ function Timeline({
           {events.map((e) => (
             <li key={e.id} className="rounded-md px-3 py-2 text-sm text-muted-foreground">
               <div className="text-foreground">
-                {e.status ? SHIPMENT_STATUS_LABEL[e.status] : (e.providerStatusText ?? e.providerStatusCode)}
+                {trackingEventTitle(e) ??
+                  (e.status ? SHIPMENT_STATUS_LABEL[e.status] : (e.providerStatusText ?? e.providerStatusCode))}
                 {e.location && ` · ${e.location}`}
               </div>
               <div className="text-xs">

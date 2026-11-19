@@ -33,7 +33,6 @@ import {
   listInWords,
   MISSING_CONTACT_LABEL,
   providerLabel,
-  UNPROVEN_PROVIDERS,
 } from '@/lib/shipping'
 
 const PAGE_SIZE = 20
@@ -138,7 +137,7 @@ export function providerBlocked(p: ShippingProvider): string | undefined {
   if (!p.configured) {
     return 'Not configured: its credentials are not set on the server, so it cannot be the default.'
   }
-  return p.code ? UNPROVEN_PROVIDERS[p.code] : undefined
+  return undefined
 }
 
 function SettingsForm({
@@ -447,6 +446,12 @@ function ProvidersCard({
             )
           })}
         </fieldset>
+        {providers.some((p) => p.code === 'PROSHIP' && p.configured) && (
+          <p className="mt-3 text-sm text-muted-foreground" data-testid="proship-note">
+            Proship is proven on the development account. Before making it the default on the live account,
+            confirm courier rules and the pickup location with Prozo.
+          </p>
+        )}
       </CardContent>
     </Card>
   )

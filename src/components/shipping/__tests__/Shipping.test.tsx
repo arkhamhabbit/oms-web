@@ -336,6 +336,9 @@ describe('booking from the list', () => {
         widthMm: 150,
         heightMm: 100,
         boxSource: 'FALLBACK',
+        deliveryPincode: '110009',
+        deliveryCity: 'North West Delhi',
+        deliveryState: 'Delhi',
       },
       {
         orderId: 'o-6',
@@ -375,6 +378,9 @@ describe('booking from the list', () => {
     expect(row5).toHaveTextContent('200 g from the products')
     expect(row5).toHaveTextContent('200 × 150 × 100 mm fallback package')
     expect(row5).toHaveTextContent('Manual · from VERIFY')
+    expect(within(dialog).getByTestId('preview-destination-HBT_10000005')).toHaveTextContent(
+      'Deliver to 110009, North West Delhi, Delhi'
+    )
     const row6 = within(dialog).getByTestId('preview-HBT_10000006')
     expect(row6).toHaveAttribute('data-bookable', 'false')
     expect(row6).toHaveTextContent('Order HBT_10000006 is not paid yet, so it cannot be booked.')
@@ -506,6 +512,7 @@ describe('the Shipment panel', () => {
       { id: 'ev0', eventAt: '2026-11-17T09:00:00Z', providerStatusCode: 'CANCELLED', status: 'CANCELLED', source: 'SYSTEM' },
       { id: 'ev1', eventAt: '2026-11-18T10:00:00Z', providerStatusCode: 'BOOKED', status: 'BOOKED', source: 'ADMIN' },
       { id: 'ev2', eventAt: '2026-11-18T12:00:00Z', providerStatusCode: '6', status: 'IN_TRANSIT', location: 'Delhi hub', source: 'POLL' },
+      { id: 'ev3', eventAt: '2026-11-18T13:00:00Z', providerStatusCode: 'COURIER_CHANGED', status: null, source: 'POLL', remark: 'PROSHIP reports courier Delhivery; it was XpressBees testing Ankit.' },
     ],
     calls: [{ id: 'c-own', action: 'BOOK', success: true, providerCode, createdAt: BOOKED_AT }],
   })
@@ -532,10 +539,11 @@ describe('the Shipment panel', () => {
     expect(await screen.findAllByRole('button', { name: 'Ship' })).not.toHaveLength(0)
     expect(screen.getAllByText('Booked, awaiting pickup').length).toBeGreaterThan(0)
     const events = within(await screen.findByRole('list', { name: 'Tracking events' })).getAllByRole('listitem')
-    expect(events[0]).toHaveTextContent('In transit · Delhi hub')
-    expect(events[1]).toHaveTextContent('Booked')
-    expect(events[2]).toHaveTextContent('Cancelled')
-    expect(events[2]).toHaveTextContent('System') // an event OMS wrote with no team member
+    expect(events[0]).toHaveTextContent('Courier changed to Delhivery')
+    expect(events[1]).toHaveTextContent('In transit · Delhi hub')
+    expect(events[2]).toHaveTextContent('Booked')
+    expect(events[3]).toHaveTextContent('Cancelled')
+    expect(events[3]).toHaveTextContent('System') // an event OMS wrote with no team member
     // booked by is a name from the shipment itself; the order's history is not searched
     expect(await screen.findByText(/Super Admin/)).toBeInTheDocument()
     expect(screen.getByText('500 g, 200 × 150 × 100 mm')).toBeInTheDocument()
@@ -628,17 +636,27 @@ describe('the order page extras', () => {
 })
 
 describe('shipping settings', () => {
-  it('disables an unconfigured provider with why, keeps Proship off the default, and warns of a missing contact', async () => {
+  it('disables only an unconfigured provider, lets Proship be chosen with a note, and warns of a missing contact', async () => {
     serve([...ALL, 'shipping.settings'])
     render(<ShippingSettingsPage />, '/shipping/settings', '/shipping/settings')
 
     const other = await screen.findByLabelText(/Other courier/)
     expect(other).toBeDisabled()
     expect(screen.getByText(/Not configured: its credentials are not set/)).toBeInTheDocument()
-    expect(screen.getByLabelText(/^Proship/)).toBeDisabled()
-    expect(screen.getByText(/Not proven live yet/)).toBeInTheDocument()
+    expect(screen.getByLabelText(/^Proship/)).toBeEnabled()
+    expect(screen.getByTestId('proship-note')).toHaveTextContent(
+      'Proship is proven on the development account. Before making it the default on the live account, confirm courier rules and the pickup location with Prozo.'
+    )
+    expect(screen.queryByText(/Not proven live yet/)).not.toBeInTheDocument()
     expect(screen.getByLabelText(/^Manual/)).toBeChecked()
     // Automatic booking never uses Manual
+    expect(screen.getByRole('switch')).toBeDisabled()
+
+    // choosing Proship frees the automatic-booking switch; choosing Manual again locks it
+    const user = userEvent.setup()
+    await user.click(screen.getByLabelText(/^Proship/))
+    expect(screen.getByRole('switch')).toBeEnabled()
+    await user.click(screen.getByLabelText(/^Manual/))
     expect(screen.getByRole('switch')).toBeDisabled()
 
     const warning = await screen.findByTestId('pickup-contact-warning')
@@ -713,5 +731,38 @@ describe('the warehouse form', () => {
       version: 4,
     })
     expect(screen.getByText(/cannot be booked from a warehouse missing any of/)).toBeInTheDocument()
+  })
+})
+
+describe('the booking preview destination', () => {
+  it('says the city and state will be looked up when both are null, and never reads blank', async () => {
+    const user = userEvent.setup()
+    serve(ALL, (call) =>
+      call.url.pathname === '/api/admin/shipments/preview'
+        ? json(200, {
+            bookable: 1,
+            results: [
+              {
+                orderId: 'o-5',
+                orderNumber: 'HBT_10000005',
+                bookable: true,
+                providerCode: 'PROSHIP',
+                pickupWarehouse: { id: 'w-1', code: 'VERIFY', name: 'Verify Warehouse' },
+                deliveryPincode: '110009',
+                deliveryCity: null,
+                deliveryState: null,
+              },
+            ],
+          })
+        : undefined
+    )
+    render(<OrdersPage />, '/orders', '/orders')
+    await waitFor(() => expect(screen.getByLabelText('Select HBT_10000005')).toBeInTheDocument())
+    await user.click(screen.getByLabelText('Select HBT_10000005'))
+    await user.click(screen.getByRole('button', { name: 'Book shipments' }))
+    const dialog = await screen.findByRole('dialog')
+    expect(await within(dialog).findByTestId('preview-destination-HBT_10000005')).toHaveTextContent(
+      'Deliver to 110009 · City and state will be looked up at booking'
+    )
   })
 })

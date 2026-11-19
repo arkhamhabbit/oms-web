@@ -57,13 +57,20 @@ export function isCourierProvider(code: string | undefined | null): boolean {
 }
 
 /**
- * D13.11: no live Proship booking has passed yet, so the console does not offer it as the default
- * (and so automatic booking, which never uses Manual, stays off). Remove a code from here once its
- * live booking, label, track and cancel have passed.
+ * How a tracking event reads in the timeline. OMS records a courier reassignment as a COURIER_CHANGED
+ * event with no status and the remark "PROVIDER reports courier X; it was Y." (2.8c).
  */
-export const UNPROVEN_PROVIDERS: Readonly<Record<string, string>> = {
-  PROSHIP:
-    'Not proven live yet: Proship has not passed a live booking, label, tracking and cancel, so it cannot be the default until it does.',
+export function trackingEventTitle(e: {
+  status?: string | null
+  providerStatusCode?: string
+  providerStatusText?: string | null
+  remark?: string | null
+}): string | undefined {
+  if (!e.status && e.providerStatusCode === 'COURIER_CHANGED') {
+    const to = /reports courier (.+?); it was/.exec(e.remark ?? '')?.[1]
+    return to ? `Courier changed to ${to}` : 'Courier changed'
+  }
+  return undefined
 }
 
 // --- selection on the orders list --------------------------------------------------------------
