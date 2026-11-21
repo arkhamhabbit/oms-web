@@ -30,6 +30,7 @@ import EarnVersionPage from '@/pages/EarnVersionPage'
 import InvitesPage from '@/pages/InvitesPage'
 import OrdersPage from '@/pages/OrdersPage'
 import OrderDetailPage from '@/pages/OrderDetailPage'
+import OrderNewPage from '@/pages/OrderNewPage'
 import OrderSettingsPage from '@/pages/OrderSettingsPage'
 import ShippingSettingsPage from '@/pages/ShippingSettingsPage'
 import ShippingLogPage from '@/pages/ShippingLogPage'
@@ -180,6 +181,14 @@ export const router = createBrowserRouter([
             element: (
               <RequirePermission permission="orders.read">
                 <OrdersPage />
+              </RequirePermission>
+            ),
+          },
+          {
+            path: '/orders/new',
+            element: (
+              <RequirePermission permission="orders.create">
+                <OrderNewPage />
               </RequirePermission>
             ),
           },

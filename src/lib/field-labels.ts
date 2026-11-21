@@ -56,6 +56,20 @@ export const REFUND_LABELS: FieldLabels = {
   reason: 'Reason',
 }
 
+export const MARK_PAID_LABELS: FieldLabels = {
+  method: 'How it was paid',
+  reference: 'Reference',
+  amountMinor: 'Amount',
+  receivedAt: 'Received at',
+  note: 'Note',
+}
+
+export const MANUAL_REFUND_LABELS: FieldLabels = {
+  reference: 'Reference',
+  amountMinor: 'Amount',
+  note: 'Note',
+}
+
 const WORD_BOUNDARY = /(?<=[a-z0-9])(?=[A-Z])|(?<=[a-z])(?=[0-9])/
 
 /** `lines[0].quantityOrdered` -> `Lines 1 quantity ordered`: a readable stand-in when no map names the field. */

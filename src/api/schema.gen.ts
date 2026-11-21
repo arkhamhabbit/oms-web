@@ -2079,14 +2079,39 @@ export interface paths {
          *      <code>shipmentState=NONE&amp;shipmentState=BOOKING_FAILED</code> — any of them), <code>labelPrinted</code>
          *      (<code>false</code>: booked, label not printed yet — the team's print queue) and <code>bookable</code>
          *      (<code>true</code>: the orders that can be booked now — CONFIRMED, paid, with no shipment that is
-         *      neither cancelled nor failed; the "To ship" list). Each row carries its current shipment (the
-         *      one <code>shipmentState</code> describes), its item count and its payment status.
+         *      neither cancelled nor failed; the "To ship" list) and <code>source</code> (<code>ADMIN</code>: the orders
+         *      the team placed for a member, 2.12; <code>APP</code>: the members' own). Each row carries its
+         *      current shipment (the one <code>shipmentState</code> describes), its item count, its payment status,
+         *      who placed it (<code>createdBy</code>) and, for an order the team placed, its latest payment link's
+         *      status and expiry.
          *
          *     **Requires permission:** `orders.read`.
          */
         get: operations["orderListOrders"];
         put?: never;
-        post?: never;
+        /**
+         * Places an order for a member: priced again now by the same calculation as the quote, and
+         *      written as any app order is — the same numbering, lines, history and (on payment) invoice —
+         *      with <code>source = ADMIN</code>, the admin as <code>createdBy</code> and the optional <code>
+         *      internalNote</code>
+         * @description Places an order for a member: priced again now by the same calculation as the quote, and
+         *      written as any app order is — the same numbering, lines, history and (on payment) invoice —
+         *      with <code>source = ADMIN</code>, the admin as <code>createdBy</code> and the optional <code>
+         *      internalNote</code>. The order is <code>PENDING_PAYMENT</code>: its stock is held until its payment link
+         *      expires (<code>paymentLinkValidityHours</code> of the order settings), and a Razorpay payment link
+         *      for the payable, referenced to the order number, is issued for the member (<code>
+         *      paymentLinks</code>). With <code>notifyCustomer</code> the gateway texts it to the member; otherwise
+         *      nothing is sent and the admin shares the link. Paid, the order confirms as an app order does;
+         *      unpaid at expiry, it expires and its stock goes back. If the gateway would not create the link,
+         *      the order is still placed and its history says why: issue one with <code>payment-link</code>.
+         *      Audited. A replayed <code>Idempotency-Key</code> returns the same order.
+         *
+         *      <p>422 <code>BUSINESS_RULE_VIOLATION</code> with the sentence for anything the quote refuses, a line
+         *      out of stock, or a <code>quotedPayableMinor</code> that no longer matches.
+         *
+         *     **Requires permission:** `orders.create`.
+         */
+        post: operations["orderPlaceAdminOrder"];
         delete?: never;
         options?: never;
         head?: never;
@@ -2202,6 +2227,42 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/admin/orders/{id}/mark-paid": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Records that an order the team placed was paid another way: how (<code>UPI</code>, <code>
+         *      BANK_TRANSFER</code>, <code>CARD_OFFLINE</code>, <code>OTHER</code>), its reference, the amount — exactly the
+         *      payable — and when it was received
+         * @description Records that an order the team placed was paid another way: how (<code>UPI</code>, <code>
+         *      BANK_TRANSFER</code>, <code>CARD_OFFLINE</code>, <code>OTHER</code>), its reference, the amount — exactly the
+         *      payable — and when it was received. The payment is recorded with gateway <code>MANUAL</code>, <code>
+         *      CAPTURED</code>, and who recorded it and when; the order confirms through the same path as a paid one
+         *      (stock committed, invoice numbered, earns posted). Its live payment link is then cancelled at
+         *      Razorpay; if that fails the order stays confirmed and OMS keeps trying, and a link payment that
+         *      still arrives is never applied: it is recorded as an excess payment owed back (<code>
+         *      excessPayments</code>, the order reads refund owed). Audited.
+         *
+         *      <p>422 <code>BUSINESS_RULE_VIOLATION</code>: the order was placed in the app, is not <code>
+         *      PENDING_PAYMENT</code>, or the amount differs from the payable.
+         *
+         *     **Requires permission:** `orders.mark_paid`.
+         *
+         *     **Concurrency** — send back the `version` you read. If the record has been changed by someone else since, this returns **409 `VERSION_CONFLICT`** with a `version` field error and writes nothing. Re-read it, show the operator what moved, and submit again with the new `version`.
+         */
+        post: operations["orderMarkOrderPaid"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/admin/orders/{id}/notes": {
         parameters: {
             query?: never;
@@ -2289,6 +2350,38 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/admin/orders/{id}/payment-link": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Issues a fresh payment link for an order the team placed that is still waiting for payment,
+         *      once its last link has expired or been cancelled (or was never created)
+         * @description Issues a fresh payment link for an order the team placed that is still waiting for payment,
+         *      once its last link has expired or been cancelled (or was never created). When the stock was
+         *      released it is held again, for a new <code>paymentLinkValidityHours</code>, and the order waits
+         *      until the new link expires. At most one live link per order. Audited.
+         *
+         *      <p>422 <code>BUSINESS_RULE_VIOLATION</code> with the sentence: the order has a live link already, is
+         *      not waiting for payment or was placed in the app; a line's stock is gone; or the gateway would
+         *      not create the link.
+         *
+         *     **Requires permission:** `orders.create`.
+         *
+         *     **Concurrency** — send back the `version` you read. If the record has been changed by someone else since, this returns **409 `VERSION_CONFLICT`** with a `version` field error and writes nothing. Re-read it, show the operator what moved, and submit again with the new `version`.
+         */
+        post: operations["orderIssueOrderPaymentLink"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/admin/orders/{id}/refund": {
         parameters: {
             query?: never;
@@ -2350,6 +2443,40 @@ export interface paths {
          *     **Concurrency** — send back the `version` you read. If the record has been changed by someone else since, this returns **409 `VERSION_CONFLICT`** with a `version` field error and writes nothing. Re-read it, show the operator what moved, and submit again with the new `version`.
          */
         post: operations["orderRefundOrderThroughGateway"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/admin/orders/{id}/refund/manual": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Records a refund of an order paid outside Razorpay (marked as paid) and now owed back: the
+         *      admin paid the member back themselves, and records the reference, the amount — up to what was
+         *      paid and not yet refunded — and a note
+         * @description Records a refund of an order paid outside Razorpay (marked as paid) and now owed back: the
+         *      admin paid the member back themselves, and records the reference, the amount — up to what was
+         *      paid and not yet refunded — and a note. OMS records who and when; no money moves through OMS.
+         *      When all of it is refunded the payment and the order read <code>REFUNDED</code>; a part leaves the
+         *      rest owed. Audited. ("Refund via Razorpay" is refused for such an order: there is no gateway
+         *      payment.)
+         *
+         *      <p>422 <code>BUSINESS_RULE_VIOLATION</code>: the order was paid through the gateway, nothing is owed
+         *      back, or the amount is more than is left to refund.
+         *
+         *     **Requires permission:** `orders.refund`.
+         *
+         *     **Concurrency** — send back the `version` you read. If the record has been changed by someone else since, this returns **409 `VERSION_CONFLICT`** with a `version` field error and writes nothing. Re-read it, show the operator what moved, and submit again with the new `version`.
+         */
+        post: operations["orderRecordOrderManualRefund"];
         delete?: never;
         options?: never;
         head?: never;
@@ -2468,6 +2595,47 @@ export interface paths {
          *     **Concurrency** — send back the `version` you read. If the record has been changed by someone else since, this returns **409 `VERSION_CONFLICT`** with a `version` field error and writes nothing. Re-read it, show the operator what moved, and submit again with the new `version`.
          */
         post: operations["orderShipOrder"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/admin/orders/quote": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Quotes an order for a member exactly as the app would quote it — the same calculation: lines at
+         *      the member's tier price (MRP and saving), shipping from the order settings in effect (free when
+         *      the tier ships free), GST included, the payable, and the Bits and Carrots the order will earn —
+         *      with the stock available per line and every reason it cannot be placed as a sentence (<code>
+         *      refusals</code>; <code>placeable</code> false)
+         * @description Quotes an order for a member exactly as the app would quote it — the same calculation: lines at
+         *      the member's tier price (MRP and saving), shipping from the order settings in effect (free when
+         *      the tier ships free), GST included, the payable, and the Bits and Carrots the order will earn —
+         *      with the stock available per line and every reason it cannot be placed as a sentence (<code>
+         *      refusals</code>; <code>placeable</code> false). Nothing is held or written. No price, discount or shipping
+         *      is accepted: OMS prices the order. No Bits or Carrots are redeemed on an order the team places.
+         *
+         *      <p>Delivery is to one of the member's addresses (<code>addressId</code>) or an address typed for
+         *      this order only (<code>address</code>), which is not added to the member's address book. <code>
+         *      deliveryMobile</code> overrides the number the courier calls (default: the address's own, or the
+         *      member's mobile for a typed address).
+         *
+         *      <p>422 <code>BUSINESS_RULE_VIOLATION</code> with the sentence when the member is unknown or not
+         *      active (suspended, or still on the waitlist), when an address is not the member's, or a variant
+         *      is not sold or not available to the member's tier. 400 <code>VALIDATION_FAILED</code> for a
+         *      malformed basket or address (a pincode is six digits).
+         *
+         *     **Requires permission:** `orders.create`.
+         */
+        post: operations["orderQuoteAdminOrder"];
         delete?: never;
         options?: never;
         head?: never;
@@ -6355,8 +6523,12 @@ export interface components {
         };
         /** @description Where the order goes, as it was when placed. */
         AddressResponse: {
-            /** Format: uuid */
-            addressId?: string;
+            /**
+             * Format: uuid
+             * @description the member's address it was copied from; null for an address an admin typed
+             *          for this order only (2.12)
+             */
+            addressId?: string | null;
             deliveryMobile?: string;
             label?: string;
             landmark?: string;
@@ -6411,6 +6583,151 @@ export interface components {
             variantId: string;
             /** Format: uuid */
             warehouseId: string;
+        };
+        /** @description One line: a variant and how many. Nothing about its price — OMS prices it. */
+        AdminOrderLineRequest: {
+            /**
+             * Format: int32
+             * @description 1 to 1000
+             */
+            quantity: number;
+            /** Format: uuid */
+            variantId: string;
+        };
+        /** @description The basket for a member and where it goes. */
+        AdminOrderQuoteRequest: {
+            /** @description an address typed for this order only — give this or <code>addressId</code> */
+            address?: components["schemas"]["TypedAddressRequest"];
+            /**
+             * Format: uuid
+             * @description one of the member's addresses — give this or <code>address</code>, not both
+             */
+            addressId?: string;
+            /**
+             * @description the number the courier calls, when not the address's own (a typed
+             *          address's default is the member's mobile): an Indian mobile, <code>+91</code> optional
+             */
+            deliveryMobile?: string;
+            /** @description 1 to 50 lines, each variant once */
+            lines: components["schemas"]["AdminOrderLineRequest"][];
+            /**
+             * Format: uuid
+             * @description the member: an <code>ACTIVE</code> account
+             */
+            memberId: string;
+        };
+        /** @description One quoted line, at the member's tier price. */
+        AdminQuoteLineResponse: {
+            /**
+             * Format: int64
+             * @description what can be reserved now
+             */
+            available?: number;
+            gstRate?: number | null;
+            /** @description whether <code>available</code> covers the line */
+            inStock?: boolean;
+            /** Format: int64 */
+            lineGstMinor?: number;
+            /** Format: int32 */
+            lineNumber?: number;
+            /**
+             * Format: int64
+             * @description what the line saves against MRP
+             */
+            lineSavingMinor?: number;
+            /** Format: int64 */
+            lineTotalMinor?: number;
+            optionLabels?: string[];
+            /** @description where the price came from, as on an app quote */
+            priceSource?: string;
+            /** Format: uuid */
+            productId?: string;
+            productName?: string;
+            /** Format: int32 */
+            quantity?: number;
+            skuCode?: string;
+            /**
+             * Format: int64
+             * @description the MRP of one unit
+             */
+            unitMrpMinor?: number;
+            /**
+             * Format: int64
+             * @description what one unit is charged: the member's tier price
+             */
+            unitPriceMinor?: number;
+            /** Format: uuid */
+            variantId?: string;
+            variantName?: string | null;
+        };
+        /**
+         * @description An admin's quote: what the app's quote for the same member, basket and address shows, the stock
+         *      per line, and every refusal as a sentence. Nothing is held.
+         */
+        AdminQuoteResponse: {
+            /** @description where it would be delivered; <code>addressId</code> null for a typed address */
+            address?: components["schemas"]["AddressResponse"];
+            currency?: string;
+            /**
+             * Format: int64
+             * @description the Carrots it will earn once paid
+             */
+            earnCarrotsMinor?: number;
+            /**
+             * Format: int64
+             * @description the Bits the order will earn once paid (own order, and the first-order Bits
+             *          when <code>firstOrder</code>)
+             */
+            earnPoints?: number;
+            /** Format: uuid */
+            earnRulesVersionId?: string | null;
+            firstOrder?: boolean;
+            freeShipping?: boolean;
+            gstBreakdown?: components["schemas"]["GstRateResponse"][];
+            /** Format: int64 */
+            gstMinor?: number;
+            /** Format: int64 */
+            itemTotalMinor?: number;
+            lines?: components["schemas"]["AdminQuoteLineResponse"][];
+            /** Format: uuid */
+            memberId?: string;
+            /** Format: uuid */
+            membershipVersionId?: string;
+            /** Format: int64 */
+            mrpTotalMinor?: number;
+            /** Format: uuid */
+            orderSettingsVersionId?: string;
+            /**
+             * Format: int64
+             * @description what the member pays: items and shipping (no Bits or Carrots on an order
+             *          the team places)
+             */
+            payableMinor?: number;
+            /**
+             * Format: int32
+             * @description how long the payment link will stay payable, and the stock
+             *          held, once placed
+             */
+            paymentLinkValidityHours?: number;
+            /** @description whether it can be placed now: <code>refusals</code> is empty */
+            placeable?: boolean;
+            /** Format: uuid */
+            pricingVersionId?: string;
+            /** Format: date-time */
+            quotedAt?: string;
+            /** @description why it cannot be placed, one sentence each (a line out of stock) */
+            refusals?: string[];
+            /**
+             * Format: int64
+             * @description <code>mrpTotalMinor - itemTotalMinor</code>
+             */
+            savingsMinor?: number;
+            /**
+             * Format: int64
+             * @description 0 when the member's tier ships free, else the flat fee in effect
+             */
+            shippingMinor?: number;
+            tierCode?: string;
         };
         /** @description A customer on a product's allowlist. */
         AllowedCustomerResponse: {
@@ -7085,6 +7402,24 @@ export interface components {
             /** @description optional — derived from the name when absent */
             slug?: string;
         };
+        /** @description Who placed an order (2.12). */
+        CreatedByResponse: {
+            /**
+             * @description the name now: the member's (their mobile when they have none), or the team
+             *          member's ("A former team member" when the account is gone)
+             */
+            displayName?: string;
+            /**
+             * Format: uuid
+             * @description the member for <code>CONSUMER</code>; the team member for <code>ADMIN</code>
+             */
+            id?: string;
+            /**
+             * @description <code>CONSUMER</code> (the member, from the app) or <code>ADMIN</code> (a team member)
+             * @enum {string}
+             */
+            kind?: "CONSUMER" | "ADMIN" | "SYSTEM" | "GATEWAY";
+        };
         /**
          * @description A new draft with every amount. Bits are whole points; Carrots are minor units of <code>INR</code>
          *      (<code>10000</code> is ₹100.00). Each amount is 0 or more, and 0 means no earn.
@@ -7746,6 +8081,16 @@ export interface components {
             /** @description optional — stored on the account if this invite creates it */
             name?: string;
         };
+        /** @description A fresh payment link. */
+        IssuePaymentLinkRequest: {
+            /** @description true: the gateway texts it to the member; false: nothing is sent */
+            notifyCustomer?: boolean;
+            /**
+             * Format: int64
+             * @description the order's version as read
+             */
+            version: number;
+        };
         /** @description Asking for an upload URL. */
         IssueUploadRequest: {
             /**
@@ -7860,6 +8205,51 @@ export interface components {
             status?: string;
             /** @description the session token — sent once, never retrievable again */
             token?: string;
+        };
+        /** @description A refund of a payment received outside the gateway, made outside OMS, recorded. */
+        ManualRefundRequest: {
+            /**
+             * Format: int64
+             * @description more than 0 and at most what was paid and not yet refunded
+             */
+            amountMinor: number;
+            /** @description at most 500 characters */
+            note?: string;
+            /** @description the refund's own reference */
+            reference: string;
+            /**
+             * Format: int64
+             * @description the order's version as read
+             */
+            version: number;
+        };
+        /** @description A payment the team received another way. */
+        MarkPaidRequest: {
+            /**
+             * Format: int64
+             * @description exactly the order's payable: no partial payment, no rounding
+             */
+            amountMinor: number;
+            /**
+             * @description how it was received: <code>UPI</code>, <code>BANK_TRANSFER</code>, <code>CARD_OFFLINE</code> or
+             *          <code>OTHER</code>
+             * @enum {string}
+             */
+            method: "UPI" | "BANK_TRANSFER" | "CARD_OFFLINE" | "OTHER";
+            /** @description at most 500 characters */
+            note?: string;
+            /**
+             * Format: date-time
+             * @description when the money was received; not in the future
+             */
+            receivedAt: string;
+            /** @description the payment's own reference (a UPI reference, a bank UTR, a slip number) */
+            reference: string;
+            /**
+             * Format: int64
+             * @description the order's version as read
+             */
+            version: number;
         };
         /** @description A refund settled outside the payment gateway: a bank transfer, cash at the counter. */
         MarkRefundedRequest: {
@@ -8016,6 +8406,7 @@ export interface components {
              *          gone or has no name
              */
             consumerName?: string | null;
+            createdBy?: components["schemas"]["CreatedByResponse"];
             currency?: string;
             /** Format: date-time */
             deliveredAt?: string;
@@ -8035,6 +8426,11 @@ export interface components {
             earnsPostedAt?: string;
             /** @description its history, oldest first, with admins' private notes among the steps */
             events?: components["schemas"]["OrderEventResponse"][];
+            /**
+             * @description payment-link payments that arrived after the order was already paid
+             *          (2.12): each owed back in full, refunded with <code>refund/gateway</code>
+             */
+            excessPayments?: components["schemas"]["PaymentResponse"][];
             /** Format: date-time */
             expiredAt?: string;
             firstOrder?: boolean;
@@ -8044,6 +8440,8 @@ export interface components {
             gstMinor?: number;
             /** Format: uuid */
             id?: string;
+            /** @description the note the admin placed it with, never shown to the member */
+            internalNote?: string | null;
             /** @description null until the order is confirmed */
             invoice?: components["schemas"]["InvoiceResponse"];
             /** Format: int64 */
@@ -8069,8 +8467,13 @@ export interface components {
             paymentDueAt?: string;
             /** Format: date-time */
             paymentFailedAt?: string;
+            /**
+             * @description the payment links of an order the team placed, newest first; empty for an
+             *          app order
+             */
+            paymentLinks?: components["schemas"]["PaymentLinkResponse"][];
             /** @enum {string} */
-            paymentMethod?: "UPI" | "CARD" | "NETBANKING" | "WALLET" | "OTHER";
+            paymentMethod?: "UPI" | "CARD" | "NETBANKING" | "WALLET" | "OTHER" | "BANK_TRANSFER" | "CARD_OFFLINE";
             /** Format: date-time */
             placedAt?: string;
             /**
@@ -8085,7 +8488,7 @@ export interface components {
             /** @description every attempt to pay its refund back, newest first */
             refunds?: components["schemas"]["PaymentRefundResponse"][];
             /**
-             * @description where its refund stands — see the order list
+             * @description where the refund stands across the payment and any excess one
              * @enum {string}
              */
             refundState?: "NONE" | "OWED" | "INITIATED" | "REFUNDED" | "VOIDED";
@@ -8108,6 +8511,11 @@ export interface components {
             shippingCalls?: components["schemas"]["OrderShippingCallResponse"][];
             /** Format: int64 */
             shippingMinor?: number;
+            /**
+             * @description <code>APP</code> or <code>ADMIN</code> (placed by the team, 2.12); <code>createdBy</code> who
+             * @enum {string}
+             */
+            source?: "APP" | "ADMIN";
             /** @enum {string} */
             status?: "PENDING_PAYMENT" | "CONFIRMED" | "PACKED" | "SHIPPED" | "OUT_FOR_DELIVERY" | "DELIVERED" | "PAYMENT_FAILED" | "EXPIRED" | "CANCELLED" | "REFUNDED";
             tierCode?: string;
@@ -8215,6 +8623,12 @@ export interface components {
              */
             minimumPayableMinor?: number;
             notes?: string;
+            /**
+             * Format: int32
+             * @description how long a payment link for an order the team placed stays
+             *          payable, and its stock held (2.12): 1 to 72 hours
+             */
+            paymentLinkValidityHours?: number;
             /** Format: int32 */
             paymentTimeoutMinutes?: number;
             /** Format: int64 */
@@ -8328,6 +8742,8 @@ export interface components {
              */
             consumerName?: string | null;
             courierName?: string | null;
+            /** @description who placed it */
+            createdBy?: components["schemas"]["CreatedByResponse"];
             currency?: string;
             /** Format: uuid */
             id?: string;
@@ -8349,8 +8765,16 @@ export interface components {
              * @description what the shopper paid through the gateway
              */
             payableMinor?: number;
+            /** Format: date-time */
+            paymentLinkExpiresAt?: string | null;
+            /**
+             * @description the latest payment link's status, for an order the team placed; null
+             *          otherwise. <code>paymentLinkExpiresAt</code> is when it stops being payable
+             * @enum {string|null}
+             */
+            paymentLinkStatus?: "ISSUED" | "PAID" | "EXPIRED" | "CANCELLED" | null;
             /** @enum {string} */
-            paymentMethod?: "UPI" | "CARD" | "NETBANKING" | "WALLET" | "OTHER";
+            paymentMethod?: "UPI" | "CARD" | "NETBANKING" | "WALLET" | "OTHER" | "BANK_TRANSFER" | "CARD_OFFLINE";
             /**
              * @description the payment as OMS holds it (2.11) — <code>CREATED</code>, <code>CAPTURED</code>,
              *          <code>FAILED</code>, <code>REFUND_PENDING</code>, <code>REFUND_INITIATED</code>, <code>REFUNDED</code> or
@@ -8390,6 +8814,11 @@ export interface components {
             shipmentState?: "NONE" | "BOOKING_FAILED" | "BOOKED" | "IN_TRANSIT" | "OUT_FOR_DELIVERY" | "DELIVERED" | "PROBLEM" | "CANCELLED";
             /** Format: int64 */
             shippingMinor?: number;
+            /**
+             * @description <code>APP</code> (the member placed it) or <code>ADMIN</code> (the team placed it, 2.12)
+             * @enum {string}
+             */
+            source?: "APP" | "ADMIN";
             /** @enum {string} */
             status?: "PENDING_PAYMENT" | "CONFIRMED" | "PACKED" | "SHIPPED" | "OUT_FOR_DELIVERY" | "DELIVERED" | "PAYMENT_FAILED" | "EXPIRED" | "CANCELLED" | "REFUNDED";
             tierCode?: string;
@@ -9480,6 +9909,57 @@ export interface components {
         PasswordResetLinkResponse: {
             resetLink?: string;
         };
+        /** @description A payment link of an order the team placed. */
+        PaymentLinkResponse: {
+            /** Format: int64 */
+            amountMinor?: number;
+            /** Format: int32 */
+            cancelAttempts?: number;
+            /** Format: date-time */
+            cancelledAt?: string | null;
+            /**
+             * Format: date-time
+             * @description OMS asked the gateway to cancel it (the order was paid another way or
+             *          ended) and the gateway has not yet agreed — OMS keeps asking; <code>lastCancelError</code> is
+             *          the gateway's last refusal
+             */
+            cancelRequestedAt?: string | null;
+            currency?: string;
+            /** Format: date-time */
+            expiredAt?: string | null;
+            /** Format: date-time */
+            expiresAt?: string;
+            /**
+             * @description the gateway's own word for it as last heard (<code>created</code>, <code>
+             *          paid</code>, <code>expired</code>, <code>cancelled</code>)
+             */
+            gatewayStatus?: string | null;
+            /** @description the gateway's link id (<code>plink_…</code>) */
+            id?: string;
+            /** Format: date-time */
+            issuedAt?: string;
+            /**
+             * Format: uuid
+             * @description the team member who issued it; <code>issuedByName</code> their name now
+             */
+            issuedBy?: string;
+            issuedByName?: string;
+            lastCancelError?: string | null;
+            /** @description whether the gateway texted it to the member */
+            notifyCustomer?: boolean;
+            /** Format: date-time */
+            paidAt?: string | null;
+            /** @description the reference sent with it: the order number, suffixed from the second link */
+            referenceId?: string;
+            /** @description what the member opens to pay */
+            shortUrl?: string;
+            /**
+             * @description <code>ISSUED</code> (payable until <code>expiresAt</code>), <code>PAID</code>, <code>EXPIRED</code>
+             *          or <code>CANCELLED</code>
+             * @enum {string}
+             */
+            status?: "ISSUED" | "PAID" | "EXPIRED" | "CANCELLED";
+        };
         /**
          * @description One attempt to pay a refund back (0.14): an admin's press of "Refund via the gateway", or their
          *      record of a refund settled outside it. Rows are never deleted or rewritten.
@@ -9549,6 +10029,11 @@ export interface components {
             /** Format: date-time */
             failedAt?: string;
             failureReason?: string;
+            /**
+             * @description <code>RAZORPAY</code>, or <code>MANUAL</code> for a payment an admin recorded as received
+             *          another way (2.12); then <code>gatewayOrderId</code> and <code>gatewayPaymentId</code> are null and
+             *          <code>manualReference</code> is the payment's reference
+             */
             gateway?: string;
             gatewayOrderId?: string;
             gatewayPaymentId?: string;
@@ -9571,8 +10056,21 @@ export interface components {
             lastCaptureError?: string | null;
             /** @description why the last gateway attempt failed, as a sentence */
             lastRefundError?: string | null;
+            manualNote?: string | null;
+            manualReference?: string | null;
             /** @enum {string} */
-            method?: "UPI" | "CARD" | "NETBANKING" | "WALLET" | "OTHER";
+            method?: "UPI" | "CARD" | "NETBANKING" | "WALLET" | "OTHER" | "BANK_TRANSFER" | "CARD_OFFLINE";
+            /**
+             * Format: date-time
+             * @description when the money was received, as the admin recorded it; <code>recordedBy</code> and
+             *          <code>recordedAt</code> who recorded it and when
+             */
+            receivedAt?: string | null;
+            /** Format: date-time */
+            recordedAt?: string | null;
+            /** Format: uuid */
+            recordedBy?: string | null;
+            recordedByName?: string | null;
             /**
              * Format: int32
              * @description how many refund attempts the order's <code>refunds</code> list holds
@@ -9610,6 +10108,12 @@ export interface components {
              */
             refundRequestedByKind?: "CONSUMER" | "ADMIN" | "SYSTEM" | "GATEWAY" | null;
             /**
+             * @description <code>PRIMARY</code> (the order's payment) or <code>EXCESS</code> (a payment-link payment
+             *          that arrived after the order was already paid: owed back, 2.12)
+             * @enum {string}
+             */
+            role?: "PRIMARY" | "EXCESS";
+            /**
              * @description <code>CREATED</code>, <code>CAPTURED</code>, <code>FAILED</code>, <code>REFUND_PENDING</code> (owed
              *          back and waiting for an admin: refund it through the gateway, or mark it refunded), <code>
              *          REFUND_INITIATED</code> (the gateway accepted the refund and is paying it back), <code>REFUNDED</code>
@@ -9639,6 +10143,29 @@ export interface components {
             /** Format: uuid */
             id?: string;
             name?: string;
+        };
+        /** @description Places the order quoted. */
+        PlaceAdminOrderRequest: {
+            address?: components["schemas"]["TypedAddressRequest"];
+            /** Format: uuid */
+            addressId?: string;
+            deliveryMobile?: string;
+            /** @description a note for the team, never shown to the member (at most 2000 characters) */
+            internalNote?: string;
+            lines: components["schemas"]["AdminOrderLineRequest"][];
+            /** Format: uuid */
+            memberId: string;
+            /**
+             * @description true: the payment gateway texts the link to the member's mobile; false
+             *          (the default): nothing is sent, and the admin shares the link
+             */
+            notifyCustomer?: boolean;
+            /**
+             * Format: int64
+             * @description the payable the quote showed; when given, placing is refused if the
+             *          order now comes to anything else. Never a price: OMS prices the order
+             */
+            quotedPayableMinor?: number;
         };
         /**
          * @description Posting a goods receipt.
@@ -9987,6 +10514,13 @@ export interface components {
              */
             cancelUntil: "PACKED" | "SHIPPED";
             notes?: string;
+            /**
+             * Format: int32
+             * @description how long the payment link of an order the team places stays
+             *          payable, and its stock held: 1 to 72 hours (2.12). Optional: left out, the value in effect
+             *          is kept (24 at launch)
+             */
+            paymentLinkValidityHours?: number;
             /**
              * Format: int32
              * @description how long a placed order waits for payment before it expires, 5 to
@@ -11213,6 +11747,14 @@ export interface components {
             toWarehouseId: string;
             /** Format: uuid */
             variantId: string;
+        };
+        /** @description An address typed for this order only. It is not added to the member's address book. */
+        TypedAddressRequest: {
+            label?: string;
+            landmark?: string;
+            line1: string;
+            /** @description six digits, not starting with 0 */
+            pincode: string;
         };
         /**
          * @description Renaming a group.
@@ -13771,7 +14313,7 @@ export interface operations {
                  *     - `orders.order.refund_retried` — Historical (retired in 0.14): an admin restarted the automatic refund attempts. The press is now orders.order.refund_initiated.
                  *     - `orders.order.refunded` — Historical (retired in 0.14): a refund settled at the gateway. Now orders.order.refund_processed.
                  */
-                action?: "catalog.attribute.created" | "catalog.attribute.deactivated" | "catalog.attribute.reactivated" | "catalog.attribute.reordered" | "catalog.attribute.updated" | "catalog.attribute_group.created" | "catalog.attribute_group.deactivated" | "catalog.attribute_group.reactivated" | "catalog.attribute_group.reordered" | "catalog.attribute_group.updated" | "catalog.attribute_value.created" | "catalog.attribute_value.deactivated" | "catalog.attribute_value.reactivated" | "catalog.attribute_value.reordered" | "catalog.attribute_value.updated" | "catalog.brand.activated" | "catalog.brand.archived" | "catalog.brand.created" | "catalog.brand.published" | "catalog.brand.reordered" | "catalog.brand.restored" | "catalog.brand.unpublished" | "catalog.brand.updated" | "catalog.category.activated" | "catalog.category.archived" | "catalog.category.created" | "catalog.category.moved" | "catalog.category.published" | "catalog.category.reordered" | "catalog.category.restored" | "catalog.category.unpublished" | "catalog.category.updated" | "catalog.media.confirmed" | "catalog.media.created" | "catalog.media.deleted" | "catalog.media.failed" | "catalog.product.approved" | "catalog.product.archived" | "catalog.product.categories_changed" | "catalog.product.content_changed" | "catalog.product.created" | "catalog.product.customer_allowed" | "catalog.product.customer_disallowed" | "catalog.product.image_added" | "catalog.product.image_removed" | "catalog.product.image_updated" | "catalog.product.images_reordered" | "catalog.product.merchandising_changed" | "catalog.product.option_added" | "catalog.product.option_removed" | "catalog.product.options_reordered" | "catalog.product.published" | "catalog.product.rejected" | "catalog.product.restored" | "catalog.product.spec_cleared" | "catalog.product.spec_set" | "catalog.product.submitted" | "catalog.product.unpublished" | "catalog.product.updated" | "catalog.product.visibility_changed" | "catalog.tag.created" | "catalog.tag.deleted" | "catalog.tag.updated" | "catalog.variant.created" | "catalog.variant.default_changed" | "catalog.variant.discontinued" | "catalog.variant.image_added" | "catalog.variant.image_removed" | "catalog.variant.image_updated" | "catalog.variant.images_reordered" | "catalog.variant.merchandising_changed" | "catalog.variant.reinstated" | "catalog.variant.reordered" | "catalog.variant.spec_cleared" | "catalog.variant.spec_set" | "catalog.variant.updated" | "catalog.variant.visibility_changed" | "earn.rules_version.created" | "earn.rules_version.published" | "earn.rules_version.updated" | "earn.rules_version.withdrawn" | "identity.user.claimed" | "identity.user.created" | "identity.user.profile_applied" | "identity.user.reinstated" | "identity.user.role_granted" | "identity.user.role_revoked" | "identity.user.suspended" | "identity.user.updated" | "inventory.availability.reconciled" | "inventory.batch.created" | "inventory.movement.recorded" | "inventory.projection.rebuilt" | "inventory.stock.transferred" | "inventory.warehouse.created" | "inventory.warehouse.deactivated" | "inventory.warehouse.reactivated" | "inventory.warehouse.updated" | "invite.claim.processed" | "invite.claim.rejected" | "invite.intake.processed" | "invite.intake.rejected" | "invite.invite.added" | "invite.invite.expired" | "invite.invite.invalidated" | "invite.invite.issued" | "invite.invite.visited" | "invite.referral.attributed" | "invite.referral.blocked" | "membership.cycle_run.completed" | "membership.version.created" | "membership.version.published" | "membership.version.updated" | "membership.version.withdrawn" | "orders.intake.price_honoured" | "orders.order.cancelled" | "orders.order.capture_refused" | "orders.order.capture_repaired" | "orders.order.confirmation_failed" | "orders.order.confirmed" | "orders.order.delivered" | "orders.order.expired" | "orders.order.late_capture" | "orders.order.note_added" | "orders.order.out_for_delivery" | "orders.order.packed" | "orders.order.payment_failed" | "orders.order.payment_voided" | "orders.order.placed" | "orders.order.price_honoured" | "orders.order.refund_failed" | "orders.order.refund_initiated" | "orders.order.refund_processed" | "orders.order.refund_requested" | "orders.order.refunded_manually" | "orders.order.shipped" | "orders.order.unpacked" | "orders.settings.published" | "pricing.bits_option.cleared" | "pricing.bits_option.set" | "pricing.price.cleared" | "pricing.price.set" | "pricing.version.created" | "pricing.version.published" | "pricing.version.updated" | "pricing.version.withdrawn" | "procurement.goods_receipt.posted" | "procurement.purchase_order.approved" | "procurement.purchase_order.cancelled" | "procurement.purchase_order.created" | "procurement.purchase_order.updated" | "procurement.supplier.created" | "procurement.supplier.deactivated" | "procurement.supplier.reactivated" | "procurement.supplier.updated" | "shipping.settings.published" | "shipping.shipment.booked" | "shipping.shipment.booking_failed" | "shipping.shipment.cancelled" | "shipping.shipment.label_printed" | "shipping.shipment.status_changed" | "team.member.created" | "team.member.forced_logout" | "team.member.invite.accepted" | "team.member.invite.resent" | "team.member.password.changed" | "team.member.password_reset.completed" | "team.member.password_reset.requested" | "team.member.password_reset.triggered" | "team.member.profile.updated" | "team.member.roles.assigned" | "team.member.status.changed" | "team.member.updated" | "team.role.created" | "team.role.deleted" | "team.role.updated" | "orders.order.refund_needs_attention" | "orders.order.refund_retried" | "orders.order.refunded";
+                action?: "catalog.attribute.created" | "catalog.attribute.deactivated" | "catalog.attribute.reactivated" | "catalog.attribute.reordered" | "catalog.attribute.updated" | "catalog.attribute_group.created" | "catalog.attribute_group.deactivated" | "catalog.attribute_group.reactivated" | "catalog.attribute_group.reordered" | "catalog.attribute_group.updated" | "catalog.attribute_value.created" | "catalog.attribute_value.deactivated" | "catalog.attribute_value.reactivated" | "catalog.attribute_value.reordered" | "catalog.attribute_value.updated" | "catalog.brand.activated" | "catalog.brand.archived" | "catalog.brand.created" | "catalog.brand.published" | "catalog.brand.reordered" | "catalog.brand.restored" | "catalog.brand.unpublished" | "catalog.brand.updated" | "catalog.category.activated" | "catalog.category.archived" | "catalog.category.created" | "catalog.category.moved" | "catalog.category.published" | "catalog.category.reordered" | "catalog.category.restored" | "catalog.category.unpublished" | "catalog.category.updated" | "catalog.media.confirmed" | "catalog.media.created" | "catalog.media.deleted" | "catalog.media.failed" | "catalog.product.approved" | "catalog.product.archived" | "catalog.product.categories_changed" | "catalog.product.content_changed" | "catalog.product.created" | "catalog.product.customer_allowed" | "catalog.product.customer_disallowed" | "catalog.product.image_added" | "catalog.product.image_removed" | "catalog.product.image_updated" | "catalog.product.images_reordered" | "catalog.product.merchandising_changed" | "catalog.product.option_added" | "catalog.product.option_removed" | "catalog.product.options_reordered" | "catalog.product.published" | "catalog.product.rejected" | "catalog.product.restored" | "catalog.product.spec_cleared" | "catalog.product.spec_set" | "catalog.product.submitted" | "catalog.product.unpublished" | "catalog.product.updated" | "catalog.product.visibility_changed" | "catalog.tag.created" | "catalog.tag.deleted" | "catalog.tag.updated" | "catalog.variant.created" | "catalog.variant.default_changed" | "catalog.variant.discontinued" | "catalog.variant.image_added" | "catalog.variant.image_removed" | "catalog.variant.image_updated" | "catalog.variant.images_reordered" | "catalog.variant.merchandising_changed" | "catalog.variant.reinstated" | "catalog.variant.reordered" | "catalog.variant.spec_cleared" | "catalog.variant.spec_set" | "catalog.variant.updated" | "catalog.variant.visibility_changed" | "earn.rules_version.created" | "earn.rules_version.published" | "earn.rules_version.updated" | "earn.rules_version.withdrawn" | "identity.user.claimed" | "identity.user.created" | "identity.user.profile_applied" | "identity.user.reinstated" | "identity.user.role_granted" | "identity.user.role_revoked" | "identity.user.suspended" | "identity.user.updated" | "inventory.availability.reconciled" | "inventory.batch.created" | "inventory.movement.recorded" | "inventory.projection.rebuilt" | "inventory.stock.transferred" | "inventory.warehouse.created" | "inventory.warehouse.deactivated" | "inventory.warehouse.reactivated" | "inventory.warehouse.updated" | "invite.claim.processed" | "invite.claim.rejected" | "invite.intake.processed" | "invite.intake.rejected" | "invite.invite.added" | "invite.invite.expired" | "invite.invite.invalidated" | "invite.invite.issued" | "invite.invite.visited" | "invite.referral.attributed" | "invite.referral.blocked" | "membership.cycle_run.completed" | "membership.version.created" | "membership.version.published" | "membership.version.updated" | "membership.version.withdrawn" | "orders.intake.price_honoured" | "orders.order.cancelled" | "orders.order.capture_refused" | "orders.order.capture_repaired" | "orders.order.confirmation_failed" | "orders.order.confirmed" | "orders.order.delivered" | "orders.order.excess_payment" | "orders.order.expired" | "orders.order.late_capture" | "orders.order.link_payment_failed" | "orders.order.marked_paid" | "orders.order.note_added" | "orders.order.out_for_delivery" | "orders.order.packed" | "orders.order.payment_failed" | "orders.order.payment_link_cancel_failed" | "orders.order.payment_link_cancelled" | "orders.order.payment_link_ended" | "orders.order.payment_link_failed" | "orders.order.payment_link_issued" | "orders.order.payment_voided" | "orders.order.placed" | "orders.order.placed_by_admin" | "orders.order.price_honoured" | "orders.order.refund_failed" | "orders.order.refund_initiated" | "orders.order.refund_processed" | "orders.order.refund_requested" | "orders.order.refunded_manually" | "orders.order.shipped" | "orders.order.stock_held_again" | "orders.order.unpacked" | "orders.settings.published" | "pricing.bits_option.cleared" | "pricing.bits_option.set" | "pricing.price.cleared" | "pricing.price.set" | "pricing.version.created" | "pricing.version.published" | "pricing.version.updated" | "pricing.version.withdrawn" | "procurement.goods_receipt.posted" | "procurement.purchase_order.approved" | "procurement.purchase_order.cancelled" | "procurement.purchase_order.created" | "procurement.purchase_order.updated" | "procurement.supplier.created" | "procurement.supplier.deactivated" | "procurement.supplier.reactivated" | "procurement.supplier.updated" | "shipping.settings.published" | "shipping.shipment.booked" | "shipping.shipment.booking_failed" | "shipping.shipment.cancelled" | "shipping.shipment.label_printed" | "shipping.shipment.status_changed" | "team.member.created" | "team.member.forced_logout" | "team.member.invite.accepted" | "team.member.invite.resent" | "team.member.password.changed" | "team.member.password_reset.completed" | "team.member.password_reset.requested" | "team.member.password_reset.triggered" | "team.member.profile.updated" | "team.member.roles.assigned" | "team.member.status.changed" | "team.member.updated" | "team.role.created" | "team.role.deleted" | "team.role.updated" | "orders.order.refund_needs_attention" | "orders.order.refund_retried" | "orders.order.refunded";
                 actorId?: string;
                 entityId?: string;
                 entityType?: "attribute" | "attribute_group" | "attribute_value" | "batch" | "brand" | "category" | "claim_intake" | "earn_rules_version" | "goods_receipt" | "invite" | "invite_intake" | "media" | "membership_cycle_run" | "membership_version" | "order" | "order_intake" | "order_settings_version" | "pricing_version" | "product" | "purchase_order" | "referral" | "role" | "shipment" | "shipping_settings_version" | "stock_availability" | "stock_level" | "stock_movement" | "stock_transfer" | "supplier" | "tag" | "team_member" | "user" | "variant" | "warehouse";
@@ -18953,6 +19495,7 @@ export interface operations {
                 pageable: components["schemas"]["Pageable"];
                 refundState?: "NONE" | "OWED" | "INITIATED" | "REFUNDED" | "VOIDED";
                 shipmentState?: ("NONE" | "BOOKING_FAILED" | "BOOKED" | "IN_TRANSIT" | "OUT_FOR_DELIVERY" | "DELIVERED" | "PROBLEM" | "CANCELLED")[];
+                source?: "APP" | "ADMIN";
                 status?: "PENDING_PAYMENT" | "CONFIRMED" | "PACKED" | "SHIPPED" | "OUT_FOR_DELIVERY" | "DELIVERED" | "PAYMENT_FAILED" | "EXPIRED" | "CANCELLED" | "REFUNDED";
                 to?: string;
             };
@@ -18991,6 +19534,95 @@ export interface operations {
             };
             /** @description `ACCESS_DENIED` — Authenticated, but lacking the permission the endpoint declares. The session is valid; do not sign the operator out. */
             403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description `INTERNAL_ERROR` — An unhandled failure. The message is deliberately generic; `traceId` identifies the server log line that explains it. */
+            500: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+        };
+    };
+    orderPlaceAdminOrder: {
+        parameters: {
+            query?: never;
+            header: {
+                "Idempotency-Key": string;
+            };
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["PlaceAdminOrderRequest"];
+            };
+        };
+        responses: {
+            /** @description Created */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "*/*": components["schemas"]["OrderDetailResponse"];
+                };
+            };
+            /** @description `VALIDATION_FAILED` — The request body could not be read, a field failed validation, a required header was absent, or a domain validation rule rejected an input the caller can correct, such as a tier colour ("Must be a colour written as #RRGGBB.") or a tier badge that does not exist or is a video ("Media <id> is a video; this takes an image."). */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description `AUTHENTICATION_FAILED` — No valid credential. Either none was presented, or the session behind it is expired, revoked, or belongs to a member who can no longer sign in. This status means the session is dead and nothing else does — a wrong *current* password on change-password is a 400 with a `currentPassword` field error, not this. */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description `ACCESS_DENIED` — Authenticated, but lacking the permission the endpoint declares. The session is valid; do not sign the operator out. */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description `CONFLICT` — The request collided with current state for a reason other than a version mismatch: a duplicate natural key (a slug, a code, an email), or a database constraint the application did not catch first. */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description `UNSUPPORTED_MEDIA_TYPE` — The request body was sent with a `Content-Type` the endpoint does not read. Every endpoint that takes a body reads `application/json`. */
+            415: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description `BUSINESS_RULE_VIOLATION` — The request was well-formed and the entities exist, but a domain rule forbids it — publishing a product with no price, archiving a brand products still reference, deleting media a tier badge uses ("This media is still used — tier badge on Sprout of ladder version Launch. Replace or remove it first."), issuing more stock than a location holds, restoring a category under an archived parent ("Restore the parent category first.") or a product under an archived brand ("Restore the brand first."), refunding through the gateway a payment that was never captured ("The payment was never captured, so there is nothing to refund.") or one whose gateway refund is under way ("A refund through the payment gateway is already in progress for this order. Refresh it to see where it stands."), refreshing a refund that is not under way ("This order has no refund in progress at the payment gateway to refresh."). Distinct from 400: nothing about the request is malformed. */
+            422: {
                 headers: {
                     [name: string]: unknown;
                 };
@@ -19343,6 +19975,106 @@ export interface operations {
             };
         };
     };
+    orderMarkOrderPaid: {
+        parameters: {
+            query?: never;
+            header: {
+                "Idempotency-Key": string;
+            };
+            path: {
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["MarkPaidRequest"];
+            };
+        };
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "*/*": components["schemas"]["OrderDetailResponse"];
+                };
+            };
+            /** @description `VALIDATION_FAILED` — The request body could not be read, a field failed validation, a required header was absent, or a domain validation rule rejected an input the caller can correct, such as a tier colour ("Must be a colour written as #RRGGBB.") or a tier badge that does not exist or is a video ("Media <id> is a video; this takes an image."). */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description `AUTHENTICATION_FAILED` — No valid credential. Either none was presented, or the session behind it is expired, revoked, or belongs to a member who can no longer sign in. This status means the session is dead and nothing else does — a wrong *current* password on change-password is a 400 with a `currentPassword` field error, not this. */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description `ACCESS_DENIED` — Authenticated, but lacking the permission the endpoint declares. The session is valid; do not sign the operator out. */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description `NOT_FOUND` — A referenced entity does not exist, or the URL matches no endpoint. Also returned for a known path called with an unsupported method, as 405. */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description `VERSION_CONFLICT` or `CONFLICT` — The `version` sent with an update is not the version stored — the record was changed by someone else since it was read. Nothing was written. Re-read the record, show the operator what changed, and submit again with the new `version`. */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description `UNSUPPORTED_MEDIA_TYPE` — The request body was sent with a `Content-Type` the endpoint does not read. Every endpoint that takes a body reads `application/json`. */
+            415: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description `BUSINESS_RULE_VIOLATION` — The request was well-formed and the entities exist, but a domain rule forbids it — publishing a product with no price, archiving a brand products still reference, deleting media a tier badge uses ("This media is still used — tier badge on Sprout of ladder version Launch. Replace or remove it first."), issuing more stock than a location holds, restoring a category under an archived parent ("Restore the parent category first.") or a product under an archived brand ("Restore the brand first."), refunding through the gateway a payment that was never captured ("The payment was never captured, so there is nothing to refund.") or one whose gateway refund is under way ("A refund through the payment gateway is already in progress for this order. Refresh it to see where it stands."), refreshing a refund that is not under way ("This order has no refund in progress at the payment gateway to refresh."). Distinct from 400: nothing about the request is malformed. */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description `INTERNAL_ERROR` — An unhandled failure. The message is deliberately generic; `traceId` identifies the server log line that explains it. */
+            500: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+        };
+    };
     orderAddOrderNote: {
         parameters: {
             query?: never;
@@ -19643,6 +20375,106 @@ export interface operations {
             };
         };
     };
+    orderIssueOrderPaymentLink: {
+        parameters: {
+            query?: never;
+            header: {
+                "Idempotency-Key": string;
+            };
+            path: {
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["IssuePaymentLinkRequest"];
+            };
+        };
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "*/*": components["schemas"]["OrderDetailResponse"];
+                };
+            };
+            /** @description `VALIDATION_FAILED` — The request body could not be read, a field failed validation, a required header was absent, or a domain validation rule rejected an input the caller can correct, such as a tier colour ("Must be a colour written as #RRGGBB.") or a tier badge that does not exist or is a video ("Media <id> is a video; this takes an image."). */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description `AUTHENTICATION_FAILED` — No valid credential. Either none was presented, or the session behind it is expired, revoked, or belongs to a member who can no longer sign in. This status means the session is dead and nothing else does — a wrong *current* password on change-password is a 400 with a `currentPassword` field error, not this. */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description `ACCESS_DENIED` — Authenticated, but lacking the permission the endpoint declares. The session is valid; do not sign the operator out. */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description `NOT_FOUND` — A referenced entity does not exist, or the URL matches no endpoint. Also returned for a known path called with an unsupported method, as 405. */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description `VERSION_CONFLICT` or `CONFLICT` — The `version` sent with an update is not the version stored — the record was changed by someone else since it was read. Nothing was written. Re-read the record, show the operator what changed, and submit again with the new `version`. */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description `UNSUPPORTED_MEDIA_TYPE` — The request body was sent with a `Content-Type` the endpoint does not read. Every endpoint that takes a body reads `application/json`. */
+            415: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description `BUSINESS_RULE_VIOLATION` — The request was well-formed and the entities exist, but a domain rule forbids it — publishing a product with no price, archiving a brand products still reference, deleting media a tier badge uses ("This media is still used — tier badge on Sprout of ladder version Launch. Replace or remove it first."), issuing more stock than a location holds, restoring a category under an archived parent ("Restore the parent category first.") or a product under an archived brand ("Restore the brand first."), refunding through the gateway a payment that was never captured ("The payment was never captured, so there is nothing to refund.") or one whose gateway refund is under way ("A refund through the payment gateway is already in progress for this order. Refresh it to see where it stands."), refreshing a refund that is not under way ("This order has no refund in progress at the payment gateway to refresh."). Distinct from 400: nothing about the request is malformed. */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description `INTERNAL_ERROR` — An unhandled failure. The message is deliberately generic; `traceId` identifies the server log line that explains it. */
+            500: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+        };
+    };
     orderRefundOrder: {
         parameters: {
             query?: never;
@@ -19757,6 +20589,106 @@ export interface operations {
         requestBody: {
             content: {
                 "application/json": components["schemas"]["OrderStepRequest"];
+            };
+        };
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "*/*": components["schemas"]["OrderDetailResponse"];
+                };
+            };
+            /** @description `VALIDATION_FAILED` — The request body could not be read, a field failed validation, a required header was absent, or a domain validation rule rejected an input the caller can correct, such as a tier colour ("Must be a colour written as #RRGGBB.") or a tier badge that does not exist or is a video ("Media <id> is a video; this takes an image."). */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description `AUTHENTICATION_FAILED` — No valid credential. Either none was presented, or the session behind it is expired, revoked, or belongs to a member who can no longer sign in. This status means the session is dead and nothing else does — a wrong *current* password on change-password is a 400 with a `currentPassword` field error, not this. */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description `ACCESS_DENIED` — Authenticated, but lacking the permission the endpoint declares. The session is valid; do not sign the operator out. */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description `NOT_FOUND` — A referenced entity does not exist, or the URL matches no endpoint. Also returned for a known path called with an unsupported method, as 405. */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description `VERSION_CONFLICT` or `CONFLICT` — The `version` sent with an update is not the version stored — the record was changed by someone else since it was read. Nothing was written. Re-read the record, show the operator what changed, and submit again with the new `version`. */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description `UNSUPPORTED_MEDIA_TYPE` — The request body was sent with a `Content-Type` the endpoint does not read. Every endpoint that takes a body reads `application/json`. */
+            415: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description `BUSINESS_RULE_VIOLATION` — The request was well-formed and the entities exist, but a domain rule forbids it — publishing a product with no price, archiving a brand products still reference, deleting media a tier badge uses ("This media is still used — tier badge on Sprout of ladder version Launch. Replace or remove it first."), issuing more stock than a location holds, restoring a category under an archived parent ("Restore the parent category first.") or a product under an archived brand ("Restore the brand first."), refunding through the gateway a payment that was never captured ("The payment was never captured, so there is nothing to refund.") or one whose gateway refund is under way ("A refund through the payment gateway is already in progress for this order. Refresh it to see where it stands."), refreshing a refund that is not under way ("This order has no refund in progress at the payment gateway to refresh."). Distinct from 400: nothing about the request is malformed. */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description `INTERNAL_ERROR` — An unhandled failure. The message is deliberately generic; `traceId` identifies the server log line that explains it. */
+            500: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+        };
+    };
+    orderRecordOrderManualRefund: {
+        parameters: {
+            query?: never;
+            header: {
+                "Idempotency-Key": string;
+            };
+            path: {
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["ManualRefundRequest"];
             };
         };
         responses: {
@@ -20206,6 +21138,93 @@ export interface operations {
                 };
             };
             /** @description `VERSION_CONFLICT` or `CONFLICT` — The `version` sent with an update is not the version stored — the record was changed by someone else since it was read. Nothing was written. Re-read the record, show the operator what changed, and submit again with the new `version`. */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description `UNSUPPORTED_MEDIA_TYPE` — The request body was sent with a `Content-Type` the endpoint does not read. Every endpoint that takes a body reads `application/json`. */
+            415: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description `BUSINESS_RULE_VIOLATION` — The request was well-formed and the entities exist, but a domain rule forbids it — publishing a product with no price, archiving a brand products still reference, deleting media a tier badge uses ("This media is still used — tier badge on Sprout of ladder version Launch. Replace or remove it first."), issuing more stock than a location holds, restoring a category under an archived parent ("Restore the parent category first.") or a product under an archived brand ("Restore the brand first."), refunding through the gateway a payment that was never captured ("The payment was never captured, so there is nothing to refund.") or one whose gateway refund is under way ("A refund through the payment gateway is already in progress for this order. Refresh it to see where it stands."), refreshing a refund that is not under way ("This order has no refund in progress at the payment gateway to refresh."). Distinct from 400: nothing about the request is malformed. */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description `INTERNAL_ERROR` — An unhandled failure. The message is deliberately generic; `traceId` identifies the server log line that explains it. */
+            500: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+        };
+    };
+    orderQuoteAdminOrder: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["AdminOrderQuoteRequest"];
+            };
+        };
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "*/*": components["schemas"]["AdminQuoteResponse"];
+                };
+            };
+            /** @description `VALIDATION_FAILED` — The request body could not be read, a field failed validation, a required header was absent, or a domain validation rule rejected an input the caller can correct, such as a tier colour ("Must be a colour written as #RRGGBB.") or a tier badge that does not exist or is a video ("Media <id> is a video; this takes an image."). */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description `AUTHENTICATION_FAILED` — No valid credential. Either none was presented, or the session behind it is expired, revoked, or belongs to a member who can no longer sign in. This status means the session is dead and nothing else does — a wrong *current* password on change-password is a 400 with a `currentPassword` field error, not this. */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description `ACCESS_DENIED` — Authenticated, but lacking the permission the endpoint declares. The session is valid; do not sign the operator out. */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description `CONFLICT` — The request collided with current state for a reason other than a version mismatch: a duplicate natural key (a slug, a code, an email), or a database constraint the application did not catch first. */
             409: {
                 headers: {
                     [name: string]: unknown;

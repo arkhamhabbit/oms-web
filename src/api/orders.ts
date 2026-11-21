@@ -19,6 +19,14 @@ export type OrderPayment = Schemas['PaymentResponse']
 export type OrderSettings = Schemas['OrderSettingsResponse']
 export type CancelUntil = NonNullable<OrderSettings['cancelUntil']>
 export type PublishOrderSettingsRequest = Schemas['PublishOrderSettingsRequest']
+export type OrderSource = NonNullable<OrderSummary['source']>
+export type PaymentLink = Schemas['PaymentLinkResponse']
+export type AdminQuote = Schemas['AdminQuoteResponse']
+export type AdminQuoteLine = Schemas['AdminQuoteLineResponse']
+export type AdminQuoteRequest = Schemas['AdminOrderQuoteRequest']
+export type PlaceAdminOrderRequest = Schemas['PlaceAdminOrderRequest']
+export type MarkPaidRequest = Schemas['MarkPaidRequest']
+export type ManualPaymentMethod = MarkPaidRequest['method']
 
 const ORDERS_KEY = 'orders'
 
@@ -29,6 +37,8 @@ export interface OrderListParams {
   number?: string
   consumerId?: string
   refundState?: RefundState
+  /** W3.10: who placed it, the app's member or the team. */
+  source?: OrderSource
   /** Any of these (2.11: the filter takes several). */
   shipmentState?: ShipmentState[]
   /** `true`: the orders that can be booked now (the "To ship" list). */
@@ -55,6 +65,7 @@ export function useOrdersQuery(params: OrderListParams, enabled = true) {
               number: params.number || undefined,
               consumerId: params.consumerId || undefined,
               refundState: params.refundState,
+              source: params.source,
               shipmentState: params.shipmentState,
               bookable: params.bookable,
               labelPrinted: params.labelPrinted,
@@ -68,10 +79,102 @@ export function useOrdersQuery(params: OrderListParams, enabled = true) {
   })
 }
 
+/** How often an order awaiting a payment link's payment is read again, so a paid link shows by itself. */
+export const AWAITING_PAYMENT_REFRESH_MS = 15_000
+
 export function useOrderQuery(id: string) {
   return useQuery({
     queryKey: [ORDERS_KEY, 'detail', id],
     queryFn: () => unwrap(api.GET('/api/admin/orders/{id}', { params: { path: { id } } })),
+    refetchInterval: (query) =>
+      query.state.data?.status === 'PENDING_PAYMENT' && query.state.data.source === 'ADMIN'
+        ? AWAITING_PAYMENT_REFRESH_MS
+        : false,
+  })
+}
+
+/**
+ * The server's quote for a team-placed order (`orders.create`). Nothing is held. The request is
+ * the query key, so an answer to an earlier basket is never shown for a later one.
+ */
+export function useAdminQuoteQuery(request: AdminQuoteRequest | undefined) {
+  return useQuery({
+    enabled: !!request,
+    queryKey: [ORDERS_KEY, 'admin-quote', request],
+    queryFn: () => unwrap<AdminQuote>(api.POST('/api/admin/orders/quote', { body: request! })),
+    retry: false,
+    staleTime: 0,
+    gcTime: 30_000,
+    refetchOnWindowFocus: false,
+  })
+}
+
+/** One key per press of Place order; the caller keeps it until the order is placed or refused. */
+export function usePlaceAdminOrderMutation() {
+  const queryClient = useQueryClient()
+  return useMutation({
+    mutationFn: (input: { body: PlaceAdminOrderRequest; idempotencyKey: string }) =>
+      unwrap<OrderDetail>(
+        api.POST('/api/admin/orders', {
+          params: { header: { 'Idempotency-Key': input.idempotencyKey } },
+          body: input.body,
+        })
+      ),
+    onSuccess: () => queryClient.invalidateQueries({ queryKey: [ORDERS_KEY] }),
+  })
+}
+
+export function useIssuePaymentLinkMutation(id: string) {
+  const queryClient = useQueryClient()
+  return useMutation({
+    mutationFn: (input: { version: number; notifyCustomer?: boolean; idempotencyKey: string }) =>
+      unwrap<OrderDetail>(
+        api.POST('/api/admin/orders/{id}/payment-link', {
+          params: { path: { id }, header: { 'Idempotency-Key': input.idempotencyKey } },
+          body: { version: input.version, notifyCustomer: input.notifyCustomer ?? false },
+        })
+      ),
+    onSuccess: () => queryClient.invalidateQueries({ queryKey: [ORDERS_KEY] }),
+  })
+}
+
+export function useMarkPaidMutation(id: string) {
+  const queryClient = useQueryClient()
+  return useMutation({
+    mutationFn: (input: { body: MarkPaidRequest; idempotencyKey: string }) =>
+      unwrap<OrderDetail>(
+        api.POST('/api/admin/orders/{id}/mark-paid', {
+          params: { path: { id }, header: { 'Idempotency-Key': input.idempotencyKey } },
+          body: input.body,
+        })
+      ),
+    onSuccess: () => queryClient.invalidateQueries({ queryKey: [ORDERS_KEY] }),
+  })
+}
+
+/** D9.9: the admin recorded paying a manually paid order back outside Razorpay. No money moves through OMS. */
+export function useManualRefundMutation(id: string) {
+  const queryClient = useQueryClient()
+  return useMutation({
+    mutationFn: (input: {
+      version: number
+      reference: string
+      amountMinor: number
+      note?: string
+      idempotencyKey: string
+    }) =>
+      unwrap<OrderDetail>(
+        api.POST('/api/admin/orders/{id}/refund/manual', {
+          params: { path: { id }, header: { 'Idempotency-Key': input.idempotencyKey } },
+          body: {
+            version: input.version,
+            reference: input.reference,
+            amountMinor: input.amountMinor,
+            note: input.note || undefined,
+          },
+        })
+      ),
+    onSuccess: () => queryClient.invalidateQueries({ queryKey: [ORDERS_KEY] }),
   })
 }
 

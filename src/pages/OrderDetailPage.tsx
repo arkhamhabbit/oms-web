@@ -5,6 +5,7 @@ import { ArrowLeftIcon, MoreHorizontalIcon } from 'lucide-react'
 import { OrderActionDialog } from '@/components/orders/OrderActionDialog'
 import { OrderNotesFeed } from '@/components/orders/OrderNotesFeed'
 import { OrderPaymentCard } from '@/components/orders/OrderPaymentCard'
+import { OrderPaymentLinkCard } from '@/components/orders/OrderPaymentLinkCard'
 import { OrderRefundsCard } from '@/components/orders/OrderRefundsCard'
 import { OrderStatusBadge } from '@/components/orders/OrderStatusBadge'
 import { OrderTotals } from '@/components/orders/OrderTotals'
@@ -125,6 +126,11 @@ function OrderDetailPage() {
         <h1 className="font-mono text-xl font-semibold">{order.number}</h1>
         <OrderStatusBadge status={order.status} />
         <TierBadge code={order.tierCode} />
+        {order.source === 'ADMIN' && (
+          <Badge variant="secondary" data-testid="placed-by-team">
+            Placed by the team{order.createdBy?.displayName ? ` · ${order.createdBy.displayName}` : ''}
+          </Badge>
+        )}
         {order.priceHonoured && (
           <Badge variant="outline">Price honoured (pricing moved after the quote)</Badge>
         )}
@@ -279,7 +285,9 @@ function OrderDetailPage() {
             </CardContent>
           </Card>
 
-          <OrderPaymentCard order={order} />
+          <OrderPaymentLinkCard order={order} onStale={() => void orderQuery.refetch()} />
+
+          <OrderPaymentCard order={order} onStale={() => void orderQuery.refetch()} />
 
           <OrderRefundsCard order={order} onStale={() => void orderQuery.refetch()} />
 
@@ -391,6 +399,11 @@ function AddressBlock({ order }: { order: OrderDetail }) {
       {a.landmark && <div>{a.landmark}</div>}
       <div>{a.pincode}</div>
       <div className="text-muted-foreground">{a.deliveryMobile}</div>
+      {!a.addressId && (
+        <div className="mt-1 text-xs text-muted-foreground">
+          Typed for this order; not in the member’s address book.
+        </div>
+      )}
     </address>
   )
 }

@@ -192,6 +192,28 @@ export const REFUND_REQUESTER_LABEL = {
   GATEWAY: 'the gateway',
 } as const
 
+export const PAYMENT_METHOD_LABEL = {
+  UPI: 'UPI',
+  CARD: 'Card',
+  NETBANKING: 'Net banking',
+  WALLET: 'Wallet',
+  OTHER: 'Other',
+  BANK_TRANSFER: 'Bank transfer',
+  CARD_OFFLINE: 'Card offline',
+} as const
+
+export const ORDER_SOURCE_LABEL = {
+  APP: 'Placed in the app',
+  ADMIN: 'Placed by the team',
+} as const
+
+export const PAYMENT_LINK_STATUS_LABEL = {
+  ISSUED: 'Live',
+  PAID: 'Paid',
+  EXPIRED: 'Expired',
+  CANCELLED: 'Cancelled',
+} as const
+
 export const REFUND_METHOD_LABEL = {
   GATEWAY: 'Razorpay',
   MANUAL: 'Manual',

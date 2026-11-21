@@ -26,14 +26,28 @@ import {
   REFUND_OUTCOME_LABEL,
   REFUND_REQUESTER_LABEL,
 } from '@/lib/labels'
-import { REFUND_SETTLEMENT_PERMISSION, refundGate, rupees } from '@/lib/orders'
+import {
+  canRecordRefund,
+  excessOwed,
+  isManualPayment,
+  manualRefundLeftMinor,
+  REFUND_SETTLEMENT_PERMISSION,
+  refundGate,
+  rupees,
+} from '@/lib/orders'
+import { ManualRefundDialog } from '@/components/orders/ManualRefundDialog'
 import { cn } from '@/lib/utils'
 
 /** The one line that says where the money stands (D9.8): owed, in flight, paid back, or never charged. */
 export function refundHeadline(order: OrderDetail): string | undefined {
   switch (order.refundState) {
-    case 'OWED':
-      return `Refund owed ${rupees(order.payment?.amountMinor)}`
+    case 'OWED': {
+      const primaryOwed = order.payment?.status === 'REFUND_PENDING'
+      const owed = primaryOwed
+        ? (order.payment?.amountMinor ?? 0)
+        : excessOwed(order).reduce((sum, p) => sum + (p.amountMinor ?? 0), 0)
+      return `Refund owed ${rupees(owed || order.payment?.amountMinor)}`
+    }
     case 'INITIATED':
       return 'Refund initiated — waiting for Razorpay'
     case 'REFUNDED':
@@ -113,6 +127,7 @@ function OrderRefundsCard({ order, onStale }: { order: OrderDetail; onStale: () 
   const refresh = useRefreshRefundMutation(order.id!)
   const [kind, setKind] = React.useState<RefundSettlementKind | undefined>()
   const [refusal, setRefusal] = React.useState<string | undefined>()
+  const [recording, setRecording] = React.useState(false)
   const gate = refundGate(order)
   if (!gate.visible) {
     return null
@@ -120,7 +135,9 @@ function OrderRefundsCard({ order, onStale }: { order: OrderDetail; onStale: () 
   const allowed = has(REFUND_SETTLEMENT_PERMISSION)
   const needs = `Needs ${REFUND_SETTLEMENT_PERMISSION}`
   const owed = order.refundState === 'OWED'
-  const showSettle = order.refundState !== 'VOIDED'
+  const manual = isManualPayment(order.payment)
+  const showSettle = order.refundState !== 'VOIDED' && !gate.excessOnly
+  const showRecord = manual && order.refundState !== 'VOIDED' && canRecordRefund(order)
 
   function doRefresh() {
     setRefusal(undefined)
@@ -177,13 +194,23 @@ function OrderRefundsCard({ order, onStale }: { order: OrderDetail; onStale: () 
         <div className="flex flex-wrap items-center gap-2">
           {showSettle && (
             <>
-              <Button
-                disabled={!allowed || !gate.canGateway}
-                title={!allowed ? needs : gate.gatewayReason}
-                onClick={() => setKind('gateway')}
-              >
-                Refund via Razorpay
-              </Button>
+              {manual ? (
+                <Button
+                  disabled={!allowed || !showRecord || lostOrFlight(gate)}
+                  title={!allowed ? needs : undefined}
+                  onClick={() => setRecording(true)}
+                >
+                  Record refund
+                </Button>
+              ) : (
+                <Button
+                  disabled={!allowed || !gate.canGateway}
+                  title={!allowed ? needs : gate.gatewayReason}
+                  onClick={() => setKind('gateway')}
+                >
+                  Refund via Razorpay
+                </Button>
+              )}
               <Button
                 variant="outline"
                 disabled={!allowed || !gate.canSettle}
@@ -205,7 +232,19 @@ function OrderRefundsCard({ order, onStale }: { order: OrderDetail; onStale: () 
             </Button>
           )}
         </div>
-        {showSettle && allowed && gate.gatewayReason && !gate.lostAnswerSentence && (
+        {gate.excessOnly && (
+          <p data-testid="refund-disabled-reason" className="-mt-2 text-xs text-muted-foreground">
+            {gate.settleReason}
+          </p>
+        )}
+        {manual && showSettle && (
+          <p className="-mt-2 text-xs text-muted-foreground">
+            {manualRefundLeftMinor(order) > 0
+              ? `Up to ${rupees(manualRefundLeftMinor(order))} can still be recorded.`
+              : 'Everything paid has been paid back.'}
+          </p>
+        )}
+        {!manual && showSettle && allowed && gate.gatewayReason && !gate.lostAnswerSentence && (
           <p data-testid="refund-disabled-reason" className="-mt-2 text-xs text-muted-foreground">
             {gate.gatewayReason}
           </p>
@@ -227,8 +266,16 @@ function OrderRefundsCard({ order, onStale }: { order: OrderDetail; onStale: () 
         onClose={() => setKind(undefined)}
         onStale={onStale}
       />
+      {recording && (
+        <ManualRefundDialog order={order} onClose={() => setRecording(false)} onStale={onStale} />
+      )}
     </Card>
   )
+}
+
+/** A refund row still REQUESTED or INITIATED blocks a second action, as on any other payment. */
+function lostOrFlight(gate: ReturnType<typeof refundGate>): boolean {
+  return gate.lostAnswer || gate.canRefresh
 }
 
 export { OrderRefundsCard }
