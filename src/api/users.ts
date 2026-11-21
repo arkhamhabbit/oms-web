@@ -48,8 +48,9 @@ export function useUserQuery(id: string) {
   })
 }
 
-export function useUserAddressesQuery(id: string) {
+export function useUserAddressesQuery(id: string, enabled = true) {
   return useQuery({
+    enabled: enabled && id !== '',
     queryKey: ['users', 'addresses', id],
     queryFn: () => unwrap(api.GET('/api/admin/users/{id}/addresses', { params: { path: { id } } })),
   })

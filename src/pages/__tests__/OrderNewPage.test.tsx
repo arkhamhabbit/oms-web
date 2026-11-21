@@ -145,6 +145,8 @@ describe('member chooser', () => {
     renderPage()
 
     await user.type(await screen.findByLabelText('Search members'), 'Asha')
+    // No address is asked for until a member is chosen (a request for /users//addresses is a bug).
+    expect(calls.some((c) => c.url.pathname.includes('//'))).toBe(false)
     const waitlist = await screen.findByRole('button', { name: 'Choose Asha Waitlist' }, SLOW)
     expect(waitlist).toBeDisabled()
     expect(screen.getByRole('button', { name: 'Choose Asha Suspended' })).toBeDisabled()
