@@ -87,6 +87,12 @@ function install(extra?: Handler, permissions = ['orders.read', 'orders.create']
     if (path === '/api/admin/users/m-1/addresses') {
       return json(200, ADDRESSES)
     }
+    if (path.startsWith('/api/admin/pincodes/')) {
+      const pincode = path.split('/').pop()
+      return pincode === '110009'
+        ? json(200, { pincode, city: 'North West Delhi', state: 'Delhi' })
+        : refusal(404, 'NOT_FOUND', 'That PIN code could not be resolved.')
+    }
     if (path === '/api/admin/products') {
       return json(200, {
         content: [{ id: 'p-1', name: 'Test Public Tee', variantCount: 1 }],
@@ -265,7 +271,7 @@ describe('basket and quote', () => {
   })
 })
 
-describe('delivery', () => {
+describe('delivery', { timeout: 20000 }, () => {
   it('sends a typed address with the not-saved note and a normalised delivery mobile', async () => {
     install()
     const user = userEvent.setup()
@@ -290,8 +296,130 @@ describe('delivery', () => {
       memberId: 'm-1',
       lines: [{ variantId: 'v-1', quantity: 1 }],
       deliveryMobile: '+919876543210',
-      address: { label: 'Office', line1: '2 Test Street', landmark: 'Mukherjee Nagar', pincode: '110009' },
+      address: {
+        label: 'Office',
+        line1: '2 Test Street',
+        landmark: 'Mukherjee Nagar',
+        pincode: '110009',
+        city: 'North West Delhi',
+        state: 'Delhi',
+      },
     })
+  })
+
+  async function startTyped(user: ReturnType<typeof userEvent.setup>) {
+    await chooseMember(user)
+    await addTee(user)
+    await user.click(screen.getByRole('button', { name: 'Type an address' }))
+    await user.type(screen.getByLabelText('Address line 1'), '2 Test Street')
+  }
+
+  it('prefills the city and state from the PIN code, still editable, and sends both', async () => {
+    install()
+    const user = userEvent.setup()
+    renderPage()
+    await startTyped(user)
+    await user.type(screen.getByLabelText('Pincode'), '110009')
+
+    await waitFor(() => expect(screen.getByLabelText('City')).toHaveValue('North West Delhi'), SLOW)
+    expect(screen.getByLabelText('State')).toHaveValue('Delhi')
+    expect(screen.queryByText('Enter the city and state')).not.toBeInTheDocument()
+    expect(calls.some((c) => c.url.pathname === '/api/admin/pincodes/110009')).toBe(true)
+
+    await user.clear(screen.getByLabelText('City'))
+    await user.type(screen.getByLabelText('City'), 'Rohini')
+    await waitFor(
+      () => expect((quoteCalls().at(-1)?.body as { address: { city: string } }).address.city).toBe('Rohini'),
+      SLOW
+    )
+    expect((quoteCalls().at(-1)?.body as { address: { state: string } }).address.state).toBe('Delhi')
+  })
+
+  it('a PIN code the directory does not have leaves city and state empty; nothing is quoted until both are typed', async () => {
+    install()
+    const user = userEvent.setup()
+    renderPage()
+    await startTyped(user)
+    await user.type(screen.getByLabelText('Pincode'), '110009')
+    await waitFor(() => expect(screen.getByLabelText('City')).toHaveValue('North West Delhi'), SLOW)
+    await waitFor(() => expect(quoteCalls().length).toBeGreaterThan(0), SLOW)
+    const before = quoteCalls().length
+
+    await user.clear(screen.getByLabelText('Pincode'))
+    await user.type(screen.getByLabelText('Pincode'), '560001')
+    expect(await screen.findByText('Enter the city and state', {}, SLOW)).toBeInTheDocument()
+    expect(screen.getByLabelText('City')).toHaveValue('')
+    expect(screen.getByLabelText('State')).toHaveValue('')
+    await new Promise((r) => setTimeout(r, 600))
+    expect(quoteCalls()).toHaveLength(before)
+    expect(screen.getByRole('button', { name: 'Place order' })).toBeDisabled()
+
+    await user.type(screen.getByLabelText('City'), 'Bengaluru')
+    await user.type(screen.getByLabelText('State'), 'Karnataka')
+    await waitFor(() => expect(quoteCalls().length).toBeGreaterThan(before), SLOW)
+    expect(quoteCalls().at(-1)?.body).toMatchObject({
+      address: { pincode: '560001', city: 'Bengaluru', state: 'Karnataka' },
+    })
+  })
+
+  it('a failed read leaves them empty too; clearing a prefilled value blocks the quote again', async () => {
+    install((call) =>
+      call.url.pathname === '/api/admin/pincodes/400069'
+        ? refusal(500, 'INTERNAL_ERROR', 'The lookup is down.')
+        : undefined
+    )
+    const user = userEvent.setup()
+    renderPage()
+    await startTyped(user)
+    await user.type(screen.getByLabelText('Pincode'), '400069')
+    expect(await screen.findByText('Enter the city and state', {}, SLOW)).toBeInTheDocument()
+    expect(screen.getByLabelText('City')).toHaveValue('')
+
+    await user.clear(screen.getByLabelText('Pincode'))
+    await user.type(screen.getByLabelText('Pincode'), '110009')
+    await waitFor(() => expect(screen.getByLabelText('State')).toHaveValue('Delhi'), SLOW)
+    await waitFor(() => expect(quoteCalls().length).toBeGreaterThan(0), SLOW)
+    const before = quoteCalls().length
+
+    await user.clear(screen.getByLabelText('State'))
+    expect(await screen.findByText('Enter the city and state')).toBeInTheDocument()
+    await new Promise((r) => setTimeout(r, 600))
+    expect(quoteCalls()).toHaveLength(before)
+    expect(screen.getByRole('button', { name: 'Place order' })).toBeDisabled()
+  })
+
+  it('shows each member address with city and state, and says so when one has none', async () => {
+    install((call) =>
+      call.url.pathname === '/api/admin/users/m-1/addresses'
+        ? json(200, [
+            { ...ADDRESSES[0], city: 'North West Delhi', state: 'Delhi' },
+            { id: 'a-2', label: 'Old flat', line1: '9 Old Road', pincode: '400069', deliveryMobile: '+919999900001' },
+          ])
+        : undefined
+    )
+    const user = userEvent.setup()
+    renderPage()
+    await chooseMember(user)
+    const withPlace = (await screen.findByRole('radio', { name: /Delhi Test/ })).closest('label')
+    expect(withPlace).toHaveTextContent('12 Test Street, Mukherjee Nagar, North West Delhi, Delhi 110009')
+    expect(withPlace).not.toHaveTextContent('No city or state on this address')
+    const without = screen.getByRole('radio', { name: /Old flat/ }).closest('label')
+    expect(without).toHaveTextContent('9 Old Road 400069')
+    expect(without).toHaveTextContent('No city or state on this address')
+  })
+
+  it('shows the link validity the quote carries', async () => {
+    install((call) =>
+      call.url.pathname === '/api/admin/orders/quote'
+        ? json(200, quote({ paymentLinkValidityHours: 24 }))
+        : undefined
+    )
+    const user = userEvent.setup()
+    renderPage()
+    await chooseMember(user)
+    await addTee(user)
+    await chooseAddress(user)
+    expect(await screen.findByTestId('quote-validity', {}, SLOW)).toHaveTextContent('Link valid for 24 hours')
   })
 
   it('does not ask for a quote while the delivery mobile is not an Indian mobile', async () => {

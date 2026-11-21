@@ -16,6 +16,7 @@ export const LOGIN_LABELS: FieldLabels = { email: 'Email', password: 'Password' 
 export const ORDER_SETTINGS_LABELS: FieldLabels = {
   shippingFeeMinor: 'Flat shipping fee',
   paymentTimeoutMinutes: 'Payment timeout',
+  paymentLinkValidityHours: 'Payment link validity',
   cancelUntil: 'Cancel window',
   notes: 'Notes',
 }

@@ -13,6 +13,7 @@ import {
   TableRow,
 } from '@/components/ui/table'
 import { isApiError } from '@/lib/api-error'
+import { addressLine, lacksPlace, NO_PLACE_NOTE } from '@/lib/address'
 import { useUserAddressesQuery, useUserProfileIntakeQuery, type ProfileIntake } from '@/api/users'
 import { INTAKE_KIND, summarizeIntakePayload } from './intake-summary'
 import { formatDateTime } from '@/lib/dates'
@@ -58,9 +59,8 @@ function UserAddressesCard({ userId }: { userId: string }) {
               <span className="font-medium">{address.label || 'Address'}</span>
               {address.isDefault && <Badge>Default</Badge>}
             </div>
-            <p>{address.line1}</p>
-            {address.landmark && <p className="text-muted-foreground">{address.landmark}</p>}
-            <p>{address.pincode}</p>
+            <p>{addressLine(address)}</p>
+            {lacksPlace(address) && <p className="text-xs text-muted-foreground">{NO_PLACE_NOTE}</p>}
             <p className="mt-1 flex flex-wrap items-center gap-1.5 text-muted-foreground">
               Delivery mobile <span className="font-mono">{address.deliveryMobile}</span>
               {address.deliveryMobileVerified ? (

@@ -120,7 +120,7 @@ function serve(permissions: string[], extra: Extra = () => undefined, list: Orde
       return json(200, { content: list, totalElements: list.length, totalPages: 1 })
     }
     if (path === '/api/admin/orders/settings') {
-      return json(200, { shippingFeeMinor: 4900, paymentTimeoutMinutes: 15, cancelUntil: 'PACKED' })
+      return json(200, { shippingFeeMinor: 4900, paymentTimeoutMinutes: 15, paymentLinkValidityHours: 24, cancelUntil: 'PACKED' })
     }
     if (path === '/api/admin/shipping/settings') return json(200, SETTINGS)
     if (path === '/api/admin/shipping/settings/versions') {
@@ -162,6 +162,12 @@ describe('the selection cap', () => {
     expect(sel.size).toBe(19)
     // the header box unticks a page that is all ticked
     expect(togglePage(sel, rows.slice(1, 20)).size).toBe(0)
+  })
+
+  it('shows the payment link validity in the settings in effect', async () => {
+    serve(ALL)
+    render(<OrdersPage />, '/orders', '/orders')
+    expect(await screen.findByText('Link valid for 24 hours')).toBeInTheDocument()
   })
 
   it('disables the 21st box on the list with the hint, and shows the selection bar with its count', async () => {
@@ -585,6 +591,89 @@ describe('the Shipment panel', () => {
     await user.click(await screen.findByRole('button', { name: /Log/ }))
     const list = await screen.findByRole('list', { name: 'Shipment calls' })
     expect(within(list).getAllByRole('listitem')).toHaveLength(1)
+  })
+
+  it('opens a cancelled shipment: its own events, the courier change and the cancel, and its own calls', async () => {
+    const user = userEvent.setup()
+    const old = {
+      shipment: { id: 's-old', providerCode: 'PROSHIP', status: 'CANCELLED', awb: 'W-OLD', version: 3, cancelledAt: '2026-11-17T10:05:00Z' },
+      cancelledBy: { id: 'u-1', kind: 'ADMIN', displayName: 'Super Admin' },
+      events: [
+        { id: 'o0', eventAt: '2026-11-17T10:00:00Z', providerStatusCode: 'BOOKED', status: 'BOOKED', source: 'ADMIN' },
+        { id: 'o1', eventAt: '2026-11-17T10:02:00Z', providerStatusCode: 'COURIER_CHANGED', status: null, source: 'POLL', remark: 'PROSHIP reports courier Delhivery; it was XpressBees.' },
+        { id: 'o2', eventAt: '2026-11-17T10:05:00Z', providerStatusCode: 'CANCELLED', status: 'CANCELLED', source: 'ADMIN' },
+      ],
+      calls: [
+        { id: 'c-old-1', action: 'BOOK', success: true, providerCode: 'PROSHIP', createdAt: '2026-11-17T10:00:00Z' },
+        { id: 'c-old-2', action: 'CANCEL', success: true, providerCode: 'PROSHIP', createdAt: '2026-11-17T10:05:00Z' },
+      ],
+    }
+    serve(ALL, (call) => {
+      if (call.url.pathname === '/api/admin/orders/o-5') return json(200, packed)
+      if (call.url.pathname === '/api/admin/shipments/s-5') return json(200, detail('MANUAL'))
+      if (call.url.pathname === '/api/admin/shipments/s-old') return json(200, old)
+      if (call.url.pathname === '/api/admin/shipping/calls/c-old-2') {
+        return json(200, {
+          call: { id: 'c-old-2', action: 'CANCEL', success: true, providerCode: 'PROSHIP' },
+          requestBody: '{"awb":"W-OLD"}',
+          responseBody: '{"cancelledOk":true}',
+        })
+      }
+      return undefined
+    })
+    render(<OrderDetailPage />, '/orders/o-5', '/orders/:id')
+    await user.click(await screen.findByText('Previous shipments (1)'))
+    await user.click(await screen.findByRole('button', { name: 'Open history of W-OLD' }))
+
+    const drawer = await screen.findByRole('dialog', { name: 'Earlier shipment' })
+    const events = within(await within(drawer).findByRole('list', { name: 'Tracking events' })).getAllByRole('listitem')
+    expect(events).toHaveLength(3)
+    expect(events[0]).toHaveTextContent('Cancelled')
+    expect(events[1]).toHaveTextContent('Courier changed to Delhivery')
+    expect(events[2]).toHaveTextContent('Booked')
+    const list = within(drawer).getByRole('list', { name: 'Shipment calls' })
+    expect(within(list).getAllByRole('listitem')).toHaveLength(2)
+    expect(within(list).queryByText(/No courier rule/)).not.toBeInTheDocument() // the order's own attempts are not here
+    await user.click(within(within(list).getAllByRole('listitem')[1]).getByRole('button'))
+    expect(await within(drawer).findByText(/cancelledOk/)).toBeInTheDocument()
+    await user.click(within(drawer).getByRole('button', { name: /Back to the shipment/ }))
+    expect(await within(drawer).findByRole('list', { name: 'Tracking events' })).toBeInTheDocument()
+  })
+
+  it('reads nothing of an earlier shipment until its history is opened, and offers none without shipping.read', async () => {
+    const user = userEvent.setup()
+    serveOrder(packed, ['orders.read'], detail('MANUAL'))
+    render(<OrderDetailPage />, '/orders/o-5', '/orders/:id')
+    await user.click(await screen.findByText('Previous shipments (1)'))
+    expect(screen.queryByRole('button', { name: /Open history of/ })).not.toBeInTheDocument()
+    expect(calls.some((c) => c.url.pathname.startsWith('/api/admin/shipments/'))).toBe(false)
+  })
+
+  it('shows the delivery address as one line with city and state', async () => {
+    serveOrder({
+      ...ORDER,
+      address: {
+        addressId: 'a-1',
+        label: 'Home',
+        line1: '12 Test Street',
+        landmark: 'Mukherjee Nagar',
+        city: 'North West Delhi',
+        state: 'Delhi',
+        pincode: '110009',
+        deliveryMobile: '+919999900001',
+      },
+    })
+    render(<OrderDetailPage />, '/orders/o-5', '/orders/:id')
+    expect(await screen.findByText('12 Test Street, Mukherjee Nagar, North West Delhi, Delhi 110009')).toBeInTheDocument()
+  })
+
+  it('an older order without city and state shows what it has, nothing guessed', async () => {
+    serveOrder({
+      ...ORDER,
+      address: { addressId: 'a-1', line1: '9 Old Road', pincode: '400069', city: null, state: null, deliveryMobile: '+919999900001' },
+    })
+    render(<OrderDetailPage />, '/orders/o-5', '/orders/:id')
+    expect(await screen.findByText('9 Old Road 400069')).toBeInTheDocument()
   })
 
   it('courier booked: the hand steps are hidden and Print label is the header action', async () => {

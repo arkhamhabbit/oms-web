@@ -12,7 +12,11 @@ import {
   DialogHeader,
   DialogTitle,
 } from '@/components/ui/dialog'
-import { useShippingCallQuery, type ShippingCallAction, type ShippingCallSummary } from '@/api/shipping'
+import {
+  useShippingCallQuery,
+  type ShippingCallAction,
+  type ShippingCallSummary,
+} from '@/api/shipping'
 import { isApiError } from '@/lib/api-error'
 import { formatDateTime } from '@/lib/dates'
 import { CALL_ACTION_LABEL, prettyBody, providerLabel } from '@/lib/shipping'
@@ -108,12 +112,18 @@ function CallDetail({ id }: { id: string }) {
     ['Triggered by', c.triggeredBy?.displayName ?? '—'],
   ]
   if (c.responseBytes != null) {
-    rows.push(['Label file', `${c.responseBytes.toLocaleString('en-IN')} bytes, ${c.responsePages ?? '?'} pages (not kept)`])
+    rows.push([
+      'Label file',
+      `${c.responseBytes.toLocaleString('en-IN')} bytes, ${c.responsePages ?? '?'} pages (not kept)`,
+    ])
   }
   return (
     <div className="flex flex-col gap-4">
       {c.sentence && (
-        <p role="note" className="rounded-md border border-destructive/40 bg-destructive/5 p-3 text-sm">
+        <p
+          role="note"
+          className="rounded-md border border-destructive/40 bg-destructive/5 p-3 text-sm"
+        >
           {c.sentence}
         </p>
       )}
@@ -132,7 +142,13 @@ function CallDetail({ id }: { id: string }) {
 }
 
 /** The log's drawer: one call opened from the shipping log. */
-function ShippingCallDrawer({ callId, onClose }: { callId: string | undefined; onClose: () => void }) {
+function ShippingCallDrawer({
+  callId,
+  onClose,
+}: {
+  callId: string | undefined
+  onClose: () => void
+}) {
   return (
     <Dialog open={!!callId} onOpenChange={(open) => !open && onClose()}>
       <DialogContent className={DRAWER} aria-describedby="call-drawer-description">
@@ -251,7 +267,12 @@ function CallListDrawer({
         </DialogHeader>
         {callId ? (
           <div className="flex flex-col gap-3">
-            <Button variant="ghost" size="sm" className="w-fit" onClick={() => setCallId(undefined)}>
+            <Button
+              variant="ghost"
+              size="sm"
+              className="w-fit"
+              onClick={() => setCallId(undefined)}
+            >
               <ArrowLeftIcon /> All calls
             </Button>
             <CallDetail id={callId} />
@@ -259,37 +280,58 @@ function CallListDrawer({
         ) : calls.length === 0 ? (
           <p className="text-sm text-muted-foreground">{empty}</p>
         ) : (
-          <ol aria-label={listLabel} className="flex flex-col gap-2">
-            {calls.map((c) => (
-              <li key={c.id}>
-                <button
-                  type="button"
-                  onClick={() => setCallId(c.id)}
-                  className="flex w-full flex-col gap-0.5 rounded-md border px-3 py-2 text-left text-sm hover:bg-muted/50"
-                >
-                  <span className="flex flex-wrap items-center gap-2">
-                    <span className="font-medium">
-                      {c.action
-                        ? (CALL_ACTION_LABEL[c.action as ShippingCallAction] ?? c.action)
-                        : '—'}
-                    </span>
-                    <SuccessChip success={c.success} />
-                    <span className="text-xs text-muted-foreground">
-                      {providerLabel(c.providerCode)}
-                      {c.httpStatus != null && ` · HTTP ${c.httpStatus}`}
-                      {c.latencyMs != null && ` · ${c.latencyMs} ms`}
-                    </span>
-                  </span>
-                  <span className="text-xs text-muted-foreground">{formatDateTime(c.createdAt)}</span>
-                  {c.sentence && <span className="text-xs">{c.sentence}</span>}
-                </button>
-              </li>
-            ))}
-          </ol>
+          <CallList calls={calls} listLabel={listLabel} onOpen={setCallId} />
         )}
       </DialogContent>
     </Dialog>
   )
 }
 
-export { ShippingCallDrawer, ShipmentLogDrawer, BookingAttemptsDrawer, SuccessChip }
+/** The calls as a list, each opening whole through `onOpen`. */
+function CallList({
+  calls,
+  listLabel,
+  onOpen,
+}: {
+  calls: CallRow[]
+  listLabel: string
+  onOpen: (id: string | undefined) => void
+}) {
+  return (
+    <ol aria-label={listLabel} className="flex flex-col gap-2">
+      {calls.map((c) => (
+        <li key={c.id}>
+          <button
+            type="button"
+            onClick={() => onOpen(c.id)}
+            className="flex w-full flex-col gap-0.5 rounded-md border px-3 py-2 text-left text-sm hover:bg-muted/50"
+          >
+            <span className="flex flex-wrap items-center gap-2">
+              <span className="font-medium">
+                {c.action ? (CALL_ACTION_LABEL[c.action as ShippingCallAction] ?? c.action) : '—'}
+              </span>
+              <SuccessChip success={c.success} />
+              <span className="text-xs text-muted-foreground">
+                {providerLabel(c.providerCode)}
+                {c.httpStatus != null && ` · HTTP ${c.httpStatus}`}
+                {c.latencyMs != null && ` · ${c.latencyMs} ms`}
+              </span>
+            </span>
+            <span className="text-xs text-muted-foreground">{formatDateTime(c.createdAt)}</span>
+            {c.sentence && <span className="text-xs">{c.sentence}</span>}
+          </button>
+        </li>
+      ))}
+    </ol>
+  )
+}
+
+export {
+  ShippingCallDrawer,
+  ShipmentLogDrawer,
+  BookingAttemptsDrawer,
+  CallDetail,
+  CallList,
+  DRAWER,
+  SuccessChip,
+}

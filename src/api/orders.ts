@@ -109,6 +109,25 @@ export function useAdminQuoteQuery(request: AdminQuoteRequest | undefined) {
   })
 }
 
+export type PincodePlace = Schemas['PincodeResponse']
+
+/**
+ * City and state of a PIN code, to prefill a typed address (`orders.create`). A 404 (the PIN code
+ * cannot be resolved) and any failed read both mean "type them": the caller reads the status, not
+ * the error.
+ */
+export function usePincodeLookupQuery(pincode: string, enabled = true) {
+  return useQuery({
+    enabled: enabled && /^\d{6}$/.test(pincode),
+    queryKey: [ORDERS_KEY, 'pincode', pincode],
+    queryFn: () =>
+      unwrap<PincodePlace>(api.GET('/api/admin/pincodes/{pincode}', { params: { path: { pincode } } })),
+    retry: false,
+    staleTime: 5 * 60_000,
+    refetchOnWindowFocus: false,
+  })
+}
+
 /** One key per press of Place order; the caller keeps it until the order is placed or refused. */
 export function usePlaceAdminOrderMutation() {
   const queryClient = useQueryClient()

@@ -1,11 +1,24 @@
 import * as React from 'react'
 import { Link } from 'react-router-dom'
-import { CopyIcon, ScrollTextIcon } from 'lucide-react'
+import { ArrowLeftIcon, CopyIcon, ScrollTextIcon } from 'lucide-react'
 import { toast } from 'sonner'
 
 import { ConfirmDialog } from '@/components/common/ConfirmDialog'
 import { noticeFromError } from '@/components/common/NoticeBanner'
-import { BookingAttemptsDrawer, ShipmentLogDrawer } from '@/components/shipping/ShippingCallDrawer'
+import {
+  BookingAttemptsDrawer,
+  CallDetail,
+  CallList,
+  DRAWER,
+  ShipmentLogDrawer,
+} from '@/components/shipping/ShippingCallDrawer'
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogHeader,
+  DialogTitle,
+} from '@/components/ui/dialog'
 import { ShipmentStateChip, ShipmentStatusChip } from '@/components/shipping/ShipmentStateChip'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
@@ -306,6 +319,9 @@ function ShipmentPanel({
                   <TableHead>Status</TableHead>
                   <TableHead>Cancelled</TableHead>
                   <TableHead>Cancelled by</TableHead>
+                  <TableHead className="w-0">
+                    <span className="sr-only">History</span>
+                  </TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
@@ -357,6 +373,7 @@ function PreviousShipmentRow({
   read: boolean
 }) {
   const detail = useShipmentQuery(shipment.id, read && !!shipment.cancelledAt)
+  const [open, setOpen] = React.useState(false)
   return (
     <TableRow>
       <TableCell>{formatDateTime(shipment.bookedAt)}</TableCell>
@@ -368,7 +385,93 @@ function PreviousShipmentRow({
       </TableCell>
       <TableCell>{shipment.cancelledAt ? formatDateTime(shipment.cancelledAt) : DASH}</TableCell>
       <TableCell>{detail.data?.cancelledBy?.displayName ?? DASH}</TableCell>
+      <TableCell>
+        {read && (
+          <>
+            <Button
+              variant="ghost"
+              size="sm"
+              aria-label={`Open history of ${shipment.awb ?? 'this shipment'}`}
+              onClick={() => setOpen(true)}
+            >
+              <ScrollTextIcon /> History
+            </Button>
+            <PreviousShipmentDrawer
+              open={open}
+              shipmentId={shipment.id}
+              awb={shipment.awb}
+              onClose={() => setOpen(false)}
+            />
+          </>
+        )}
+      </TableCell>
     </TableRow>
+  )
+}
+
+/**
+ * An earlier shipment's own record, read when it is opened: the same timeline the live panel
+ * shows (a cancel and a courier change included) and the calls made about it.
+ */
+function PreviousShipmentDrawer({
+  open,
+  shipmentId,
+  awb,
+  onClose,
+}: {
+  open: boolean
+  shipmentId: string | undefined
+  awb: string | null | undefined
+  onClose: () => void
+}) {
+  const query = useShipmentQuery(shipmentId, open)
+  const [callId, setCallId] = React.useState<string | undefined>()
+  const calls = query.data?.calls ?? []
+  return (
+    <Dialog
+      open={open}
+      onOpenChange={(next) => {
+        if (!next) {
+          setCallId(undefined)
+          onClose()
+        }
+      }}
+    >
+      <DialogContent className={DRAWER} aria-describedby="previous-shipment-description">
+        <DialogHeader>
+          <DialogTitle>Earlier shipment</DialogTitle>
+          <DialogDescription id="previous-shipment-description">
+            What the provider reported about{' '}
+            {awb ? <span className="font-mono">{awb}</span> : 'this shipment'}, and every exchange
+            with it, newest first.
+          </DialogDescription>
+        </DialogHeader>
+        {callId ? (
+          <div className="flex flex-col gap-3">
+            <Button variant="ghost" size="sm" className="w-fit" onClick={() => setCallId(undefined)}>
+              <ArrowLeftIcon /> Back to the shipment
+            </Button>
+            <CallDetail id={callId} />
+          </div>
+        ) : (
+          <>
+            <Timeline detail={query.data} loading={query.isLoading} error={query.error} />
+            {query.data && (
+              <section aria-label="Calls" className="flex flex-col gap-2">
+                <h3 className="text-sm font-medium">Calls</h3>
+                {calls.length === 0 ? (
+                  <p className="text-sm text-muted-foreground">
+                    No calls are recorded for this shipment.
+                  </p>
+                ) : (
+                  <CallList calls={calls} listLabel="Shipment calls" onOpen={setCallId} />
+                )}
+              </section>
+            )}
+          </>
+        )}
+      </DialogContent>
+    </Dialog>
   )
 }
 

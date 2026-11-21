@@ -54,15 +54,38 @@ describe('quote request', () => {
     const typed: DeliveryDraft = {
       mode: 'typed',
       addressId: 'a-1',
-      typed: { label: ' Office ', line1: ' 2 Test Street ', landmark: '', pincode: '110009' },
+      typed: { label: ' Office ', line1: ' 2 Test Street ', landmark: '', pincode: '110009', city: ' North West Delhi ', state: 'Delhi' },
       mobile: '098765 43210',
     }
     expect(buildQuoteRequest('m-1', lines, typed)).toEqual({
       memberId: 'm-1',
       lines: [{ variantId: 'v-1', quantity: 2 }],
       deliveryMobile: '+919876543210',
-      address: { label: 'Office', line1: '2 Test Street', landmark: undefined, pincode: '110009' },
+      address: {
+        label: 'Office',
+        line1: '2 Test Street',
+        landmark: undefined,
+        pincode: '110009',
+        city: 'North West Delhi',
+        state: 'Delhi',
+      },
     })
+  })
+
+  it('a typed address needs both a city and a state before it can be quoted', () => {
+    const typed: DeliveryDraft = {
+      mode: 'typed',
+      addressId: undefined,
+      typed: { label: '', line1: '2 Test Street', landmark: '', pincode: '110009', city: '', state: '' },
+      mobile: '',
+    }
+    expect(deliveryProblems(typed).place).toBe('Enter the city and state')
+    expect(buildQuoteRequest('m-1', lines, typed)).toBeUndefined()
+    const cityOnly = { ...typed, typed: { ...typed.typed, city: 'North West Delhi' } }
+    expect(deliveryProblems(cityOnly).place).toBeDefined()
+    const both = { ...typed, typed: { ...typed.typed, city: 'North West Delhi', state: 'Delhi' } }
+    expect(deliveryProblems(both).place).toBeUndefined()
+    expect(buildQuoteRequest('m-1', lines, both)).toBeDefined()
   })
 
   it('names what is wrong with the delivery', () => {

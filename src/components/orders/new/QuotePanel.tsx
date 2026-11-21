@@ -92,6 +92,11 @@ function QuoteBody({ quote }: { quote: AdminQuote }) {
         <Row label="Payable" value={rupees(quote.payableMinor)} strong />
         <Row label="GST included" value={rupees(quote.gstMinor)} />
       </dl>
+      {quote.paymentLinkValidityHours != null && (
+        <p className="text-xs text-muted-foreground" data-testid="quote-validity">
+          Link valid for {quote.paymentLinkValidityHours} hours
+        </p>
+      )}
       <p className="text-xs text-muted-foreground" data-testid="quote-earns">
         This order will earn {(quote.earnPoints ?? 0).toLocaleString('en-IN')} Bits and{' '}
         {rupees(quote.earnCarrotsMinor)} Carrots.
