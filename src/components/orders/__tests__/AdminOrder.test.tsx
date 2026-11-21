@@ -50,6 +50,8 @@ const TYPED_ADDRESS = {
   label: 'Office',
   line1: '2 Test Street',
   landmark: 'Mukherjee Nagar',
+  city: 'North West Delhi',
+  state: 'Delhi',
   pincode: '110009',
   deliveryMobile: '+919999900001',
 }
@@ -211,7 +213,7 @@ describe('placed by the team', () => {
   it('tags the order with who placed it and shows a typed address with no book link', async () => {
     renderOrder(PENDING, ALL)
     expect(await screen.findByTestId('placed-by-team')).toHaveTextContent('Placed by the team · Super Admin')
-    expect(screen.getByText('2 Test Street')).toBeInTheDocument()
+    expect(screen.getByText('2 Test Street, Mukherjee Nagar, North West Delhi, Delhi 110009')).toBeInTheDocument()
     expect(screen.getByText(/Typed for this order; not in the member’s address book/)).toBeInTheDocument()
   })
 

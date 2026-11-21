@@ -1,9 +1,14 @@
+import * as React from 'react'
+
+import { usePincodeLookupQuery } from '@/api/orders'
 import { useUserAddressesQuery } from '@/api/users'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { isApiError } from '@/lib/api-error'
+import { addressLine, lacksPlace, NO_PLACE_NOTE } from '@/lib/address'
+import { isPincode } from '@/lib/orders'
 import {
   deliveryProblems,
   TYPED_ADDRESS_NOTE,
@@ -29,6 +34,28 @@ function DeliveryChooser({
   const setTyped = (patch: Partial<TypedAddress>) =>
     onChange({ ...value, typed: { ...value.typed, ...patch } })
   const list = memberId ? (addresses.data ?? []) : []
+
+  // A six-digit PIN code reads its city and state once: a hit fills both (still editable), a miss
+  // or a failed read empties them so the admin types them. Applied once per PIN code, so what the
+  // admin then edits is never overwritten.
+  const pin = value.typed.pincode.trim()
+  const lookup = usePincodeLookupQuery(pin, typed)
+  const settled = lookup.isSuccess || lookup.isError
+  const applied = React.useRef('')
+  React.useEffect(() => {
+    if (!isPincode(pin)) {
+      applied.current = ''
+      return
+    }
+    if (!typed || !settled || applied.current === pin) {
+      return
+    }
+    applied.current = pin
+    onChange({
+      ...value,
+      typed: { ...value.typed, city: lookup.data?.city ?? '', state: lookup.data?.state ?? '' },
+    })
+  }, [pin, typed, settled, lookup.data, value, onChange])
 
   return (
     <Card>
@@ -89,13 +116,11 @@ function DeliveryChooser({
                     <span>
                       <span className="font-medium">{a.label || 'Address'}</span>
                       {a.isDefault && <span className="ml-2 text-xs text-muted-foreground">Default</span>}
-                      <span className="block">
-                        {a.line1}
-                        {a.landmark ? `, ${a.landmark}` : ''}
-                      </span>
-                      <span className="block text-muted-foreground">
-                        {a.pincode} · {a.deliveryMobile}
-                      </span>
+                      <span className="block">{addressLine(a)}</span>
+                      {lacksPlace(a) && (
+                        <span className="block text-xs text-muted-foreground">{NO_PLACE_NOTE}</span>
+                      )}
+                      <span className="block text-muted-foreground">{a.deliveryMobile}</span>
                     </span>
                   </label>
                 ))}
@@ -129,6 +154,25 @@ function DeliveryChooser({
                     <p className="text-xs text-destructive">{problems.pincode}</p>
                   )}
                 </div>
+                <div className="grid gap-1.5">
+                  <Label htmlFor="addr-city">City</Label>
+                  <Input
+                    id="addr-city"
+                    value={value.typed.city}
+                    onChange={(e) => setTyped({ city: e.target.value })}
+                  />
+                </div>
+                <div className="grid gap-1.5">
+                  <Label htmlFor="addr-state">State</Label>
+                  <Input
+                    id="addr-state"
+                    value={value.typed.state}
+                    onChange={(e) => setTyped({ state: e.target.value })}
+                  />
+                </div>
+                {isPincode(pin) && problems.place && !lookup.isFetching && (
+                  <p className="text-xs text-muted-foreground sm:col-span-2">{problems.place}</p>
+                )}
                 <div className="grid gap-1.5 sm:col-span-2">
                   <Label htmlFor="addr-line1">Address line 1</Label>
                   <Input

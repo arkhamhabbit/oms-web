@@ -33,6 +33,7 @@ import { ACTION_LABEL, ACTION_PERMISSION, actionsFor, rupees } from '@/lib/order
 import { isCourierProvider } from '@/lib/shipping'
 import { BookShipmentsDialog, type OrderToBook } from '@/components/shipping/BookShipmentsDialog'
 import { PrintOutcomeDialog, usePrintLabels } from '@/components/shipping/PrintLabels'
+import { addressLine } from '@/lib/address'
 import { ShipmentPanel } from '@/components/shipping/ShipmentPanel'
 import { useOrderQuery, useOrdersQuery, type FulfilAction, type OrderDetail } from '@/api/orders'
 import { formatDateTime } from '@/lib/dates'
@@ -395,9 +396,7 @@ function AddressBlock({ order }: { order: OrderDetail }) {
   return (
     <address className="text-sm not-italic">
       {a.label && <div className="font-medium">{a.label}</div>}
-      <div>{a.line1}</div>
-      {a.landmark && <div>{a.landmark}</div>}
-      <div>{a.pincode}</div>
+      <div>{addressLine(a)}</div>
       <div className="text-muted-foreground">{a.deliveryMobile}</div>
       {!a.addressId && (
         <div className="mt-1 text-xs text-muted-foreground">

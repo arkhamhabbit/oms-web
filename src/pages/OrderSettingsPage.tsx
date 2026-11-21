@@ -35,8 +35,10 @@ import {
 const PAGE_SIZE = 20
 const TIMEOUT_MIN = 5
 const TIMEOUT_MAX = 15
+const VALIDITY_MIN = 1
+const VALIDITY_MAX = 72
 /** Field errors that sit beside their own control; the rest are listed in the banner. */
-const PLACED_FIELDS = ['shippingFeeMinor', 'paymentTimeoutMinutes']
+const PLACED_FIELDS = ['shippingFeeMinor', 'paymentTimeoutMinutes', 'paymentLinkValidityHours']
 
 const rupees = (minor: number | undefined) => `₹${minorToMajorString(minor ?? 0)}`
 
@@ -68,6 +70,12 @@ function OrderSettingsPage() {
       id: 'timeout',
       header: 'Payment timeout',
       cell: ({ row }) => `${row.original.paymentTimeoutMinutes} min`,
+    },
+    {
+      id: 'linkValidity',
+      header: 'Link validity',
+      cell: ({ row }) =>
+        row.original.paymentLinkValidityHours == null ? '' : `${row.original.paymentLinkValidityHours} h`,
     },
     {
       id: 'cancelUntil',
@@ -137,6 +145,9 @@ function NewVersionForm({ current, canWrite }: { current: OrderSettings; canWrit
     current.shippingFeeMinor ?? 0
   )
   const [timeoutText, setTimeoutText] = React.useState(String(current.paymentTimeoutMinutes ?? ''))
+  const [validityText, setValidityText] = React.useState(
+    String(current.paymentLinkValidityHours ?? '')
+  )
   const [cancelUntil, setCancelUntil] = React.useState<CancelUntil>(
     current.cancelUntil ?? 'SHIPPED'
   )
@@ -151,7 +162,13 @@ function NewVersionForm({ current, canWrite }: { current: OrderSettings; canWrit
     timeout === null || timeout < TIMEOUT_MIN || timeout > TIMEOUT_MAX
       ? `Enter a whole number of minutes from ${TIMEOUT_MIN} to ${TIMEOUT_MAX}.`
       : undefined
-  const ready = shippingMinor !== null && timeout !== null && !timeoutProblem
+  const validity = /^\d+$/.test(validityText.trim()) ? Number.parseInt(validityText.trim(), 10) : null
+  const validityProblem =
+    validity === null || validity < VALIDITY_MIN || validity > VALIDITY_MAX
+      ? `Enter a whole number of hours from ${VALIDITY_MIN} to ${VALIDITY_MAX}.`
+      : undefined
+  const ready =
+    shippingMinor !== null && timeout !== null && !timeoutProblem && validity !== null && !validityProblem
 
   function submit() {
     if (!ready) {
@@ -163,6 +180,7 @@ function NewVersionForm({ current, canWrite }: { current: OrderSettings; canWrit
       .mutateAsync({
         shippingFeeMinor: shippingMinor,
         paymentTimeoutMinutes: timeout,
+        paymentLinkValidityHours: validity,
         cancelUntil,
         notes: notes.trim() || undefined,
       })
@@ -243,6 +261,32 @@ function NewVersionForm({ current, canWrite }: { current: OrderSettings; canWrit
             ))}
           </div>
           <div className="grid max-w-sm gap-1.5">
+            <Label htmlFor="paymentLinkValidity">Payment link validity (hours)</Label>
+            <Input
+              id="paymentLinkValidity"
+              inputMode="numeric"
+              value={validityText}
+              onChange={(e) => setValidityText(e.target.value)}
+              disabled={!canWrite}
+              aria-invalid={validityProblem ? true : undefined}
+              aria-describedby="paymentLinkValidity-problem"
+            />
+            {validityProblem && (
+              <p id="paymentLinkValidity-problem" className="text-sm text-destructive">
+                {validityProblem}
+              </p>
+            )}
+            <p className="text-xs text-muted-foreground">
+              How long a payment link on a team-placed order can be paid, and how long its stock is
+              held: {VALIDITY_MIN} to {VALIDITY_MAX} hours.
+            </p>
+            {fieldError('paymentLinkValidityHours').map((e) => (
+              <p key={e.message} className="text-sm text-destructive">
+                {e.message}
+              </p>
+            ))}
+          </div>
+          <div className="grid max-w-sm gap-1.5">
             <Label htmlFor="cancelUntil">Cancel window</Label>
             <Select
               value={cancelUntil}
@@ -310,7 +354,7 @@ function NewVersionForm({ current, canWrite }: { current: OrderSettings; canWrit
         >
           <p>
             Shipping {shippingMinor === null ? '—' : rupees(shippingMinor)}, payment timeout{' '}
-            {timeout ?? '—'} min, cancel{' '}
+            {timeout ?? '—'} min, payment link valid {validity ?? '—'} h, cancel{' '}
             {cancelUntil === 'SHIPPED' ? 'until shipped' : 'until packed'}. New quotes use these the
             moment this is published.
           </p>

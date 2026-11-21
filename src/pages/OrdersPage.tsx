@@ -343,7 +343,7 @@ function OrdersPage() {
                 : 'The order settings could not be loaded.'}
             </p>
           ) : (
-            <dl className="grid gap-x-8 gap-y-2 text-sm sm:grid-cols-3">
+            <dl className="grid gap-x-8 gap-y-2 text-sm sm:grid-cols-4">
               <div>
                 <dt className="text-muted-foreground">Flat shipping</dt>
                 <dd className="font-medium">{rupees(settings.data?.shippingFeeMinor)}</dd>
@@ -351,6 +351,14 @@ function OrdersPage() {
               <div>
                 <dt className="text-muted-foreground">Payment timeout</dt>
                 <dd className="font-medium">{settings.data?.paymentTimeoutMinutes ?? '—'} min</dd>
+              </div>
+              <div>
+                <dt className="text-muted-foreground">Payment link</dt>
+                <dd className="font-medium">
+                  {settings.data?.paymentLinkValidityHours == null
+                    ? '—'
+                    : `Link valid for ${settings.data.paymentLinkValidityHours} hours`}
+                </dd>
               </div>
               <div>
                 <dt className="text-muted-foreground">Cancel window</dt>

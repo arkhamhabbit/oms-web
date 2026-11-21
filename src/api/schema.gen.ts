@@ -2721,6 +2721,33 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/admin/pincodes/{pincode}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * The city and state of a PIN code, to prefill a typed address: what OMS already holds, else
+         *      looked up once (India Post's pincode service) and kept.
+         * @description The city and state of a PIN code, to prefill a typed address: what OMS already holds, else
+         *      looked up once (India Post's pincode service) and kept. Nothing is guessed — 404 <code>
+         *      NOT_FOUND</code> with a sentence when the PIN code cannot be resolved, and the admin types the city
+         *      and state. 400 <code>VALIDATION_FAILED</code> for anything but six digits not starting with 0. Reads
+         *      only OMS's own directory and the lookup; changes no order or address.
+         *
+         *     **Requires permission:** `orders.create`.
+         */
+        get: operations["pincodeLookupPincode"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/admin/pricing/resolve": {
         parameters: {
             query?: never;
@@ -6529,11 +6556,18 @@ export interface components {
              *          for this order only (2.12)
              */
             addressId?: string | null;
+            /**
+             * @description the delivery city (2.13, D5.15); present on every order placed from 2.13 on, null
+             *          only on an older order whose PIN code could not be resolved
+             */
+            city?: string | null;
             deliveryMobile?: string;
             label?: string;
             landmark?: string;
             line1?: string;
             pincode?: string;
+            /** @description the delivery state, with <code>city</code> */
+            state?: string | null;
         };
         /** @description A new slide, appended to its set. */
         AddSlideRequest: {
@@ -7282,6 +7316,11 @@ export interface components {
          *     . Read-only: edits stay consumer-side.
          */
         ConsumerAddressResponse: {
+            /**
+             * @description the delivery city (2.13): as the member gave it, or as OMS resolved it from the PIN
+             *          code; null until resolved
+             */
+            city?: string | null;
             /** Format: date-time */
             createdAt?: string;
             /** @description the number the courier calls, normalised (<code>+91</code> and ten digits) */
@@ -7299,6 +7338,8 @@ export interface components {
             landmark?: string;
             line1?: string;
             pincode?: string;
+            /** @description the delivery state, with <code>city</code> */
+            state?: string | null;
             /** Format: date-time */
             updatedAt?: string;
         };
@@ -10144,6 +10185,13 @@ export interface components {
             id?: string;
             name?: string;
         };
+        /** @description A PIN code's city and state (2.13), to prefill a typed address. */
+        PincodeResponse: {
+            /** @description the district the PIN code is in, as India Post names it */
+            city?: string;
+            pincode?: string;
+            state?: string;
+        };
         /** @description Places the order quoted. */
         PlaceAdminOrderRequest: {
             address?: components["schemas"]["TypedAddressRequest"];
@@ -11750,11 +11798,20 @@ export interface components {
         };
         /** @description An address typed for this order only. It is not added to the member's address book. */
         TypedAddressRequest: {
+            /**
+             * @description the delivery city (2.13, D5.15). Give it with <code>state</code>, or leave both empty
+             *          and OMS resolves them from the PIN code (the PIN code lookup, GET /api/admin/pincodes/…,
+             *          prefills the form); a quote is refused with a sentence when they are empty and cannot be
+             *          resolved
+             */
+            city?: string;
             label?: string;
             landmark?: string;
             line1: string;
             /** @description six digits, not starting with 0 */
             pincode: string;
+            /** @description the delivery state, with <code>city</code> */
+            state?: string;
         };
         /**
          * @description Renaming a group.
@@ -21501,6 +21558,73 @@ export interface operations {
             };
             /** @description `ACCESS_DENIED` — Authenticated, but lacking the permission the endpoint declares. The session is valid; do not sign the operator out. */
             403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description `INTERNAL_ERROR` — An unhandled failure. The message is deliberately generic; `traceId` identifies the server log line that explains it. */
+            500: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+        };
+    };
+    pincodeLookupPincode: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                pincode: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "*/*": components["schemas"]["PincodeResponse"];
+                };
+            };
+            /** @description `VALIDATION_FAILED` — The request body could not be read, a field failed validation, a required header was absent, or a domain validation rule rejected an input the caller can correct, such as a tier colour ("Must be a colour written as #RRGGBB.") or a tier badge that does not exist or is a video ("Media <id> is a video; this takes an image."). */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description `AUTHENTICATION_FAILED` — No valid credential. Either none was presented, or the session behind it is expired, revoked, or belongs to a member who can no longer sign in. This status means the session is dead and nothing else does — a wrong *current* password on change-password is a 400 with a `currentPassword` field error, not this. */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description `ACCESS_DENIED` — Authenticated, but lacking the permission the endpoint declares. The session is valid; do not sign the operator out. */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description `NOT_FOUND` — A referenced entity does not exist, or the URL matches no endpoint. Also returned for a known path called with an unsupported method, as 405. */
+            404: {
                 headers: {
                     [name: string]: unknown;
                 };

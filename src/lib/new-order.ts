@@ -17,6 +17,9 @@ export interface TypedAddress {
   line1: string
   landmark: string
   pincode: string
+  /** Prefilled from the PIN code; editable; required to place (D5.15). */
+  city: string
+  state: string
 }
 
 export interface DeliveryDraft {
@@ -31,15 +34,21 @@ export interface DeliveryDraft {
 export const EMPTY_DELIVERY: DeliveryDraft = {
   mode: 'book',
   addressId: undefined,
-  typed: { label: '', line1: '', landmark: '', pincode: '' },
+  typed: { label: '', line1: '', landmark: '', pincode: '', city: '', state: '' },
   mobile: '',
 }
 
 export const TYPED_ADDRESS_NOTE = "Used for this order only; not saved to the member's address book."
 
 /** What is wrong with the delivery draft, in words, by field; empty when it can be quoted. */
-export function deliveryProblems(d: DeliveryDraft): { address?: string; line1?: string; pincode?: string; mobile?: string } {
-  const out: { address?: string; line1?: string; pincode?: string; mobile?: string } = {}
+export function deliveryProblems(d: DeliveryDraft): {
+  address?: string
+  line1?: string
+  pincode?: string
+  place?: string
+  mobile?: string
+} {
+  const out: { address?: string; line1?: string; pincode?: string; place?: string; mobile?: string } = {}
   if (d.mode === 'book') {
     if (!d.addressId) {
       out.address = 'Choose one of the member’s addresses, or type one.'
@@ -50,6 +59,9 @@ export function deliveryProblems(d: DeliveryDraft): { address?: string; line1?: 
     }
     if (!isPincode(d.typed.pincode)) {
       out.pincode = 'A pincode is six digits.'
+    }
+    if (!d.typed.city.trim() || !d.typed.state.trim()) {
+      out.place = 'Enter the city and state'
     }
   }
   if (d.mobile.trim() && !normaliseMobile(d.mobile)) {
@@ -85,6 +97,8 @@ export function buildQuoteRequest(
           line1: delivery.typed.line1.trim(),
           landmark: delivery.typed.landmark.trim() || undefined,
           pincode: delivery.typed.pincode.trim(),
+          city: delivery.typed.city.trim(),
+          state: delivery.typed.state.trim(),
         },
       }
 }
