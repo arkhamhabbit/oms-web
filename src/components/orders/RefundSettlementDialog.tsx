@@ -26,18 +26,28 @@ const COPY: Record<RefundSettlementKind, { title: string; confirm: string }> = {
 function RefundSettlementDialog({
   order,
   kind,
+  amountMinor,
   onClose,
   onStale,
 }: {
   order: OrderDetail
   kind: RefundSettlementKind | undefined
+  /** The amount to name in the confirm when the payment refunded is not the order's own (an excess payment). */
+  amountMinor?: number
   onClose: () => void
   onStale: () => void
 }) {
   return (
     <>
       {kind && (
-        <Body key={kind} order={order} kind={kind} onClose={onClose} onStale={onStale} />
+        <Body
+          key={kind}
+          order={order}
+          kind={kind}
+          amountMinor={amountMinor}
+          onClose={onClose}
+          onStale={onStale}
+        />
       )}
     </>
   )
@@ -46,11 +56,13 @@ function RefundSettlementDialog({
 function Body({
   order,
   kind,
+  amountMinor,
   onClose,
   onStale,
 }: {
   order: OrderDetail
   kind: RefundSettlementKind
+  amountMinor?: number
   onClose: () => void
   onStale: () => void
 }) {
@@ -110,7 +122,7 @@ function Body({
           <p>
             OMS will refund exactly{' '}
             <strong className="text-foreground" data-testid="refund-amount">
-              {rupees(order.payment?.amountMinor)}
+              {rupees(amountMinor ?? order.payment?.amountMinor)}
             </strong>{' '}
             for {order.number} to the shopper&rsquo;s original payment method through Razorpay.
           </p>

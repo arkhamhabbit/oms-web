@@ -1,7 +1,7 @@
 import * as React from 'react'
 import { Link, useNavigate, useSearchParams } from 'react-router-dom'
 import type { ColumnDef } from '@tanstack/react-table'
-import { PrinterIcon, SettingsIcon } from 'lucide-react'
+import { PlusIcon, PrinterIcon, SettingsIcon } from 'lucide-react'
 
 import { DataTable } from '@/components/data-table/DataTable'
 import { OrderStatusBadge } from '@/components/orders/OrderStatusBadge'
@@ -17,16 +17,24 @@ import {
 } from '@/components/ui/select'
 import { useBreadcrumb } from '@/layouts/breadcrumb-context'
 import { isApiError } from '@/lib/api-error'
-import { isUuid, istDayStart, ORDER_STATUSES, rupees } from '@/lib/orders'
+import { CREATE_ORDER_PERMISSION, isUuid, istDayStart, ORDER_STATUSES, rupees } from '@/lib/orders'
 import {
   useCurrentOrderSettingsQuery,
   useOrdersQuery,
+  type OrderSource,
   type OrderStatus,
   type OrderSummary,
   type RefundState,
 } from '@/api/orders'
 import { formatDateTime } from '@/lib/dates'
-import { ANY_STATUS, ORDER_STATUS_LABEL, PAYMENT_STATUS_LABEL, REFUND_STATE_LABEL } from '@/lib/labels'
+import {
+  ANY_STATUS,
+  ORDER_SOURCE_LABEL,
+  ORDER_STATUS_LABEL,
+  PAYMENT_METHOD_LABEL,
+  PAYMENT_STATUS_LABEL,
+  REFUND_STATE_LABEL,
+} from '@/lib/labels'
 import { Badge } from '@/components/ui/badge'
 import { TierBadge } from '@/components/membership/TierBadge'
 import { ConsumerLink } from '@/components/orders/ConsumerLink'
@@ -64,6 +72,10 @@ function OrdersPage() {
   const [status, setStatus] = React.useState<OrderStatus | 'ALL'>('ALL')
   const [number, setNumber] = React.useState('')
   const [consumerId, setConsumerId] = React.useState(search.get('consumerId') ?? '')
+  const initialSource = search.get('source')
+  const [source, setSource] = React.useState<OrderSource | 'ALL'>(
+    initialSource === 'ADMIN' || initialSource === 'APP' ? initialSource : 'ALL'
+  )
   const initialRefund = search.get('refundState')
   const [refundState, setRefundState] = React.useState<RefundState | 'ALL'>(
     initialRefund && initialRefund in REFUND_STATE_LABEL ? (initialRefund as RefundState) : 'ALL'
@@ -75,6 +87,7 @@ function OrdersPage() {
 
   const { has } = usePermissions()
   const canBook = has('shipping.book')
+  const canCreate = has(CREATE_ORDER_PERMISSION)
   const { selection, toggle, togglePage, clear } = useOrderSelection()
   const [booking, setBooking] = React.useState<
     { mode: BookMode; orders: OrderToBook[] } | undefined
@@ -94,6 +107,7 @@ function OrdersPage() {
     number: number.trim(),
     consumerId: consumerValid ? consumerId.trim() : undefined,
     refundState: refundState === 'ALL' ? undefined : refundState,
+    source: source === 'ALL' ? undefined : source,
     from: istDayStart(fromDate),
     // The date box names the last day wanted; the server's `to` is exclusive.
     to: istDayStart(toDate, 1),
@@ -186,11 +200,30 @@ function OrdersPage() {
       cell: ({ row }) => <OrderStatusBadge status={row.original.status} />,
     },
     {
+      id: 'source',
+      header: 'Source',
+      cell: ({ row }) =>
+        row.original.source === 'ADMIN' ? (
+          <div className="leading-tight">
+            <Badge variant="secondary">Placed by the team</Badge>
+            {row.original.createdBy?.displayName && (
+              <div className="text-xs text-muted-foreground">{row.original.createdBy.displayName}</div>
+            )}
+          </div>
+        ) : (
+          <span className="text-muted-foreground">App</span>
+        ),
+    },
+    {
       id: 'payment',
       header: 'Payment',
       cell: ({ row }) => (
         <div className="leading-tight">
-          <div>{row.original.paymentMethod ?? '—'}</div>
+          <div>
+            {row.original.paymentMethod
+              ? (PAYMENT_METHOD_LABEL[row.original.paymentMethod] ?? row.original.paymentMethod)
+              : '—'}
+          </div>
           <div className="text-xs text-muted-foreground">
             {row.original.paymentStatus ? PAYMENT_STATUS_LABEL[row.original.paymentStatus] : '—'}
           </div>
@@ -266,6 +299,13 @@ function OrdersPage() {
     <div className="flex flex-col gap-4">
       <div className="flex flex-wrap items-center gap-3">
         <h1 className="text-xl font-semibold">Orders</h1>
+        {canCreate && (
+          <Button asChild>
+            <Link to="/orders/new">
+              <PlusIcon /> New order
+            </Link>
+          </Button>
+        )}
         <Button
           variant={owedActive ? 'default' : 'outline'}
           aria-pressed={owedActive}
@@ -366,6 +406,22 @@ function OrdersPage() {
             {(['OWED', 'INITIATED', 'REFUNDED', 'VOIDED'] as const).map((s) => (
               <SelectItem key={s} value={s}>
                 {REFUND_STATE_LABEL[s]}
+              </SelectItem>
+            ))}
+          </SelectContent>
+        </Select>
+        <Select
+          value={source}
+          onValueChange={(value) => filter(setSource)(value as OrderSource | 'ALL')}
+        >
+          <SelectTrigger className="w-48" aria-label="Source filter">
+            <SelectValue placeholder="Source" />
+          </SelectTrigger>
+          <SelectContent>
+            <SelectItem value="ALL">Any source</SelectItem>
+            {(['ADMIN', 'APP'] as const).map((s) => (
+              <SelectItem key={s} value={s}>
+                {ORDER_SOURCE_LABEL[s]}
               </SelectItem>
             ))}
           </SelectContent>
