@@ -15,6 +15,7 @@ export const ATTRIBUTE_UNITS = [
 ] as const
 
 export const AUDIT_ENTITY_TYPES = [
+  "app_settings",
   "attribute",
   "attribute_group",
   "attribute_value",
@@ -52,6 +53,7 @@ export const AUDIT_ENTITY_TYPES = [
 ] as const
 
 export const AUDIT_ACTIONS = [
+  "app_settings.record.updated",
   "catalog.attribute.created",
   "catalog.attribute.deactivated",
   "catalog.attribute.reactivated",
