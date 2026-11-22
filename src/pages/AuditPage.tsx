@@ -1,4 +1,5 @@
 import * as React from 'react'
+import { useSearchParams } from 'react-router-dom'
 import type { ColumnDef } from '@tanstack/react-table'
 
 import { DataTable } from '@/components/data-table/DataTable'
@@ -161,8 +162,17 @@ function AuditPage() {
   useBreadcrumb([{ label: 'Audit' }])
 
   const [pageIndex, setPageIndex] = React.useState(0)
-  const [draft, setDraft] = React.useState<Filters>(emptyFilters)
-  const [applied, setApplied] = React.useState<Filters>(emptyFilters)
+  // A link from another page (History) arrives with the entity type already chosen.
+  const [searchParams] = useSearchParams()
+  const linkedType = searchParams.get('entityType')
+  const initialFilters: Filters = {
+    ...emptyFilters,
+    entityType: (AUDIT_ENTITY_TYPES as readonly string[]).includes(linkedType ?? '')
+      ? (linkedType as AuditEntityType)
+      : '',
+  }
+  const [draft, setDraft] = React.useState<Filters>(initialFilters)
+  const [applied, setApplied] = React.useState<Filters>(initialFilters)
 
   const query = useAuditEntriesQuery({
     page: pageIndex,

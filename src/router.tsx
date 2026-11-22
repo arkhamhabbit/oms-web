@@ -32,6 +32,7 @@ import OrdersPage from '@/pages/OrdersPage'
 import OrderDetailPage from '@/pages/OrderDetailPage'
 import OrderNewPage from '@/pages/OrderNewPage'
 import OrderSettingsPage from '@/pages/OrderSettingsPage'
+import AppSettingsPage from '@/pages/AppSettingsPage'
 import ShippingSettingsPage from '@/pages/ShippingSettingsPage'
 import ShippingLogPage from '@/pages/ShippingLogPage'
 import WarehousesPage from '@/pages/WarehousesPage'
@@ -197,6 +198,14 @@ export const router = createBrowserRouter([
             element: (
               <RequirePermission permission="orders.read">
                 <OrderSettingsPage />
+              </RequirePermission>
+            ),
+          },
+          {
+            path: '/settings/app',
+            element: (
+              <RequirePermission permission="app_settings.read">
+                <AppSettingsPage />
               </RequirePermission>
             ),
           },

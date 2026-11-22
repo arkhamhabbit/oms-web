@@ -4,6 +4,49 @@
  */
 
 export interface paths {
+    "/api/admin/app-settings": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * The app settings as stored, with the <code>version</code> to send back with an update.
+         * @description The app settings as stored, with the <code>version</code> to send back with an update.
+         *
+         *     **Requires permission:** `app_settings.read`.
+         */
+        get: operations["appSettingsGet"];
+        /**
+         * Saves every app setting at once: a null, absent or blank field clears it
+         * @description Saves every app setting at once: a null, absent or blank field clears it.
+         *
+         *      <p><b>Links</b> must be absolute <code>https://</code> addresses with a site name, at most 500
+         *      characters, with no spaces and no user name or password in them; Get Support may be a <code>
+         *      https://wa.me/…</code> link. A link is stored and published exactly as entered — it is not fetched,
+         *      rewritten or checked for reachability. <b>The legal name</b> is up to 200 characters, <b>the
+         *      FSSAI licence number</b> exactly 14 digits, <b>the support email</b> an email address, and
+         *      <b>the support phone</b> an Indian mobile or landline, stored as +91 and ten digits.
+         *
+         *      <p><b>Refuses</b> a stale <code>version</code> (409 <code>VERSION_CONFLICT</code>) before looking at any
+         *      field, and any invalid field (400, one sentence per field in <code>fieldErrors</code>); either way
+         *      nothing is written. A save that changes nothing returns the record unchanged, with the same
+         *      version and no audit entry. Each change is audited with the before and after of every field it
+         *      changed, and the published <code>app_settings</code> row is rewritten in the same transaction.
+         *
+         *     **Requires permission:** `app_settings.manage`.
+         *
+         *     **Concurrency** — send back the `version` you read. If the record has been changed by someone else since, this returns **409 `VERSION_CONFLICT`** with a `version` field error and writes nothing. Re-read it, show the operator what moved, and submit again with the new `version`.
+         */
+        put: operations["appSettingsUpdate"];
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/admin/attribute-groups": {
         parameters: {
             query?: never;
@@ -6782,6 +6825,37 @@ export interface components {
             /** Format: uuid */
             userId?: string;
         };
+        /** @description The app settings as stored. A null field is not set: the app shows nothing for that line. */
+        AppSettingsResponse: {
+            aboutUrl?: string | null;
+            companyLegalName?: string | null;
+            facebookUrl?: string | null;
+            faqUrl?: string | null;
+            fssaiLicenceNumber?: string | null;
+            instagramUrl?: string | null;
+            linkedinUrl?: string | null;
+            magazineUrl?: string | null;
+            partnerUrl?: string | null;
+            policiesUrl?: string | null;
+            privacyUrl?: string | null;
+            supportEmail?: string | null;
+            /** @description +91 and ten digits */
+            supportPhone?: string | null;
+            supportUrl?: string | null;
+            termsUrl?: string | null;
+            /**
+             * Format: date-time
+             * @description when the record last changed, UTC
+             */
+            updatedAt?: string;
+            /**
+             * Format: int64
+             * @description send it back with an update
+             */
+            version?: number;
+            xUrl?: string | null;
+            youtubeUrl?: string | null;
+        };
         AssignRolesRequest: {
             roleIds: string[];
             /**
@@ -11814,6 +11888,57 @@ export interface components {
             state?: string;
         };
         /**
+         * @description Every app setting, sent whole: what the form holds when it is saved.
+         *
+         *      <p><b>A null, absent or blank field clears it</b> — the app then shows nothing for that line.
+         *      Send the stored value to keep one.
+         */
+        UpdateAppSettingsRequest: {
+            /** @description About Habbit: an absolute https:// link */
+            aboutUrl?: string | null;
+            /** @description the registered company name, up to 200 characters */
+            companyLegalName?: string | null;
+            /** @description Habbit on Facebook: an absolute https:// link */
+            facebookUrl?: string | null;
+            /** @description Every Asked Question: an absolute https:// link */
+            faqUrl?: string | null;
+            /** @description the FSSAI licence number: exactly 14 digits */
+            fssaiLicenceNumber?: string | null;
+            /** @description Habbit on Instagram: an absolute https:// link */
+            instagramUrl?: string | null;
+            /** @description Habbit on LinkedIn: an absolute https:// link */
+            linkedinUrl?: string | null;
+            /** @description Habbit Magazine: an absolute https:// link (not shown in the app for now) */
+            magazineUrl?: string | null;
+            /** @description Become a Habbit Partner: an absolute https:// link */
+            partnerUrl?: string | null;
+            /** @description the Privacy, Terms and Policies page: an absolute https:// link */
+            policiesUrl?: string | null;
+            /** @description the privacy policy: an absolute https:// link */
+            privacyUrl?: string | null;
+            /** @description the support email address */
+            supportEmail?: string | null;
+            /**
+             * @description the support phone: an Indian mobile or landline, stored as +91 and ten
+             *          digits
+             */
+            supportPhone?: string | null;
+            /** @description Get Support: an absolute https:// link; a https://wa.me/… link opens WhatsApp */
+            supportUrl?: string | null;
+            /** @description the terms: an absolute https:// link */
+            termsUrl?: string | null;
+            /**
+             * Format: int64
+             * @description the <code>version</code> you read. A mismatch is refused with 409 <code>
+             *          VERSION_CONFLICT</code> and nothing is written.
+             */
+            version: number;
+            /** @description Habbit on X: an absolute https:// link */
+            xUrl?: string | null;
+            /** @description Habbit on YouTube: an absolute https:// link */
+            youtubeUrl?: string | null;
+        };
+        /**
          * @description Renaming a group.
          *
          *      <p>Separate from {@link CreateAttributeGroupRequest CreateAttributeGroupRequest} rather than one shared "save" shape,
@@ -12756,6 +12881,149 @@ export interface components {
 }
 export type $defs = Record<string, never>;
 export interface operations {
+    appSettingsGet: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "*/*": components["schemas"]["AppSettingsResponse"];
+                };
+            };
+            /** @description `VALIDATION_FAILED` — The request body could not be read, a field failed validation, a required header was absent, or a domain validation rule rejected an input the caller can correct, such as a tier colour ("Must be a colour written as #RRGGBB.") or a tier badge that does not exist or is a video ("Media <id> is a video; this takes an image."). */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description `AUTHENTICATION_FAILED` — No valid credential. Either none was presented, or the session behind it is expired, revoked, or belongs to a member who can no longer sign in. This status means the session is dead and nothing else does — a wrong *current* password on change-password is a 400 with a `currentPassword` field error, not this. */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description `ACCESS_DENIED` — Authenticated, but lacking the permission the endpoint declares. The session is valid; do not sign the operator out. */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description `INTERNAL_ERROR` — An unhandled failure. The message is deliberately generic; `traceId` identifies the server log line that explains it. */
+            500: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+        };
+    };
+    appSettingsUpdate: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["UpdateAppSettingsRequest"];
+            };
+        };
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "*/*": components["schemas"]["AppSettingsResponse"];
+                };
+            };
+            /** @description `VALIDATION_FAILED` — The request body could not be read, a field failed validation, a required header was absent, or a domain validation rule rejected an input the caller can correct, such as a tier colour ("Must be a colour written as #RRGGBB.") or a tier badge that does not exist or is a video ("Media <id> is a video; this takes an image."). */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description `AUTHENTICATION_FAILED` — No valid credential. Either none was presented, or the session behind it is expired, revoked, or belongs to a member who can no longer sign in. This status means the session is dead and nothing else does — a wrong *current* password on change-password is a 400 with a `currentPassword` field error, not this. */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description `ACCESS_DENIED` — Authenticated, but lacking the permission the endpoint declares. The session is valid; do not sign the operator out. */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description `VERSION_CONFLICT` or `CONFLICT` — The `version` sent with an update is not the version stored — the record was changed by someone else since it was read. Nothing was written. Re-read the record, show the operator what changed, and submit again with the new `version`. */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description `UNSUPPORTED_MEDIA_TYPE` — The request body was sent with a `Content-Type` the endpoint does not read. Every endpoint that takes a body reads `application/json`. */
+            415: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description `BUSINESS_RULE_VIOLATION` — The request was well-formed and the entities exist, but a domain rule forbids it — publishing a product with no price, archiving a brand products still reference, deleting media a tier badge uses ("This media is still used — tier badge on Sprout of ladder version Launch. Replace or remove it first."), issuing more stock than a location holds, restoring a category under an archived parent ("Restore the parent category first.") or a product under an archived brand ("Restore the brand first."), refunding through the gateway a payment that was never captured ("The payment was never captured, so there is nothing to refund.") or one whose gateway refund is under way ("A refund through the payment gateway is already in progress for this order. Refresh it to see where it stands."), refreshing a refund that is not under way ("This order has no refund in progress at the payment gateway to refresh."). Distinct from 400: nothing about the request is malformed. */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description `INTERNAL_ERROR` — An unhandled failure. The message is deliberately generic; `traceId` identifies the server log line that explains it. */
+            500: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+        };
+    };
     attributeGroupList: {
         parameters: {
             query?: {
@@ -14370,10 +14638,10 @@ export interface operations {
                  *     - `orders.order.refund_retried` — Historical (retired in 0.14): an admin restarted the automatic refund attempts. The press is now orders.order.refund_initiated.
                  *     - `orders.order.refunded` — Historical (retired in 0.14): a refund settled at the gateway. Now orders.order.refund_processed.
                  */
-                action?: "catalog.attribute.created" | "catalog.attribute.deactivated" | "catalog.attribute.reactivated" | "catalog.attribute.reordered" | "catalog.attribute.updated" | "catalog.attribute_group.created" | "catalog.attribute_group.deactivated" | "catalog.attribute_group.reactivated" | "catalog.attribute_group.reordered" | "catalog.attribute_group.updated" | "catalog.attribute_value.created" | "catalog.attribute_value.deactivated" | "catalog.attribute_value.reactivated" | "catalog.attribute_value.reordered" | "catalog.attribute_value.updated" | "catalog.brand.activated" | "catalog.brand.archived" | "catalog.brand.created" | "catalog.brand.published" | "catalog.brand.reordered" | "catalog.brand.restored" | "catalog.brand.unpublished" | "catalog.brand.updated" | "catalog.category.activated" | "catalog.category.archived" | "catalog.category.created" | "catalog.category.moved" | "catalog.category.published" | "catalog.category.reordered" | "catalog.category.restored" | "catalog.category.unpublished" | "catalog.category.updated" | "catalog.media.confirmed" | "catalog.media.created" | "catalog.media.deleted" | "catalog.media.failed" | "catalog.product.approved" | "catalog.product.archived" | "catalog.product.categories_changed" | "catalog.product.content_changed" | "catalog.product.created" | "catalog.product.customer_allowed" | "catalog.product.customer_disallowed" | "catalog.product.image_added" | "catalog.product.image_removed" | "catalog.product.image_updated" | "catalog.product.images_reordered" | "catalog.product.merchandising_changed" | "catalog.product.option_added" | "catalog.product.option_removed" | "catalog.product.options_reordered" | "catalog.product.published" | "catalog.product.rejected" | "catalog.product.restored" | "catalog.product.spec_cleared" | "catalog.product.spec_set" | "catalog.product.submitted" | "catalog.product.unpublished" | "catalog.product.updated" | "catalog.product.visibility_changed" | "catalog.tag.created" | "catalog.tag.deleted" | "catalog.tag.updated" | "catalog.variant.created" | "catalog.variant.default_changed" | "catalog.variant.discontinued" | "catalog.variant.image_added" | "catalog.variant.image_removed" | "catalog.variant.image_updated" | "catalog.variant.images_reordered" | "catalog.variant.merchandising_changed" | "catalog.variant.reinstated" | "catalog.variant.reordered" | "catalog.variant.spec_cleared" | "catalog.variant.spec_set" | "catalog.variant.updated" | "catalog.variant.visibility_changed" | "earn.rules_version.created" | "earn.rules_version.published" | "earn.rules_version.updated" | "earn.rules_version.withdrawn" | "identity.user.claimed" | "identity.user.created" | "identity.user.profile_applied" | "identity.user.reinstated" | "identity.user.role_granted" | "identity.user.role_revoked" | "identity.user.suspended" | "identity.user.updated" | "inventory.availability.reconciled" | "inventory.batch.created" | "inventory.movement.recorded" | "inventory.projection.rebuilt" | "inventory.stock.transferred" | "inventory.warehouse.created" | "inventory.warehouse.deactivated" | "inventory.warehouse.reactivated" | "inventory.warehouse.updated" | "invite.claim.processed" | "invite.claim.rejected" | "invite.intake.processed" | "invite.intake.rejected" | "invite.invite.added" | "invite.invite.expired" | "invite.invite.invalidated" | "invite.invite.issued" | "invite.invite.visited" | "invite.referral.attributed" | "invite.referral.blocked" | "membership.cycle_run.completed" | "membership.version.created" | "membership.version.published" | "membership.version.updated" | "membership.version.withdrawn" | "orders.intake.price_honoured" | "orders.order.cancelled" | "orders.order.capture_refused" | "orders.order.capture_repaired" | "orders.order.confirmation_failed" | "orders.order.confirmed" | "orders.order.delivered" | "orders.order.excess_payment" | "orders.order.expired" | "orders.order.late_capture" | "orders.order.link_payment_failed" | "orders.order.marked_paid" | "orders.order.note_added" | "orders.order.out_for_delivery" | "orders.order.packed" | "orders.order.payment_failed" | "orders.order.payment_link_cancel_failed" | "orders.order.payment_link_cancelled" | "orders.order.payment_link_ended" | "orders.order.payment_link_failed" | "orders.order.payment_link_issued" | "orders.order.payment_voided" | "orders.order.placed" | "orders.order.placed_by_admin" | "orders.order.price_honoured" | "orders.order.refund_failed" | "orders.order.refund_initiated" | "orders.order.refund_processed" | "orders.order.refund_requested" | "orders.order.refunded_manually" | "orders.order.shipped" | "orders.order.stock_held_again" | "orders.order.unpacked" | "orders.settings.published" | "pricing.bits_option.cleared" | "pricing.bits_option.set" | "pricing.price.cleared" | "pricing.price.set" | "pricing.version.created" | "pricing.version.published" | "pricing.version.updated" | "pricing.version.withdrawn" | "procurement.goods_receipt.posted" | "procurement.purchase_order.approved" | "procurement.purchase_order.cancelled" | "procurement.purchase_order.created" | "procurement.purchase_order.updated" | "procurement.supplier.created" | "procurement.supplier.deactivated" | "procurement.supplier.reactivated" | "procurement.supplier.updated" | "shipping.settings.published" | "shipping.shipment.booked" | "shipping.shipment.booking_failed" | "shipping.shipment.cancelled" | "shipping.shipment.label_printed" | "shipping.shipment.status_changed" | "team.member.created" | "team.member.forced_logout" | "team.member.invite.accepted" | "team.member.invite.resent" | "team.member.password.changed" | "team.member.password_reset.completed" | "team.member.password_reset.requested" | "team.member.password_reset.triggered" | "team.member.profile.updated" | "team.member.roles.assigned" | "team.member.status.changed" | "team.member.updated" | "team.role.created" | "team.role.deleted" | "team.role.updated" | "orders.order.refund_needs_attention" | "orders.order.refund_retried" | "orders.order.refunded";
+                action?: "app_settings.record.updated" | "catalog.attribute.created" | "catalog.attribute.deactivated" | "catalog.attribute.reactivated" | "catalog.attribute.reordered" | "catalog.attribute.updated" | "catalog.attribute_group.created" | "catalog.attribute_group.deactivated" | "catalog.attribute_group.reactivated" | "catalog.attribute_group.reordered" | "catalog.attribute_group.updated" | "catalog.attribute_value.created" | "catalog.attribute_value.deactivated" | "catalog.attribute_value.reactivated" | "catalog.attribute_value.reordered" | "catalog.attribute_value.updated" | "catalog.brand.activated" | "catalog.brand.archived" | "catalog.brand.created" | "catalog.brand.published" | "catalog.brand.reordered" | "catalog.brand.restored" | "catalog.brand.unpublished" | "catalog.brand.updated" | "catalog.category.activated" | "catalog.category.archived" | "catalog.category.created" | "catalog.category.moved" | "catalog.category.published" | "catalog.category.reordered" | "catalog.category.restored" | "catalog.category.unpublished" | "catalog.category.updated" | "catalog.media.confirmed" | "catalog.media.created" | "catalog.media.deleted" | "catalog.media.failed" | "catalog.product.approved" | "catalog.product.archived" | "catalog.product.categories_changed" | "catalog.product.content_changed" | "catalog.product.created" | "catalog.product.customer_allowed" | "catalog.product.customer_disallowed" | "catalog.product.image_added" | "catalog.product.image_removed" | "catalog.product.image_updated" | "catalog.product.images_reordered" | "catalog.product.merchandising_changed" | "catalog.product.option_added" | "catalog.product.option_removed" | "catalog.product.options_reordered" | "catalog.product.published" | "catalog.product.rejected" | "catalog.product.restored" | "catalog.product.spec_cleared" | "catalog.product.spec_set" | "catalog.product.submitted" | "catalog.product.unpublished" | "catalog.product.updated" | "catalog.product.visibility_changed" | "catalog.tag.created" | "catalog.tag.deleted" | "catalog.tag.updated" | "catalog.variant.created" | "catalog.variant.default_changed" | "catalog.variant.discontinued" | "catalog.variant.image_added" | "catalog.variant.image_removed" | "catalog.variant.image_updated" | "catalog.variant.images_reordered" | "catalog.variant.merchandising_changed" | "catalog.variant.reinstated" | "catalog.variant.reordered" | "catalog.variant.spec_cleared" | "catalog.variant.spec_set" | "catalog.variant.updated" | "catalog.variant.visibility_changed" | "earn.rules_version.created" | "earn.rules_version.published" | "earn.rules_version.updated" | "earn.rules_version.withdrawn" | "identity.user.claimed" | "identity.user.created" | "identity.user.profile_applied" | "identity.user.reinstated" | "identity.user.role_granted" | "identity.user.role_revoked" | "identity.user.suspended" | "identity.user.updated" | "inventory.availability.reconciled" | "inventory.batch.created" | "inventory.movement.recorded" | "inventory.projection.rebuilt" | "inventory.stock.transferred" | "inventory.warehouse.created" | "inventory.warehouse.deactivated" | "inventory.warehouse.reactivated" | "inventory.warehouse.updated" | "invite.claim.processed" | "invite.claim.rejected" | "invite.intake.processed" | "invite.intake.rejected" | "invite.invite.added" | "invite.invite.expired" | "invite.invite.invalidated" | "invite.invite.issued" | "invite.invite.visited" | "invite.referral.attributed" | "invite.referral.blocked" | "membership.cycle_run.completed" | "membership.version.created" | "membership.version.published" | "membership.version.updated" | "membership.version.withdrawn" | "orders.intake.price_honoured" | "orders.order.cancelled" | "orders.order.capture_refused" | "orders.order.capture_repaired" | "orders.order.confirmation_failed" | "orders.order.confirmed" | "orders.order.delivered" | "orders.order.excess_payment" | "orders.order.expired" | "orders.order.late_capture" | "orders.order.link_payment_failed" | "orders.order.marked_paid" | "orders.order.note_added" | "orders.order.out_for_delivery" | "orders.order.packed" | "orders.order.payment_failed" | "orders.order.payment_link_cancel_failed" | "orders.order.payment_link_cancelled" | "orders.order.payment_link_ended" | "orders.order.payment_link_failed" | "orders.order.payment_link_issued" | "orders.order.payment_voided" | "orders.order.placed" | "orders.order.placed_by_admin" | "orders.order.price_honoured" | "orders.order.refund_failed" | "orders.order.refund_initiated" | "orders.order.refund_processed" | "orders.order.refund_requested" | "orders.order.refunded_manually" | "orders.order.shipped" | "orders.order.stock_held_again" | "orders.order.unpacked" | "orders.settings.published" | "pricing.bits_option.cleared" | "pricing.bits_option.set" | "pricing.price.cleared" | "pricing.price.set" | "pricing.version.created" | "pricing.version.published" | "pricing.version.updated" | "pricing.version.withdrawn" | "procurement.goods_receipt.posted" | "procurement.purchase_order.approved" | "procurement.purchase_order.cancelled" | "procurement.purchase_order.created" | "procurement.purchase_order.updated" | "procurement.supplier.created" | "procurement.supplier.deactivated" | "procurement.supplier.reactivated" | "procurement.supplier.updated" | "shipping.settings.published" | "shipping.shipment.booked" | "shipping.shipment.booking_failed" | "shipping.shipment.cancelled" | "shipping.shipment.label_printed" | "shipping.shipment.status_changed" | "team.member.created" | "team.member.forced_logout" | "team.member.invite.accepted" | "team.member.invite.resent" | "team.member.password.changed" | "team.member.password_reset.completed" | "team.member.password_reset.requested" | "team.member.password_reset.triggered" | "team.member.profile.updated" | "team.member.roles.assigned" | "team.member.status.changed" | "team.member.updated" | "team.role.created" | "team.role.deleted" | "team.role.updated" | "orders.order.refund_needs_attention" | "orders.order.refund_retried" | "orders.order.refunded";
                 actorId?: string;
                 entityId?: string;
-                entityType?: "attribute" | "attribute_group" | "attribute_value" | "batch" | "brand" | "category" | "claim_intake" | "earn_rules_version" | "goods_receipt" | "invite" | "invite_intake" | "media" | "membership_cycle_run" | "membership_version" | "order" | "order_intake" | "order_settings_version" | "pricing_version" | "product" | "purchase_order" | "referral" | "role" | "shipment" | "shipping_settings_version" | "stock_availability" | "stock_level" | "stock_movement" | "stock_transfer" | "supplier" | "tag" | "team_member" | "user" | "variant" | "warehouse";
+                entityType?: "app_settings" | "attribute" | "attribute_group" | "attribute_value" | "batch" | "brand" | "category" | "claim_intake" | "earn_rules_version" | "goods_receipt" | "invite" | "invite_intake" | "media" | "membership_cycle_run" | "membership_version" | "order" | "order_intake" | "order_settings_version" | "pricing_version" | "product" | "purchase_order" | "referral" | "role" | "shipment" | "shipping_settings_version" | "stock_availability" | "stock_level" | "stock_movement" | "stock_transfer" | "supplier" | "tag" | "team_member" | "user" | "variant" | "warehouse";
                 from?: string;
                 pageable: components["schemas"]["Pageable"];
                 to?: string;

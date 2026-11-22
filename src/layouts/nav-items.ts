@@ -24,6 +24,7 @@ import {
   PackageCheck,
   Ship,
   FileText,
+  Settings,
 } from 'lucide-react'
 
 export interface NavItem {
@@ -108,5 +109,11 @@ export const navItems: NavItem[] = [
   { label: 'Invites', to: '/invites', icon: Send, permission: 'invite.read' },
   { label: 'Team', to: '/team', icon: Users, permission: 'team.read' },
   { label: 'Roles', to: '/roles', icon: ShieldCheck, permission: 'team.read' },
+  {
+    label: 'App settings',
+    to: '/settings/app',
+    icon: Settings,
+    permission: 'app_settings.read',
+  },
   { label: 'Audit', to: '/audit', icon: ScrollText, permission: 'audit.read' },
 ]
