@@ -50,6 +50,8 @@ it seeds a Super Admin in `INVITED` state with no password and logs a one-time
 |---|---|---|
 | `VITE_API_BASE_URL` | Where OMS Core is running | `http://localhost:8080` |
 
+Those two apply to `npm run dev` only. The container reads `OMS_API_BASE_URL` and `MEDIA_ORIGIN` when it starts (one image for any server; see `deploy/oms-web.env.example`).
+
 Copy `.env.example` to `.env` to override. Most local setups don't need a `.env` at all —
 OMS Core's own default port matches the fallback here, and its `local` profile's default
 `CORS_ALLOWED_ORIGINS` already includes this app's default dev port (5173).

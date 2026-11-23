@@ -3,6 +3,7 @@ import createClient from 'openapi-fetch'
 import type { components, paths } from '@/api/schema.gen'
 import { queryClient } from '@/api/query-client'
 import { ApiClientError, networkError } from '@/lib/api-error'
+import { apiBaseUrl } from '@/lib/runtime-config'
 
 type ErrorBody = components['schemas']['ErrorResponse']
 
@@ -39,7 +40,10 @@ export function onUnauthorized(handler: () => void): void {
  * to call fetch()/axios directly (enforced by eslint.config.js).
  */
 export const api = createClient<paths>({
-  baseUrl: import.meta.env.VITE_API_BASE_URL ?? 'http://localhost:8080',
+  // Read when the page loads (W4.0): `config.js` in a container, `VITE_API_BASE_URL` or the
+  // localhost default under `npm run dev`. An unusable value gives '' here and `main.tsx`
+  // shows the configuration page instead of rendering the app, so nothing calls localhost.
+  baseUrl: apiBaseUrl(),
   // The session lives in an httpOnly cookie (D2.16) — this is what makes the browser send
   // it. There is no token to attach; JavaScript never has one to read.
   credentials: 'include',
