@@ -1,0 +1,20 @@
+# Nothing secret and nothing local goes into the build context.
+.git
+.gitignore
+.gitattributes
+.claude
+.playwright-mcp
+node_modules
+dist
+coverage
+.env
+.env.*
+!.env.example
+*.local
+*.log
+docs
+README.md
+Dockerfile
+.dockerignore
+.vscode
+.idea
